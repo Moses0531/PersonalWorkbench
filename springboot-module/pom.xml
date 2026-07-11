@@ -38,6 +38,7 @@
 
     <modules>
         <module>start-module</module>
+        <module>common-module</module>
     </modules>
 
     <dependencyManagement>
