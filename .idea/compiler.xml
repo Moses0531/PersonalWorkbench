@@ -7,7 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
-          <entry name="$PROJECT_DIR$/../../AppRun/apache-maven-3.9.11-bin/apache-maven-3.9.11/maven-repo/org/projectlombok/lombok/1.18.46/lombok-1.18.46.jar" />
+          <entry name="$PROJECT_DIR$/../../AppRun/apache-maven-3.9.11-bin/apache-maven-3.9.11/maven-repo/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar" />
         </processorPath>
         <module name="start-module" />
       </profile>
@@ -16,7 +16,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="springboot-module" options="-parameters" />
+      <module name="springboot-module" options="" />
       <module name="start-module" options="-parameters" />
     </option>
   </component>
