@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>common-module</artifactId>
+    <name>common-module</name>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

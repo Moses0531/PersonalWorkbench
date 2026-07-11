@@ -15,7 +15,11 @@
     <name>start-module</name>
 
     <dependencies>
-
+        <dependency>
+            <groupId>com.moses</groupId>
+            <artifactId>common-module</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
