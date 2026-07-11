@@ -1,0 +1,8 @@
+# 忽略 IntelliJ IDEA 配置文件夹
+.idea/
+
+# 忽略所有编译生成的 class 文件
+*.class
+
+# 可选：忽略 Maven 构建产物（如 target 目录）
+target/
