@@ -11,6 +11,7 @@ import com.moses.auth.service.SysAuthService;
 import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
 import com.moses.utils.CaptchaUtil;
+import com.moses.utils.FormatUtil;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +19,11 @@ import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Pattern;
 
 @Service
 public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
         implements SysAuthService {
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.-]+@[\\w.-]+\\.\\w+$");
     private static final long DEFAULT_ROLE_ID = 2L;
 
     private final CaptchaUtil captchaUtil;
@@ -56,7 +55,10 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
         if (hasPhone == hasEmail) {
             throw new RuntimeException("请填写手机号或邮箱其中一项");
         }
-        if (hasEmail && !EMAIL_PATTERN.matcher(email.trim()).matches()) {
+        if (hasPhone && !FormatUtil.isValidPhone(phone)) {
+            throw new RuntimeException("手机号格式不正确");
+        }
+        if (hasEmail && !FormatUtil.isValidEmail(email)) {
             throw new RuntimeException("邮箱格式不正确");
         }
         if (!StringUtils.hasText(password) || !StringUtils.hasText(confirmPassword)) {
@@ -123,6 +125,7 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
         }
 
         account = account.trim();
+        validateLoginAccount(account);
         SysAuth sysAuth = findAuthByAccount(account);
         if (sysAuth == null) {
             throw new RuntimeException("账号不存在");
@@ -152,6 +155,18 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
             result.setUsername(sysUser.getUsername());
         }
         return result;
+    }
+
+    private void validateLoginAccount(String account) {
+        if (account.contains("@")) {
+            if (!FormatUtil.isValidEmail(account)) {
+                throw new RuntimeException("邮箱格式不正确");
+            }
+            return;
+        }
+        if (account.matches("^\\d{11}$") && !FormatUtil.isValidPhone(account)) {
+            throw new RuntimeException("手机号格式不正确");
+        }
     }
 
     private String generateUniqueAccount() {
