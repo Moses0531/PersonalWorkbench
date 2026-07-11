@@ -19,4 +19,13 @@ public class Login {
 
     /** 验证码时间戳 */
     private Long captchaTimestamp;
+
+    /** 登录令牌（登录成功后返回） */
+    private String token;
+
+    /** 用户ID（登录成功后返回） */
+    private Long userId;
+
+    /** 用户名（登录成功后返回） */
+    private String username;
 }

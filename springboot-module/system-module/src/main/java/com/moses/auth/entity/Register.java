@@ -25,4 +25,10 @@ public class Register {
 
     /** 验证码时间戳 */
     private Long captchaTimestamp;
+
+    /** 系统生成的登录账号（注册成功后返回） */
+    private String account;
+
+    /** 用户ID（注册成功后返回） */
+    private Long userId;
 }

@@ -22,11 +22,11 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResultConfig userRegister(@RequestBody Register register) {
-        return sysAuthService.register(register);
+        return ResultConfig.success(sysAuthService.register(register));
     }
 
     @PostMapping("/login")
     public ResultConfig userLogin(@RequestBody Login login) {
-        return sysAuthService.login(login);
+        return ResultConfig.success(sysAuthService.login(login));
     }
 }
