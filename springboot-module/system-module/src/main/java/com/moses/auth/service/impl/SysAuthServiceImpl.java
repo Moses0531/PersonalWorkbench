@@ -1,7 +1,9 @@
 package com.moses.auth.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.moses.auth.entity.Login;
 import com.moses.auth.entity.Register;
 import com.moses.auth.entity.SysAuth;
 import com.moses.auth.mapper.SysAuthMapper;
@@ -116,5 +118,69 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
             }
         }
         throw new RuntimeException("账号生成失败，请稍后重试");
+    }
+
+    @Override
+    public ResultConfig login(Login login) {
+        if (login == null) {
+            return ResultConfig.error("登录信息不能为空");
+        }
+
+        if (!captchaUtil.verifyCaptcha(login.getCaptchaCode(), login.getCaptchaToken(), login.getCaptchaTimestamp())) {
+            return ResultConfig.error("验证码错误或已过期");
+        }
+
+        String account = login.getAccount();
+        String password = login.getPassword();
+        if (!StringUtils.hasText(account) || !StringUtils.hasText(password)) {
+            return ResultConfig.error("账号和密码不能为空");
+        }
+
+        account = account.trim();
+        SysAuth sysAuth = findAuthByAccount(account);
+        if (sysAuth == null) {
+            return ResultConfig.error("账号不存在");
+        }
+        if ("1".equals(sysAuth.getStatus())) {
+            return ResultConfig.error("账号已被封禁");
+        }
+        if (!BCrypt.checkpw(password, sysAuth.getPassword())) {
+            return ResultConfig.error("密码错误");
+        }
+
+        StpUtil.login(sysAuth.getAccountId());
+
+        Date now = new Date();
+        sysAuth.setLastLoginTime(now);
+        sysAuth.setUpdateTime(now);
+        updateById(sysAuth);
+
+        SysUser sysUser = sysUserService.getOne(
+                new LambdaQueryWrapper<SysUser>().eq(SysUser::getAccountId, sysAuth.getAccountId()));
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", StpUtil.getTokenValue());
+        data.put("account", sysAuth.getAccount());
+        if (sysUser != null) {
+            data.put("userId", sysUser.getUserId());
+            data.put("username", sysUser.getUsername());
+        }
+        return ResultConfig.success(data);
+    }
+
+    private SysAuth findAuthByAccount(String identifier) {
+        SysAuth sysAuth = getOne(new LambdaQueryWrapper<SysAuth>().eq(SysAuth::getAccount, identifier));
+        if (sysAuth != null) {
+            return sysAuth;
+        }
+
+        SysUser sysUser = sysUserService.getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getPhone, identifier)
+                .or()
+                .eq(SysUser::getEmail, identifier));
+        if (sysUser == null) {
+            return null;
+        }
+        return getById(sysUser.getAccountId());
     }
 }

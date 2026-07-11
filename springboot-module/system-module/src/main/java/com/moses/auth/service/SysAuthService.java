@@ -1,6 +1,7 @@
 package com.moses.auth.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.moses.auth.entity.Login;
 import com.moses.auth.entity.Register;
 import com.moses.auth.entity.SysAuth;
 import com.moses.config.ResultConfig;
@@ -16,4 +17,9 @@ public interface SysAuthService extends IService<SysAuth> {
      * 用户注册：手机号或邮箱二选一，账号由系统随机生成8位数
      */
     ResultConfig register(Register register);
+
+    /**
+     * 用户登录：账号、手机号或邮箱 + 密码 + 验证码
+     */
+    ResultConfig login(Login login);
 }

@@ -1,5 +1,6 @@
 package com.moses.auth.controller;
 
+import com.moses.auth.entity.Login;
 import com.moses.auth.entity.Register;
 import com.moses.auth.service.SysAuthService;
 import com.moses.config.ResultConfig;
@@ -25,8 +26,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResultConfig userLogin() {
-
-        return ResultConfig.success();
+    public ResultConfig userLogin(@RequestBody Login login) {
+        return sysAuthService.login(login);
     }
 }
