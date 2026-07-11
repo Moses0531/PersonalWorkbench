@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 
 @SpringBootApplication
-
+@MapperScan("com.moses.**.mapper")
 public class RunApplication {
 
     public static void main(String[] args) {

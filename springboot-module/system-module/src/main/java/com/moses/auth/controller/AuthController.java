@@ -1,8 +1,12 @@
 package com.moses.auth.controller;
 
+import com.moses.auth.entity.Register;
+import com.moses.auth.service.SysAuthService;
 import com.moses.config.ResultConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /* 用户注册与登录 */
@@ -10,14 +14,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
-    @PostMapping("/register")
-    public ResultConfig register() {
+    @Autowired
+    private  SysAuthService sysAuthService;
 
-        return ResultConfig.success();
+
+
+    @PostMapping("/register")
+    public ResultConfig userRegister(@RequestBody Register register) {
+        return sysAuthService.register(register);
     }
 
     @PostMapping("/login")
-    public ResultConfig login() {
+    public ResultConfig userLogin() {
 
         return ResultConfig.success();
     }
