@@ -31,7 +31,6 @@
         <knife4j.version>4.4.0</knife4j.version>
         <kaptcha.version>2.3.2</kaptcha.version>
         <cn.dev33.version>1.45.0</cn.dev33.version>
-        <bcrypt.version>0.4</bcrypt.version>
         <mysql.version>8.3.0</mysql.version>
         <spring-ai.version>1.1.8</spring-ai.version>
     </properties>
@@ -159,13 +158,6 @@
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
             <version>2.3.3</version>
-        </dependency>
-
-        <!-- BCrypt 密码加密 -->
-        <dependency>
-            <groupId>org.mindrot</groupId>
-            <artifactId>jbcrypt</artifactId>
-            <version>${bcrypt.version}</version>
         </dependency>
 
         <!-- Redis 连接池 -->

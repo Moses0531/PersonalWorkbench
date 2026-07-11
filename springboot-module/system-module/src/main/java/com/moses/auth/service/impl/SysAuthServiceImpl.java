@@ -12,7 +12,7 @@ import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
 import com.moses.utils.CaptchaUtil;
 import com.moses.utils.FormatUtil;
-import org.mindrot.jbcrypt.BCrypt;
+import cn.dev33.satoken.secure.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
