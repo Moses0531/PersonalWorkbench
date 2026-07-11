@@ -1,4 +1,5 @@
 create database `spine_extension`;
+use `spine_extension`;
 DROP TABLE IF EXISTS `sys_account`;
 CREATE TABLE `sys_account` (
                                `account_id` bigint NOT NULL AUTO_INCREMENT COMMENT '账号ID',
