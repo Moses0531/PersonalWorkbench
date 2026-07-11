@@ -20,6 +20,11 @@
             <artifactId>common-module</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.moses</groupId>
+            <artifactId>system-module</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

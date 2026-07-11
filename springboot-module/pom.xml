@@ -39,6 +39,7 @@
     <modules>
         <module>start-module</module>
         <module>common-module</module>
+        <module>system-module</module>
     </modules>
 
     <dependencyManagement>
