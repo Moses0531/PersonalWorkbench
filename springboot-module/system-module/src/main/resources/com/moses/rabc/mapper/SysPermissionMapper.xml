@@ -21,5 +21,15 @@
             <result property="updateTime" column="update_time" />
     </resultMap>
 
+    <select id="selectPermissionCodesByAccountId" resultType="java.lang.String">
+        SELECT DISTINCT p.code
+        FROM sys_user u
+        INNER JOIN role_permission rp ON u.role_id = rp.role_id
+        INNER JOIN sys_permission p ON rp.permission_id = p.permission_id
+        WHERE u.account_id = #{accountId}
+          AND p.code IS NOT NULL
+          AND p.code != ''
+          AND p.status = '0'
+    </select>
 
 </mapper>

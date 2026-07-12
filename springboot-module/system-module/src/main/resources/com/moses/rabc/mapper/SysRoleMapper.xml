@@ -15,4 +15,13 @@
             <result property="updateTime" column="update_time" />
     </resultMap>
 
+    <select id="selectRoleCodeByAccountId" resultType="java.lang.String">
+        SELECT r.role_code
+        FROM sys_user u
+        INNER JOIN sys_role r ON u.role_id = r.role_id
+        WHERE u.account_id = #{accountId}
+          AND r.status = '0'
+        LIMIT 1
+    </select>
+
 </mapper>
