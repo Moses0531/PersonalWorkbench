@@ -10,6 +10,7 @@ import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
 import com.moses.utils.CaptchaUtil;
 import com.moses.utils.FormatUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,13 +23,12 @@ public class SysAuthServiceImpl implements SysAuthService {
 
     private static final long DEFAULT_ROLE_ID = 2L;
 
-    private final CaptchaUtil captchaUtil;
-    private final SysUserService sysUserService;
+    @Autowired
+    private  CaptchaUtil captchaUtil;
 
-    public SysAuthServiceImpl(CaptchaUtil captchaUtil, SysUserService sysUserService) {
-        this.captchaUtil = captchaUtil;
-        this.sysUserService = sysUserService;
-    }
+    @Autowired
+    private  SysUserService sysUserService;
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
