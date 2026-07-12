@@ -10,7 +10,7 @@ CREATE TABLE `sys_user` (
                             `email`           varchar(50) DEFAULT NULL COMMENT '邮箱',
                             `real_name`       varchar(100) DEFAULT '' COMMENT '真实姓名',
                             `sex`             char(1) DEFAULT '0' COMMENT '性别',
-                            `avatar`          varchar(255) DEFAULT '' COMMENT '头像',
+                            `avatar`          varchar(255) DEFAULT 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png' COMMENT '头像',
                             `birthday`        datetime DEFAULT NULL COMMENT '生日',
                             `last_login_time` datetime DEFAULT NULL COMMENT '最近登录时间',
                             `create_time`     datetime DEFAULT CURRENT_TIMESTAMP,
@@ -124,5 +124,5 @@ INSERT INTO `role_permission` (`role_id`, `permission_id`) VALUES
                                                                (2, 1), (2, 100), (2, 103);
 
 -- 初始化 ROOT 用户（账号 root，密码 root123）
-INSERT INTO `sys_user` (`account`, `password`, `status`, `role_id`, `username`) VALUES
-    ('root', '$2b$10$ygdWz1SFbxvtm5YiAnY2S..Hl44JLU6j9oNCEcM9uCXInMxtheWEy', '0', 0, '超级管理员');
+INSERT INTO `sys_user` (`account`, `password`, `status`, `role_id`, `username`, `avatar`) VALUES
+    ('root', '$2b$10$ygdWz1SFbxvtm5YiAnY2S..Hl44JLU6j9oNCEcM9uCXInMxtheWEy', '0', 0, '超级管理员', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png');
