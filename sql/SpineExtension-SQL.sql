@@ -49,7 +49,7 @@ CREATE TABLE `sys_permission` (
                               `parent_id` bigint DEFAULT '0' COMMENT '父权限ID（0表示根节点）',
                               `type` char(1) DEFAULT 'M' COMMENT '类型（D-目录，M-菜单，F-功能）',
                               `status` char(1) DEFAULT '0' COMMENT '状态（0-正常，1-停用）',
-                              `code` varchar(20) DEFAULT NULL COMMENT '权限标识码',
+                              `code` varchar(255) DEFAULT NULL COMMENT '权限标识码',
                               `icon` varchar(255) DEFAULT '' COMMENT '图标URL',
                               `remark` varchar(500) DEFAULT '' COMMENT '备注',
                               `router_name` varchar(255) DEFAULT NULL COMMENT '页面路由',
@@ -73,3 +73,56 @@ CREATE TABLE `role_permission` (
                                    KEY `idx_role_id` (`role_id`),
                                    KEY `idx_permission_id` (`permission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色-权限关联表';
+
+-- 权限数据
+INSERT INTO `sys_permission` (`permission_id`, `name`, `parent_id`, `type`, `status`, `code`, `icon`, `remark`, `router_name`, `order`, `component_path`, `is_display`) VALUES
+                                                                                                                                                                            (1, '首页', 0, 'M', '0', 'home:query', '', NULL, 'dashboard', 0, 'views/system/DashboardPage.vue', 0),
+                                                                                                                                                                            (100, '个人信息', 0, 'M', '0', 'profile', '', '个人信息页', 'ProfilePage', 1, 'views/system/profile.vue', 1),
+                                                                                                                                                                            (103, '编辑个人信息', 100, 'F', '0', 'profile:modify', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (200, '系统管理目录', 0, 'D', '0', 'system', '', '系统管理根目录', NULL, NULL, NULL, 0),
+                                                                                                                                                                            (210, '用户管理列表', 200, 'M', '0', 'user', '', '普通用户管理', 'UserManagementPage', NULL, 'views/system/user-management.vue', 0),
+                                                                                                                                                                            (211, '新增用户', 210, 'F', '0', 'user:add', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (212, '删除用户', 210, 'F', '0', 'user:remove', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (213, '编辑用户', 210, 'F', '0', 'user:modify', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (214, '查看用户', 210, 'F', '0', 'user:query', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (220, '角色管理列表', 200, 'M', '0', 'role', '', '角色配置', 'RoleManagementPage', NULL, 'views/system/role-management.vue', 0),
+                                                                                                                                                                            (221, '新增角色', 220, 'F', '0', 'role:add', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (222, '删除角色', 220, 'F', '0', 'role:remove', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (223, '编辑角色', 220, 'F', '0', 'role:modify', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (224, '查看角色', 220, 'F', '0', 'role:query', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (230, '权限管理列表', 200, 'M', '0', 'permission', '', '权限配置', 'PermissionManagementPage', NULL, 'views/system/permission-management.vue', 0),
+                                                                                                                                                                            (231, '新增权限', 230, 'F', '0', 'permission:add', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (232, '删除权限', 230, 'F', '0', 'permission:remove', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (233, '编辑权限', 230, 'F', '0', 'permission:modify', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (234, '查看权限', 230, 'F', '0', 'permission:query', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (240, '管理员信息列表', 200, 'M', '0', 'admin', '', '超级管理员可访问', 'AdminManagementPage', NULL, 'views/system/admin-management.vue', 0),
+                                                                                                                                                                            (241, '新增管理员', 240, 'F', '0', 'admin:add', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (242, '删除管理员', 240, 'F', '0', 'admin:remove', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (243, '编辑管理员', 240, 'F', '0', 'admin:modify', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (244, '查看管理员', 240, 'F', '0', 'admin:query', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (250, '角色权限管理', 200, 'M', '0', 'rolePermission', '', '角色与权限绑定', 'RolePermissionPage', NULL, 'views/system/role-permission.vue', 0),
+                                                                                                                                                                            (251, '查看角色权限', 250, 'F', '0', 'rolePermission:query', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (252, '新增角色权限', 250, 'F', '0', 'rolePermission:add', '', NULL, NULL, NULL, NULL, 0),
+                                                                                                                                                                            (253, '移除角色权限', 250, 'F', '0', 'rolePermission:remove', '', NULL, NULL, NULL, NULL, 0);
+
+-- 角色权限关联：ROOT 拥有全部权限
+INSERT INTO `role_permission` (`role_id`, `permission_id`) VALUES
+                                                               (0, 1), (0, 100), (0, 103),
+                                                               (0, 200), (0, 210), (0, 211), (0, 212), (0, 213), (0, 214),
+                                                               (0, 220), (0, 221), (0, 222), (0, 223), (0, 224),
+                                                               (0, 230), (0, 231), (0, 232), (0, 233), (0, 234),
+                                                               (0, 240), (0, 241), (0, 242), (0, 243), (0, 244),
+                                                               (0, 250), (0, 251), (0, 252), (0, 253);
+
+-- 角色权限关联：ADMIN 管理普通用户 + 个人信息
+INSERT INTO `role_permission` (`role_id`, `permission_id`) VALUES
+                                                               (1, 1), (1, 100), (1, 103),
+                                                               (1, 200), (1, 210), (1, 211), (1, 212), (1, 213), (1, 214);
+
+-- 角色权限关联：USER 首页 + 个人信息
+INSERT INTO `role_permission` (`role_id`, `permission_id`) VALUES
+                                                               (2, 1), (2, 100), (2, 103);
+
+-- 初始化 ROOT 用户（账号 root，密码 root123）
+INSERT INTO `sys_user` (`account`, `password`, `status`, `role_id`, `username`) VALUES
+    ('root', '$2b$10$ygdWz1SFbxvtm5YiAnY2S..Hl44JLU6j9oNCEcM9uCXInMxtheWEy', '0', 0, '超级管理员');
