@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Param;
 */
 public interface SysRoleMapper extends BaseMapper<SysRole> {
 
-    String selectRoleCodeByAccountId(@Param("accountId") Long accountId);
+    String selectRoleCodeByUserId(@Param("userId") Long userId);
 
 }
 

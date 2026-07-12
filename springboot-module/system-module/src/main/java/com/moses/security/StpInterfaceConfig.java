@@ -27,8 +27,8 @@ public class StpInterfaceConfig implements StpInterface {
 
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
-        Long accountId = Long.valueOf(loginId.toString());
-        List<String> permissionList = sysPermissionMapper.selectPermissionCodesByAccountId(accountId);
+        Long userId = Long.valueOf(loginId.toString());
+        List<String> permissionList = sysPermissionMapper.selectPermissionCodesByUserId(userId);
         if (permissionList == null) {
             return new ArrayList<>();
         }
@@ -37,8 +37,8 @@ public class StpInterfaceConfig implements StpInterface {
 
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
-        Long accountId = Long.valueOf(loginId.toString());
-        String roleCode = sysRoleMapper.selectRoleCodeByAccountId(accountId);
+        Long userId = Long.valueOf(loginId.toString());
+        String roleCode = sysRoleMapper.selectRoleCodeByUserId(userId);
         List<String> roleList = new ArrayList<>();
         if (roleCode != null && !roleCode.trim().isEmpty()) {
             roleList.add(roleCode);
