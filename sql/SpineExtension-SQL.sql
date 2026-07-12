@@ -47,9 +47,9 @@ CREATE TABLE `sys_role` (
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统角色表';
 
 INSERT INTO `sys_role` (`role_id`, `role_name`, `role_code`, `level`, `description`) VALUES
-                                                                                     (1, '超级管理员', 'ROOT', 0, '平台最高权限'),
-                                                                                     (2, '管理员', 'ADMIN', 1, '系统运维权限'),
-                                                                                     (3, '普通用户', 'USER', 2, '普通业务用户');
+                                                                                     (0, '超级管理员', 'ROOT', 0, '平台最高权限'),
+                                                                                     (1, '管理员', 'ADMIN', 1, '系统运维权限'),
+                                                                                     (2, '普通用户', 'USER', 2, '普通业务用户');
 
 -- 权限表
 CREATE TABLE `sys_permission` (
