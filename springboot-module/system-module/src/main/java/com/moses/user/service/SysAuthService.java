@@ -1,7 +1,7 @@
-package com.moses.auth.service;
+package com.moses.user.service;
 
-import com.moses.auth.entity.Login;
-import com.moses.auth.entity.Register;
+import com.moses.user.entity.Login;
+import com.moses.user.entity.Register;
 
 /**
  * 用户认证服务

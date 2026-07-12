@@ -1,4 +1,4 @@
-package com.moses.auth.entity;
+package com.moses.user.entity;
 
 import lombok.Data;
 

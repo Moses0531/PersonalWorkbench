@@ -1,8 +1,8 @@
-package com.moses.auth.controller;
+package com.moses.user.controller;
 
-import com.moses.auth.entity.Login;
-import com.moses.auth.entity.Register;
-import com.moses.auth.service.SysAuthService;
+import com.moses.user.entity.Login;
+import com.moses.user.entity.Register;
+import com.moses.user.service.SysAuthService;
 import com.moses.config.ResultConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

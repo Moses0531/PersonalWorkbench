@@ -1,11 +1,11 @@
-package com.moses.auth.service.impl;
+package com.moses.user.service.impl;
 
 import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.moses.auth.entity.Login;
-import com.moses.auth.entity.Register;
-import com.moses.auth.service.SysAuthService;
+import com.moses.user.entity.Login;
+import com.moses.user.entity.Register;
+import com.moses.user.service.SysAuthService;
 import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
 import com.moses.utils.CaptchaUtil;
