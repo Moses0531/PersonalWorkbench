@@ -41,7 +41,7 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     auto-mapping-behavior: full
-  mapper-locations: classpath*:com/moses/mapper/*.xml
+  mapper-locations: classpath*:com/moses/**/mapper/*.xml
   type-aliases-package: com.moses.entity
 # 阿里云 OSS 配置
 aliyun:
