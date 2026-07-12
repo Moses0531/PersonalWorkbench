@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moses.rabc.mapper.SysPermissionMapper">
+
+    <resultMap id="BaseResultMap" type="com.moses.rabc.entity.SysPermission">
+            <id property="permissionId" column="permission_id" />
+            <result property="name" column="name" />
+            <result property="parentId" column="parent_id" />
+            <result property="type" column="type" />
+            <result property="status" column="status" />
+            <result property="code" column="code" />
+            <result property="icon" column="icon" />
+            <result property="remark" column="remark" />
+            <result property="routerName" column="router_name" />
+            <result property="order" column="order" />
+            <result property="componentPath" column="component_path" />
+            <result property="isDisplay" column="is_display" />
+            <result property="createTime" column="create_time" />
+            <result property="updateTime" column="update_time" />
+    </resultMap>
+
+
+</mapper>
