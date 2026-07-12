@@ -1,4 +1,4 @@
-package com.moses.config;
+package com.moses.security;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import org.springframework.context.annotation.Configuration;
