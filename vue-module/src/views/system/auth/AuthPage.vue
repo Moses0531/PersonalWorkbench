@@ -95,6 +95,32 @@
               @submit.prevent="onRegisterSubmit"
             >
               <el-form-item>
+                <template #label><span class="label-text">注册方式</span></template>
+                <div class="register-type-tabs" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    class="register-type-tab"
+                    :class="{ active: registerType === 'phone' }"
+                    :aria-selected="registerType === 'phone'"
+                    @click="switchRegisterType('phone')"
+                  >
+                    手机号
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    class="register-type-tab"
+                    :class="{ active: registerType === 'email' }"
+                    :aria-selected="registerType === 'email'"
+                    @click="switchRegisterType('email')"
+                  >
+                    邮箱
+                  </button>
+                </div>
+              </el-form-item>
+
+              <el-form-item v-if="registerType === 'phone'">
                 <template #label><span class="label-text">手机号</span></template>
                 <el-input
                   v-model.trim="registerForm.phone"
@@ -105,10 +131,21 @@
                 </el-input>
               </el-form-item>
 
+              <el-form-item v-else>
+                <template #label><span class="label-text">邮箱</span></template>
+                <el-input
+                  v-model.trim="registerForm.email"
+                  placeholder="请输入邮箱"
+                  clearable
+                >
+                  <template #prefix><el-icon><Message /></el-icon></template>
+                </el-input>
+              </el-form-item>
+
               <el-form-item class="form-item-last">
                 <template #label><span class="label-text">提示</span></template>
                 <div class="auth-readonly-field">
-                  <span class="auth-readonly-field__body">填写手机号后，</span><span class="auth-readonly-field__action">点击下一步</span><span class="auth-readonly-field__body">设置密码</span>
+                  <span class="auth-readonly-field__body">注册成功后系统将自动生成登录账号，</span><span class="auth-readonly-field__action">点击下一步</span><span class="auth-readonly-field__body">设置密码</span>
                 </div>
               </el-form-item>
             </el-form>
@@ -235,7 +272,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Iphone, CircleCheck, ArrowRight } from '@element-plus/icons-vue'
+import { User, Lock, Iphone, Message, CircleCheck, ArrowRight } from '@element-plus/icons-vue'
 import { loginApi, registerApi } from '@/apis/system/AuthApi'
 import { fetchCaptchaBase64Api } from '@/apis/common/CaptchaApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -256,6 +293,7 @@ const captchaBase64 = ref('')
 const captchaToken = ref('')
 const captchaTimestamp = ref(0)
 const registerStep = ref(1)  // 注册分两步：基本信息 -> 密码
+const registerType = ref('phone')  // phone | email，与后端 Register 二选一
 
 const loginForm = reactive({
   account: '',
@@ -265,10 +303,13 @@ const loginForm = reactive({
 
 const registerForm = reactive({
   phone: '',
+  email: '',
   password: '',
   confirmPassword: '',
   captcha: ''
 })
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const loginRules = {
   account: [{ required: true, message: '请输入账号、手机号或邮箱', trigger: 'blur' }],
@@ -293,8 +334,18 @@ function switchTab(tab) {
   if (activeTab.value === tab) return
   activeTab.value = tab
   registerStep.value = 1
+  registerType.value = 'phone'
+  registerForm.phone = ''
+  registerForm.email = ''
   router.replace({ path: '/auth', query: { ...route.query, tab } })
   refreshCaptcha()
+}
+
+function switchRegisterType(type) {
+  if (registerType.value === type) return
+  registerType.value = type
+  registerForm.phone = ''
+  registerForm.email = ''
 }
 
 async function refreshCaptcha() {
@@ -310,13 +361,24 @@ async function refreshCaptcha() {
 }
 
 function nextRegisterStep() {
-  if (!registerForm.phone?.trim()) {
-    ElMessage.warning('请输入手机号')
-    return
-  }
-  if (!/^1[3-9]\d{9}$/.test(registerForm.phone)) {
-    ElMessage.warning('请输入正确的手机号')
-    return
+  if (registerType.value === 'phone') {
+    if (!registerForm.phone?.trim()) {
+      ElMessage.warning('请输入手机号')
+      return
+    }
+    if (!/^1[3-9]\d{9}$/.test(registerForm.phone)) {
+      ElMessage.warning('请输入正确的手机号')
+      return
+    }
+  } else {
+    if (!registerForm.email?.trim()) {
+      ElMessage.warning('请输入邮箱')
+      return
+    }
+    if (!EMAIL_PATTERN.test(registerForm.email)) {
+      ElMessage.warning('请输入正确的邮箱')
+      return
+    }
   }
   registerStep.value = 2
   registerForm.captcha = ''
@@ -337,15 +399,18 @@ function onRegisterSubmit() {
   }
 }
 
-/** 登录成功后：保存 token 并跳转仪表盘 */
-function completeLogin(data, accountFallback) {
+/** 登录成功后：保存 token 与 sys_user 核心字段并跳转仪表盘 */
+function completeLogin(data) {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
   }
+  if (!data?.userId) {
+    throw new Error('登录成功但未获取到用户ID')
+  }
 
   setAuth(data.token, {
-    account: data.account || accountFallback,
     userId: data.userId,
+    account: data.account,
     username: data.username,
   })
   ElMessage.success('登录成功')
@@ -368,7 +433,7 @@ async function handleLogin() {
       captchaToken: captchaToken.value,
       captchaTimestamp: captchaTimestamp.value,
     })
-    completeLogin(result?.data || {}, loginForm.account)
+    completeLogin(result?.data || {})
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
     refreshCaptcha()
@@ -379,6 +444,14 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  if (!registerForm.password?.trim()) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+  if (registerForm.password.length < 6 || registerForm.password.length > 20) {
+    ElMessage.warning('密码长度需在 6-20 位之间')
+    return
+  }
   if (registerForm.password !== registerForm.confirmPassword) {
     ElMessage.warning('两次输入密码不一致')
     return
@@ -390,17 +463,28 @@ async function handleRegister() {
 
   registerLoading.value = true
   try {
-    const result = await registerApi({
-      phone: registerForm.phone,
+    const payload = {
       password: registerForm.password,
       confirmPassword: registerForm.confirmPassword,
       captchaCode: registerForm.captcha,
       captchaToken: captchaToken.value,
       captchaTimestamp: captchaTimestamp.value,
-    })
+    }
+    if (registerType.value === 'phone') {
+      payload.phone = registerForm.phone
+    } else {
+      payload.email = registerForm.email
+    }
+
+    const result = await registerApi(payload)
     const data = result?.data || {}
-    ElMessage.success(`注册成功，您的账号为 ${data.account || '已生成'}`)
-    loginForm.account = data.account || registerForm.phone
+    if (!data.account) {
+      throw new Error('注册成功但未获取到系统账号')
+    }
+    ElMessage.success(`注册成功，系统账号：${data.account}`)
+    loginForm.account = data.account
+    registerForm.password = ''
+    registerForm.confirmPassword = ''
     registerStep.value = 1
     switchTab('login')
   } catch (error) {
@@ -500,6 +584,39 @@ onMounted(() => {
   background: var(--auth-tabs-bg);
   border-radius: 8px;
   border: 1px solid var(--auth-border);
+}
+
+.register-type-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  width: 100%;
+  padding: 4px;
+  background: var(--auth-tabs-bg);
+  border-radius: 8px;
+  border: 1px solid var(--auth-border);
+}
+
+.register-type-tab {
+  min-height: 34px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.register-type-tab:hover {
+  color: var(--auth-accent);
+}
+
+.register-type-tab.active {
+  color: var(--auth-text-inverse);
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--auth-accent-light), var(--auth-accent));
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.28);
 }
 
 .auth-tab {
