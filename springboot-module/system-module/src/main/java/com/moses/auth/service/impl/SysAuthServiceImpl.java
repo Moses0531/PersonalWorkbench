@@ -1,18 +1,15 @@
 package com.moses.auth.service.impl;
 
+import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.moses.auth.entity.Login;
 import com.moses.auth.entity.Register;
-import com.moses.auth.entity.SysAuth;
-import com.moses.auth.mapper.SysAuthMapper;
 import com.moses.auth.service.SysAuthService;
 import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
 import com.moses.utils.CaptchaUtil;
 import com.moses.utils.FormatUtil;
-import cn.dev33.satoken.secure.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -21,8 +18,7 @@ import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
-        implements SysAuthService {
+public class SysAuthServiceImpl implements SysAuthService {
 
     private static final long DEFAULT_ROLE_ID = 2L;
 
@@ -84,20 +80,14 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
         String account = generateUniqueAccount();
         Date now = new Date();
 
-        SysAuth sysAuth = new SysAuth();
-        sysAuth.setAccount(account);
-        sysAuth.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
-        sysAuth.setStatus("0");
-        sysAuth.setCreateTime(now);
-        sysAuth.setUpdateTime(now);
-        save(sysAuth);
-
         SysUser sysUser = new SysUser();
-        sysUser.setAccountId(sysAuth.getAccountId());
+        sysUser.setAccount(account);
+        sysUser.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
+        sysUser.setStatus("0");
         sysUser.setRoleId(DEFAULT_ROLE_ID);
         sysUser.setUsername("用户" + account);
-        sysUser.setPhone(phone != null ? phone : "");
-        sysUser.setEmail(email != null ? email : "");
+        sysUser.setPhone(phone);
+        sysUser.setEmail(email);
         sysUser.setCreateTime(now);
         sysUser.setUpdateTime(now);
         sysUserService.save(sysUser);
@@ -126,34 +116,30 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
 
         account = account.trim();
         validateLoginAccount(account);
-        SysAuth sysAuth = findAuthByAccount(account);
-        if (sysAuth == null) {
+
+        SysUser sysUser = findUserByIdentifier(account);
+        if (sysUser == null) {
             throw new RuntimeException("账号不存在");
         }
-        if ("1".equals(sysAuth.getStatus())) {
+        if ("1".equals(sysUser.getStatus())) {
             throw new RuntimeException("账号已被封禁");
         }
-        if (!BCrypt.checkpw(password, sysAuth.getPassword())) {
+        if (!BCrypt.checkpw(password, sysUser.getPassword())) {
             throw new RuntimeException("密码错误");
         }
 
-        StpUtil.login(sysAuth.getAccountId());
+        StpUtil.login(sysUser.getUserId());
 
         Date now = new Date();
-        sysAuth.setLastLoginTime(now);
-        sysAuth.setUpdateTime(now);
-        updateById(sysAuth);
-
-        SysUser sysUser = sysUserService.getOne(
-                new LambdaQueryWrapper<SysUser>().eq(SysUser::getAccountId, sysAuth.getAccountId()));
+        sysUser.setLastLoginTime(now);
+        sysUser.setUpdateTime(now);
+        sysUserService.updateById(sysUser);
 
         Login result = new Login();
         result.setToken(StpUtil.getTokenValue());
-        result.setAccount(sysAuth.getAccount());
-        if (sysUser != null) {
-            result.setUserId(sysUser.getUserId());
-            result.setUsername(sysUser.getUsername());
-        }
+        result.setAccount(sysUser.getAccount());
+        result.setUserId(sysUser.getUserId());
+        result.setUsername(sysUser.getUsername());
         return result;
     }
 
@@ -172,7 +158,7 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
     private String generateUniqueAccount() {
         for (int i = 0; i < 20; i++) {
             String account = String.valueOf(ThreadLocalRandom.current().nextInt(10000000, 100000000));
-            long count = count(new LambdaQueryWrapper<SysAuth>().eq(SysAuth::getAccount, account));
+            long count = sysUserService.count(new LambdaQueryWrapper<SysUser>().eq(SysUser::getAccount, account));
             if (count == 0) {
                 return account;
             }
@@ -180,19 +166,14 @@ public class SysAuthServiceImpl extends ServiceImpl<SysAuthMapper, SysAuth>
         throw new RuntimeException("账号生成失败，请稍后重试");
     }
 
-    private SysAuth findAuthByAccount(String identifier) {
-        SysAuth sysAuth = getOne(new LambdaQueryWrapper<SysAuth>().eq(SysAuth::getAccount, identifier));
-        if (sysAuth != null) {
-            return sysAuth;
+    private SysUser findUserByIdentifier(String identifier) {
+        SysUser sysUser = sysUserService.getOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getAccount, identifier));
+        if (sysUser != null) {
+            return sysUser;
         }
-
-        SysUser sysUser = sysUserService.getOne(new LambdaQueryWrapper<SysUser>()
+        return sysUserService.getOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getPhone, identifier)
                 .or()
                 .eq(SysUser::getEmail, identifier));
-        if (sysUser == null) {
-            return null;
-        }
-        return getById(sysUser.getAccountId());
     }
 }

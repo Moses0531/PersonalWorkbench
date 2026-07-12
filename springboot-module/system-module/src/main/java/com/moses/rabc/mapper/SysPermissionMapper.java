@@ -14,7 +14,7 @@ import java.util.List;
 */
 public interface SysPermissionMapper extends BaseMapper<SysPermission> {
 
-    List<String> selectPermissionCodesByAccountId(@Param("accountId") Long accountId);
+    List<String> selectPermissionCodesByUserId(@Param("userId") Long userId);
 
 }
 
