@@ -21,8 +21,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class SysAuthServiceImpl implements SysAuthService {
 
-    private static final long DEFAULT_ROLE_ID = 2L;
-
     @Autowired
     private  CaptchaUtil captchaUtil;
 
@@ -84,7 +82,7 @@ public class SysAuthServiceImpl implements SysAuthService {
         sysUser.setAccount(account);
         sysUser.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
         sysUser.setStatus("0");
-        sysUser.setRoleId(DEFAULT_ROLE_ID);
+        sysUser.setRoleId(2L);
         sysUser.setUsername("用户" + account);
         sysUser.setPhone(phone);
         sysUser.setEmail(email);
