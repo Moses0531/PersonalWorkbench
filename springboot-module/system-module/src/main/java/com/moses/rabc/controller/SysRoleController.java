@@ -1,7 +1,6 @@
 package com.moses.rabc.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import cn.dev33.satoken.annotation.SaCheckRole;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.moses.config.ResultConfig;
@@ -17,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/role")
 @Tag(name = "角色管理", description = "提供角色管理相关接口 (仅root可操作)")
-public class RoleController {
+public class SysRoleController {
     @Autowired
     private SysRoleService sysRoleService;
 
@@ -46,7 +45,7 @@ public class RoleController {
         return ResultConfig.success();
     }
 
-    @Operation(summary = "删除角色(多个)")
+    @Operation(summary = "批量删除角色")
     @SaCheckPermission("role:remove")
     @DeleteMapping("/deleteBatchRole")
     public ResultConfig deleteBatchRole(@RequestBody List<Integer> ids) {
