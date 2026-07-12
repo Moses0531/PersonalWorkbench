@@ -6,15 +6,18 @@
 
     <resultMap id="BaseResultMap" type="com.moses.user.entity.SysUser">
             <id property="userId" column="user_id" />
-            <result property="accountId" column="account_id" />
+            <result property="account" column="account" />
+            <result property="password" column="password" />
+            <result property="status" column="status" />
             <result property="roleId" column="role_id" />
             <result property="username" column="username" />
+            <result property="phone" column="phone" />
             <result property="email" column="email" />
             <result property="realName" column="real_name" />
-            <result property="phone" column="phone" />
             <result property="sex" column="sex" />
             <result property="avatar" column="avatar" />
             <result property="birthday" column="birthday" />
+            <result property="lastLoginTime" column="last_login_time" />
             <result property="createTime" column="create_time" />
             <result property="updateTime" column="update_time" />
     </resultMap>
