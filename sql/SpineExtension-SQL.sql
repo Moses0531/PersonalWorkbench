@@ -44,7 +44,7 @@ CREATE TABLE `sys_role` (
                         `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                         PRIMARY KEY (`role_id`),
                         UNIQUE KEY `uk_role_code` (`role_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统角色表';
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统角色表';
 
 INSERT INTO `sys_role` (`role_id`, `role_name`, `role_code`, `level`, `description`) VALUES
                                                                                      (0, '超级管理员', 'ROOT', 0, '平台最高权限'),
@@ -71,7 +71,7 @@ CREATE TABLE `sys_permission` (
                               KEY `idx_parent_id` (`parent_id`),
                               KEY `idx_type` (`type`),
                               KEY `idx_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=2031 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='权限表';
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='权限表';
 
 CREATE TABLE `role_permission` (
                                    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
