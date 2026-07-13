@@ -1,6 +1,7 @@
 package com.moses.rabc.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.util.Date;
@@ -62,7 +63,8 @@ public class SysPermission {
     /**
      * 排序
      */
-    private Integer order;
+    @TableField("display_order")
+    private Integer displayOrder;
 
     /**
      * 前端路由路径（如 /dashboard）
@@ -105,7 +107,7 @@ public class SysPermission {
             && (this.getIcon() == null ? other.getIcon() == null : this.getIcon().equals(other.getIcon()))
             && (this.getRemark() == null ? other.getRemark() == null : this.getRemark().equals(other.getRemark()))
             && (this.getRouterName() == null ? other.getRouterName() == null : this.getRouterName().equals(other.getRouterName()))
-            && (this.getOrder() == null ? other.getOrder() == null : this.getOrder().equals(other.getOrder()))
+            && (this.getDisplayOrder() == null ? other.getDisplayOrder() == null : this.getDisplayOrder().equals(other.getDisplayOrder()))
             && (this.getComponentPath() == null ? other.getComponentPath() == null : this.getComponentPath().equals(other.getComponentPath()))
             && (this.getIsDisplay() == null ? other.getIsDisplay() == null : this.getIsDisplay().equals(other.getIsDisplay()))
             && (this.getCreateTime() == null ? other.getCreateTime() == null : this.getCreateTime().equals(other.getCreateTime()))
@@ -125,7 +127,7 @@ public class SysPermission {
         result = prime * result + ((getIcon() == null) ? 0 : getIcon().hashCode());
         result = prime * result + ((getRemark() == null) ? 0 : getRemark().hashCode());
         result = prime * result + ((getRouterName() == null) ? 0 : getRouterName().hashCode());
-        result = prime * result + ((getOrder() == null) ? 0 : getOrder().hashCode());
+        result = prime * result + ((getDisplayOrder() == null) ? 0 : getDisplayOrder().hashCode());
         result = prime * result + ((getComponentPath() == null) ? 0 : getComponentPath().hashCode());
         result = prime * result + ((getIsDisplay() == null) ? 0 : getIsDisplay().hashCode());
         result = prime * result + ((getCreateTime() == null) ? 0 : getCreateTime().hashCode());
@@ -148,7 +150,7 @@ public class SysPermission {
         sb.append(", icon=").append(icon);
         sb.append(", remark=").append(remark);
         sb.append(", routerName=").append(routerName);
-        sb.append(", order=").append(order);
+        sb.append(", displayOrder=").append(displayOrder);
         sb.append(", componentPath=").append(componentPath);
         sb.append(", isDisplay=").append(isDisplay);
         sb.append(", createTime=").append(createTime);

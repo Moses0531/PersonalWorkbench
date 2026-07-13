@@ -15,7 +15,7 @@
         FROM sys_permission p
         INNER JOIN role_permission rp ON p.permission_id = rp.permission_id
         WHERE rp.role_id = #{roleId}
-        ORDER BY p.`order` ASC, p.permission_id ASC
+        ORDER BY p.display_order ASC, p.permission_id ASC
     </select>
 
     <delete id="deleteByRoleIdAndPermissionId">

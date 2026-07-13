@@ -53,7 +53,7 @@ CREATE TABLE `sys_permission` (
                               `icon` varchar(255) DEFAULT '' COMMENT '图标URL',
                               `remark` varchar(500) DEFAULT '' COMMENT '备注',
                               `router_name` varchar(255) DEFAULT NULL COMMENT '组件名称（如 DashboardPage，对应 Vue 文件名）',
-                              `order` int DEFAULT NULL COMMENT '排序',
+                              `display_order` int DEFAULT NULL COMMENT '排序',
                               `component_path` varchar(255) DEFAULT NULL COMMENT '前端路由路径（如 /dashboard）',
                               `is_display` int DEFAULT '0' COMMENT '是否显示在导航栏',
                               `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -75,7 +75,7 @@ CREATE TABLE `role_permission` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色-权限关联表';
 
 -- 权限数据
-INSERT INTO `sys_permission` (`permission_id`, `name`, `parent_id`, `type`, `status`, `code`, `icon`, `remark`, `router_name`, `order`, `component_path`, `is_display`) VALUES
+INSERT INTO `sys_permission` (`permission_id`, `name`, `parent_id`, `type`, `status`, `code`, `icon`, `remark`, `router_name`, `display_order`, `component_path`, `is_display`) VALUES
                                                                                                                                                                             (1, '首页', 0, 'M', '0', 'home:query', '', NULL, 'DashboardPage', 0, '/dashboard', 0),
                                                                                                                                                                             (100, '个人信息', 0, 'M', '0', 'profile', '', '个人信息页', 'ProfilePage', 1, '/profile', 1),
                                                                                                                                                                             (103, '编辑个人信息', 100, 'F', '0', 'profile:modify', '', NULL, NULL, NULL, NULL, 0),
@@ -126,3 +126,6 @@ INSERT INTO `role_permission` (`role_id`, `permission_id`) VALUES
 -- 初始化 ROOT 用户（账号 root，密码 root123）
 INSERT INTO `sys_user` (`account`, `password`, `status`, `role_id`, `username`, `avatar`) VALUES
     ('root', '$2b$10$ygdWz1SFbxvtm5YiAnY2S..Hl44JLU6j9oNCEcM9uCXInMxtheWEy', '0', 0, '超级管理员', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png');
+
+-- 已有库迁移：order 为 MySQL 保留字，改名为 display_order
+-- ALTER TABLE `sys_permission` CHANGE COLUMN `order` `display_order` int DEFAULT NULL COMMENT '排序';
