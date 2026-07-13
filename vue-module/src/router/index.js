@@ -28,7 +28,11 @@ router.beforeEach((to) => {
 
   if (to.meta.guest) {
     if (userStore.isLoggedIn && to.name === 'auth') {
-      ensureDynamicRoutes()
+      const ready = ensureDynamicRoutes()
+      if (!ready) {
+        userStore.clearAuth()
+        return true
+      }
       const first = userStore.getMenuRouterList?.[0]
       return first?.path ? (first.path.startsWith('/') ? first.path : `/${first.path}`) : '/dashboard'
     }
@@ -42,7 +46,8 @@ router.beforeEach((to) => {
   if (userStore.isLoggedIn) {
     const wasBuilt = userStore.routesBuilt
     const ready = ensureDynamicRoutes()
-    if (!ready && to.path !== '/auth') {
+    if (!ready) {
+      userStore.clearAuth()
       return { path: '/auth', query: { redirect: to.fullPath } }
     }
     if (!wasBuilt && userStore.routesBuilt) {

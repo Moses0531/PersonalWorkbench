@@ -3,7 +3,7 @@ import { TOKEN_KEY } from '@/utils/request'
 import { buildMenuState } from '@/utils/menu'
 
 const USER_KEY = 'rbac_user'
-const MENU_KEY = 'rbac_menu'
+const MENU_KEY = 'rbac_menu_v2'
 
 function readStoredUser() {
   try {
