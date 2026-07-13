@@ -61,8 +61,7 @@
           </svg>
         </button>
         <div class="rail-avatar" @click="goToProfile" :title="displayName">
-          <img v-if="userAvatar" :src="userAvatar" class="rail-avatar-img" alt="" @error="onAvatarError" />
-          <span v-else class="rail-avatar-text">{{ avatarInitial }}</span>
+          <img :src="userAvatar" class="rail-avatar-img" alt="" @error="onAvatarError" />
         </div>
       </div>
     </nav>
@@ -200,10 +199,9 @@ const activePath = computed(() => route.path)
 const displayName = computed(
   () => userStore.user?.username || userStore.user?.account || '用户',
 )
-const avatarInitial = computed(() => {
-  const name = displayName.value || '用户'
-  return name.charAt(0).toUpperCase()
-})
+
+const DEFAULT_AVATAR = 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png'
+const avatarLoadFailed = ref(false)
 
 const PAGE_FALLBACK_TITLES = {
   403: '无权限',
@@ -223,16 +221,19 @@ const currentPageTitle = computed(() => {
 })
 
 const userAvatar = computed(() => {
-  const avatar = userStore.user?.avatar
-  if (!avatar) return ''
+  if (avatarLoadFailed.value) return DEFAULT_AVATAR
+  const avatar = userStore.user?.avatar || DEFAULT_AVATAR
   if (/^https?:\/\//.test(avatar)) return avatar
   const base = (import.meta.env.VITE_APP_BASE_API || '/api').replace(/\/$/, '')
   const path = avatar.startsWith('/') ? avatar : `/${avatar}`
   return `${base}${path}`
 })
 
+watch(() => userStore.user?.avatar, () => { avatarLoadFailed.value = false })
+
 function onAvatarError(e) {
-  e.target.style.display = 'none'
+  avatarLoadFailed.value = true
+  e.target.src = DEFAULT_AVATAR
 }
 
 function filterVisibleChildren(menu) {
@@ -762,12 +763,6 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.rail-avatar-text {
-  font-size: 11px;
-  font-weight: var(--font-bold);
-  color: var(--color-accent);
 }
 
 /* ═══════════════════════════════

@@ -415,6 +415,7 @@ function completeLogin(data) {
     userId: data.userId,
     account: data.account,
     username: data.username,
+    avatar: data.avatar,
   })
   setUserLoginInfo(data)
   buildRoutes(appRouter)
