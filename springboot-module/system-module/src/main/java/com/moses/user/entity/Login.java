@@ -1,6 +1,9 @@
 package com.moses.user.entity;
 
+import com.moses.rabc.entity.SysPermission;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class Login {
@@ -28,4 +31,7 @@ public class Login {
 
     /** 用户名（登录成功后返回） */
     private String username;
+
+    /** 当前用户可访问的权限菜单列表（平铺） */
+    private List<SysPermission> menuList;
 }

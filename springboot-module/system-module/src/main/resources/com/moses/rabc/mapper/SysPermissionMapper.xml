@@ -32,4 +32,16 @@
           AND p.status = '0'
     </select>
 
+    <select id="selectMenusByUserId" resultMap="BaseResultMap">
+        SELECT DISTINCT p.permission_id, p.name, p.parent_id, p.type, p.status, p.code,
+               p.icon, p.remark, p.router_name, p.`order`, p.component_path, p.is_display,
+               p.create_time, p.update_time
+        FROM sys_user u
+        INNER JOIN role_permission rp ON u.role_id = rp.role_id
+        INNER JOIN sys_permission p ON rp.permission_id = p.permission_id
+        WHERE u.user_id = #{userId}
+          AND p.status = '0'
+        ORDER BY p.parent_id, p.`order`, p.permission_id
+    </select>
+
 </mapper>

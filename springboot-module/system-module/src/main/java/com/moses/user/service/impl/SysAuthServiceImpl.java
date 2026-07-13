@@ -3,6 +3,8 @@ package com.moses.user.service.impl;
 import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.moses.rabc.entity.SysPermission;
+import com.moses.rabc.mapper.SysPermissionMapper;
 import com.moses.user.entity.Login;
 import com.moses.user.entity.Register;
 import com.moses.user.service.SysAuthService;
@@ -15,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -26,6 +30,9 @@ public class SysAuthServiceImpl implements SysAuthService {
 
     @Autowired
     private  SysUserService sysUserService;
+
+    @Autowired
+    private SysPermissionMapper sysPermissionMapper;
 
 
     @Override
@@ -138,6 +145,8 @@ public class SysAuthServiceImpl implements SysAuthService {
         result.setAccount(sysUser.getAccount());
         result.setUserId(sysUser.getUserId());
         result.setUsername(sysUser.getUsername());
+        List<SysPermission> menuList = sysPermissionMapper.selectMenusByUserId(sysUser.getUserId());
+        result.setMenuList(menuList != null ? menuList : new ArrayList<>());
         return result;
     }
 
