@@ -3,7 +3,7 @@ export const constantRoutes = [
   {
     path: '/auth',
     name: 'auth',
-    component: () => import('@/views/system/auth/AuthPage.vue'),
+    component: () => import('@/views/system/user/AuthPage.vue'),
     meta: { guest: true },
   },
   {
