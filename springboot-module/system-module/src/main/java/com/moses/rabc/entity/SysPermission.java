@@ -55,7 +55,7 @@ public class SysPermission {
     private String remark;
 
     /**
-     * 页面路由
+     * 组件名称（对应 Vue 文件名，如 DashboardPage）
      */
     private String routerName;
 
@@ -65,7 +65,7 @@ public class SysPermission {
     private Integer order;
 
     /**
-     * 路径
+     * 前端路由路径（如 /dashboard）
      */
     private String componentPath;
 

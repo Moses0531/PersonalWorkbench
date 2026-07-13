@@ -10,21 +10,7 @@ for (const [rawKey, loader] of Object.entries(viewModules)) {
   }
 }
 
-/** 按 component_path 解析 glob loader */
-export function getViewLoaderByComponentPath(componentPath) {
-  if (!componentPath) return undefined
-  const normalized = componentPath.replace(/\\/g, '/').replace(/^\//, '')
-  const fileName = normalized.split('/').pop()
-  if (fileName && loadersByFileName.has(fileName)) {
-    return loadersByFileName.get(fileName)
-  }
-  const globKey = normalized.startsWith('views/')
-    ? `../${normalized}`
-    : `../views/${normalized}`
-  return viewModules[globKey]
-}
-
-/** 按 PascalCase router_name 解析 loader，如 DashboardPage → DashboardPage.vue */
+/** 按 router_name（组件名）解析 glob loader，如 DashboardPage → DashboardPage.vue */
 export function getViewLoaderByRouterName(routerName) {
   if (!routerName) return undefined
   const trimmed = String(routerName).trim()
@@ -46,9 +32,5 @@ export function getViewLoaderByRouterName(routerName) {
 }
 
 export function resolveViewLoader(menu) {
-  return (
-    getViewLoaderByComponentPath(menu.component) ||
-    getViewLoaderByRouterName(menu.routerName) ||
-    getViewLoaderByComponentPath(menu.path?.replace(/^\//, 'views/') + '.vue')
-  )
+  return getViewLoaderByRouterName(menu.routerName)
 }

@@ -17,17 +17,59 @@ export function isFunctionType(item) {
   return item?.menuType === MENU_TYPE.FUNCTION
 }
 
-/** 后端 SysPermission → 前端统一菜单结构（唯一适配点） */
+function looksLikeRoutePath(value) {
+  const s = String(value ?? '').trim()
+  return s.startsWith('/')
+}
+
+function looksLikeComponentName(value) {
+  const s = String(value ?? '').trim()
+  if (!s || s.startsWith('/')) return false
+  if (/\.vue$/i.test(s)) return true
+  return /Page$/i.test(s) || /^[A-Z][A-Za-z0-9]*$/.test(s)
+}
+
+function pathToComponentName(path) {
+  const segment = String(path ?? '').replace(/^\//, '').split('/').filter(Boolean).pop() || ''
+  if (!segment) return ''
+  return (
+    segment
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('') + 'Page'
+  )
+}
+
+/** 兼容旧库：router_name 与 component_path 曾互换语义 */
+function coalescePermissionFields(permission) {
+  let routerName = String(permission.routerName ?? permission.router_name ?? '').trim()
+  let routePath = String(permission.componentPath ?? permission.component_path ?? '').trim()
+
+  if (looksLikeRoutePath(routerName) && looksLikeComponentName(routePath)) {
+    return { routerName: routePath, routePath: routerName }
+  }
+  if (looksLikeRoutePath(routePath) && looksLikeComponentName(routerName)) {
+    return { routerName, routePath }
+  }
+  if (looksLikeRoutePath(routerName) && !routePath) {
+    return { routerName: pathToComponentName(routerName), routePath: routerName }
+  }
+  return { routerName, routePath }
+}
+
+/** 后端 SysPermission → 前端统一菜单结构（唯一适配点）
+ * router_name  → Vue 组件名（DashboardPage）
+ * component_path → 前端 URL 路径（/dashboard）
+ */
 export function normalizeMenuItem(permission) {
-  const routerName = permission.routerName ?? permission.router_name ?? ''
+  const { routerName, routePath } = coalescePermissionFields(permission)
   return {
     menuId: permission.permissionId ?? permission.permission_id,
     menuName: permission.name,
     menuType: permission.type,
     parentId: permission.parentId ?? permission.parent_id ?? 0,
-    path: resolvePath(routerName, permission.componentPath ?? permission.component_path),
-    component: permission.componentPath ?? permission.component_path ?? null,
-    routerName: routerName || null,
+    path: resolveMenuPath(routePath, routerName),
+    routerName: routerName.replace(/\.vue$/i, '') || null,
     icon: permission.icon || '',
     visibleFlag: (permission.isDisplay ?? permission.is_display ?? 0) === 0,
     disabledFlag: (permission.status ?? '0') === '1',
@@ -37,15 +79,15 @@ export function normalizeMenuItem(permission) {
   }
 }
 
-/** 兼容 URL 路径（/dashboard）与 PascalCase（DashboardPage → /dashboard） */
-function resolvePath(routerName, componentPath) {
+/** component_path 存 URL；router_name 仅作组件名兜底推导路径 */
+function resolveMenuPath(routePath, routerName) {
+  const cp = String(routePath ?? '').trim()
+  if (cp.startsWith('/')) return cp
+  if (cp && !cp.includes('.vue')) return cp.startsWith('/') ? cp : `/${cp}`
   const rn = String(routerName ?? '').trim()
   if (rn.startsWith('/')) return rn
   if (rn) return componentPathFromRouterName(rn)
-  const cp = String(componentPath ?? '').trim()
-  if (!cp) return null
-  const fileName = cp.split('/').pop()?.replace(/\.vue$/i, '') ?? ''
-  return fileName ? componentPathFromRouterName(fileName) : null
+  return null
 }
 
 export function componentPathFromRouterName(routerName) {
