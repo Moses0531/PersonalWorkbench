@@ -1,6 +1,7 @@
 package com.moses.rabc.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.moses.config.ResultConfig;
 import com.moses.rabc.entity.RolePermission;
 import com.moses.rabc.service.RolePermissionService;
@@ -19,14 +20,14 @@ public class RolePermissionController {
 
     @GetMapping("/getPermissionsByRoleId")
     @Operation(summary = "查询角色对应的权限", description = "根据角色ID查询已绑定的权限列表")
-    @SaCheckPermission("rolePermission:query")
+    @SaCheckPermission(value = {"rolePermission:query", "role:modify", "role:query"}, mode = SaMode.OR)
     public ResultConfig getPermissionsByRoleId(@RequestParam Long roleId) {
         return ResultConfig.success(rolePermissionService.getPermissionsByRoleId(roleId));
     }
 
     @PostMapping("/addRolePermission")
     @Operation(summary = "给角色新增权限", description = "为指定角色绑定一个权限")
-    @SaCheckPermission("rolePermission:add")
+    @SaCheckPermission(value = {"rolePermission:add", "role:modify"}, mode = SaMode.OR)
     public ResultConfig addRolePermission(@RequestBody RolePermission rolePermission) {
         rolePermissionService.addRolePermission(rolePermission);
         return ResultConfig.success();
@@ -34,7 +35,7 @@ public class RolePermissionController {
 
     @DeleteMapping("/removeRolePermission")
     @Operation(summary = "移除角色权限", description = "解除角色与指定权限的绑定")
-    @SaCheckPermission("rolePermission:remove")
+    @SaCheckPermission(value = {"rolePermission:remove", "role:modify"}, mode = SaMode.OR)
     public ResultConfig removeRolePermission(@RequestBody RolePermission rolePermission) {
         rolePermissionService.removeRolePermission(rolePermission.getRoleId(), rolePermission.getPermissionId());
         return ResultConfig.success();

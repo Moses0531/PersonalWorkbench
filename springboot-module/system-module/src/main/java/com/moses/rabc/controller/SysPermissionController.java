@@ -2,6 +2,7 @@ package com.moses.rabc.controller;
 
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.moses.config.ResultConfig;
@@ -23,7 +24,7 @@ public class SysPermissionController {
 
     @GetMapping("/getPermissionPage")
     @Operation(summary = "获取权限分页列表", description = "获取权限分页列表")
-    @SaCheckPermission("permission:query")
+    @SaCheckPermission(value = {"permission:query", "role:modify"}, mode = SaMode.OR)
     public ResultConfig getPermissionPage(@RequestParam(value = "pageNum", defaultValue = "1") Integer current,
                                     @RequestParam(value = "pageRows", defaultValue = "20") Integer pageRows){
         IPage<SysPermission> permissionIPage = sysPermissionService.page(new Page<>(current, pageRows));

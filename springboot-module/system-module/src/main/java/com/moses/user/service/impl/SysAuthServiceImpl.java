@@ -150,9 +150,18 @@ public class SysAuthServiceImpl implements SysAuthService {
         result.setUserId(sysUser.getUserId());
         result.setUsername(sysUser.getUsername());
         result.setAvatar(sysUser.getAvatar());
-        List<SysPermission> menuList = sysPermissionMapper.selectMenusByUserId(sysUser.getUserId());
-        result.setMenuList(fillParentMenus(menuList != null ? menuList : new ArrayList<>()));
+        result.setMenuList(loadMenusForUser(sysUser.getUserId()));
         return result;
+    }
+
+    @Override
+    public List<SysPermission> getCurrentUserMenus() {
+        return loadMenusForUser(StpUtil.getLoginIdAsLong());
+    }
+
+    private List<SysPermission> loadMenusForUser(Long userId) {
+        List<SysPermission> menuList = sysPermissionMapper.selectMenusByUserId(userId);
+        return fillParentMenus(menuList != null ? menuList : new ArrayList<>());
     }
 
     /**

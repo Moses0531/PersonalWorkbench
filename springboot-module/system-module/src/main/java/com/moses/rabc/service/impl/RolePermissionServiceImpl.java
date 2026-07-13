@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.moses.rabc.entity.RolePermission;
 import com.moses.rabc.entity.SysPermission;
+import com.moses.rabc.entity.SysRole;
 import com.moses.rabc.mapper.RolePermissionMapper;
 import com.moses.rabc.service.RolePermissionService;
 import com.moses.rabc.service.SysPermissionService;
@@ -30,12 +31,7 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
 
     @Override
     public List<SysPermission> getPermissionsByRoleId(Long roleId) {
-        if (roleId == null) {
-            throw new RuntimeException("角色ID不能为空");
-        }
-        if (sysRoleService.getById(roleId) == null) {
-            throw new RuntimeException("角色不存在");
-        }
+        requireRole(roleId);
         return baseMapper.selectPermissionsByRoleId(roleId);
     }
 
@@ -44,9 +40,7 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         if (rolePermission == null || rolePermission.getRoleId() == null || rolePermission.getPermissionId() == null) {
             throw new RuntimeException("角色ID和权限ID不能为空");
         }
-        if (sysRoleService.getById(rolePermission.getRoleId()) == null) {
-            throw new RuntimeException("角色不存在");
-        }
+        requireRole(rolePermission.getRoleId());
         if (sysPermissionService.getById(rolePermission.getPermissionId()) == null) {
             throw new RuntimeException("权限不存在");
         }
@@ -68,6 +62,22 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         if (rows == 0) {
             throw new RuntimeException("角色权限关联不存在");
         }
+    }
+
+    /** role_id=0 时 getById 可能查不到，需显式按主键查询 */
+    private SysRole requireRole(Long roleId) {
+        if (roleId == null) {
+            throw new RuntimeException("角色ID不能为空");
+        }
+        SysRole role = sysRoleService.getById(roleId);
+        if (role == null) {
+            role = sysRoleService.getOne(new LambdaQueryWrapper<SysRole>()
+                    .eq(SysRole::getRoleId, roleId), false);
+        }
+        if (role == null) {
+            throw new RuntimeException("角色不存在");
+        }
+        return role;
     }
 
 }
