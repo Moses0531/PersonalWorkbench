@@ -545,6 +545,7 @@ onMounted(() => {
 .form-card {
   position: relative;
   z-index: 1;
+  margin-left: 1000px;
   --auth-accent: #0891b2;
   --auth-accent-deep: #0e7490;
   --auth-accent-light: #22d3ee;
