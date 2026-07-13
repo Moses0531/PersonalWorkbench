@@ -1,7 +1,6 @@
 <script setup>
 /** 树形层级管理列表：展开折叠、搜索过滤后扁平化渲染 */
 import { computed, ref, useSlots, watch, TransitionGroup } from 'vue'
-import TotalNumberView from './TotalNumberView.vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -23,7 +22,6 @@ const props = defineProps({
   emptyText: { type: String, default: '暂无数据' },
   emptySearchText: { type: String, default: '未找到匹配结果' },
   total: { type: Number, default: null },
-  totalNumbers: { type: Array, default: () => [] },
   rowActions: { type: Array, default: () => [] },
   actionVariant: { type: String, default: 'icon' },
   embedded: { type: Boolean, default: false },
@@ -238,7 +236,6 @@ function isTreeCell(column) {
     <div class="management-list-view__container">
       <slot name="header" />
       <slot v-if="slots.stats" name="stats" />
-      <TotalNumberView v-else-if="totalNumbers.length" :items="totalNumbers" />
 
       <div class="management-list-view__card">
         <div class="management-list-view__toolbar">

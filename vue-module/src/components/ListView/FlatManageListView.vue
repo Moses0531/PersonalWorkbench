@@ -1,7 +1,6 @@
 <script setup>
 /** 扁平数据管理列表通用布局：工具栏、KPI、表格与行操作插槽 */
 import { computed, useSlots } from 'vue'
-import TotalNumberView from './TotalNumberView.vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -20,7 +19,6 @@ const props = defineProps({
   emptyText: { type: String, default: '暂无数据' },
   emptySearchText: { type: String, default: '未找到匹配结果' },
   total: { type: Number, default: null },            // 显式总数；null 时用 data.length
-  totalNumbers: { type: Array, default: () => [] },  // KPI 卡片数据，传给 TotalNumberView
   rowActions: { type: Array, default: () => [] },    // 默认行操作，列 type='actions' 时使用
   actionVariant: { type: String, default: 'icon' },
   variant: { type: String, default: '' },              // 附加样式变体 class 后缀
@@ -95,9 +93,7 @@ function onSearchInput(event) {
     <div class="management-list-view__container">
       <slot name="header" />
 
-      <!-- stats 插槽优先；否则用 totalNumbers 渲染 KPI -->
       <slot v-if="slots.stats" name="stats" />
-      <TotalNumberView v-else-if="totalNumbers.length" :items="totalNumbers" />
 
       <div class="management-list-view__card">
         <!-- 工具栏：标题 + 搜索 + 刷新 + toolbar-actions 插槽（如「新增」按钮） -->
