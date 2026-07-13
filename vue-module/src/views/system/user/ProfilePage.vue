@@ -8,7 +8,7 @@ import {
   updateUserProfileApi,
   changePasswordApi,
   uploadAvatarApi,
-} from '@/apis/system/UserProfileApi'
+} from '@/apis/system/user/UserProfileApi'
 import { hasPermission } from '@/utils/menu'
 import { useUserStore } from '@/stores/userStore'
 
