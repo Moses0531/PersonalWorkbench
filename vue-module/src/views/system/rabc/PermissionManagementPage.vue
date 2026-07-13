@@ -6,16 +6,17 @@ import {
   listPermissionsApi,
   savePermissionApi,
   updatePermissionApi,
-  assignPermissionRolesApi,
-  listPermissionRoleIdsApi,
-  listRolesApi,
+} from '@/apis/system/rabc/PermissionApi'
+import { assignPermissionRolesApi, listPermissionRoleIdsApi } from '@/apis/system/rabc/RolePermissionApi'
+import { listRolesApi } from '@/apis/system/rabc/RoleApi'
+import {
   componentPathFromRouterName,
   componentPathOf,
   isDisplayOf,
   normalizePermissionList,
   permissionTypeOf,
   viewFileFromRouterName,
-} from '@/apis/system/rabc'
+} from '@/utils/menu'
 import HierarchicalManageListView from '@/components/ListView/HierarchicalManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
@@ -38,7 +39,7 @@ const form = reactive({
   status: '0',
   code: '',
   icon: '',
-  order: 0,
+  displayOrder: 0,
   remark: '',
   roleIds: []
 })
@@ -51,7 +52,7 @@ const columns = [
   { prop: 'code', label: '权限标识', width: '100px' },
   { prop: 'isDisplay', label: '显示', width: '72px', align: 'center' },
   { prop: 'status', label: '状态', width: '72px', align: 'center' },
-  { prop: 'order', label: '排序', width: '56px', align: 'center' },
+  { prop: 'displayOrder', label: '排序', width: '56px', align: 'center' },
   { prop: 'remark', label: '备注', width: '110px' },
   { prop: 'actions', label: '操作', type: 'actions', width: '108px', align: 'center' }
 ]
@@ -70,7 +71,7 @@ const parentOptions = computed(() => {
   const options = [{ value: 0, label: '根节点' }]
   list
     .slice()
-    .sort((a, b) => (a.order ?? 99999) - (b.order ?? 99999) || (a.permissionId || 0) - (b.permissionId || 0))
+    .sort((a, b) => (a.displayOrder ?? 99999) - (b.displayOrder ?? 99999) || (a.permissionId || 0) - (b.permissionId || 0))
     .forEach((item) => {
       options.push({
         value: Number(item.permissionId),
@@ -85,8 +86,8 @@ function buildTree(list, parentId = 0) {
     .filter((item) => Number(item.parentId) === Number(parentId))
     .map((item) => ({ ...item, children: buildTree(list, item.permissionId) }))
     .sort((a, b) => {
-      const ao = a.order ?? 99999
-      const bo = b.order ?? 99999
+      const ao = a.displayOrder ?? 99999
+      const bo = b.displayOrder ?? 99999
       return ao !== bo ? ao - bo : (a.permissionId || 0) - (b.permissionId || 0)
     })
 }
@@ -117,7 +118,7 @@ function resetForm() {
     status: '0',
     code: '',
     icon: '',
-    order: 0,
+    displayOrder: 0,
     remark: '',
     roleIds: []
   })
@@ -174,7 +175,7 @@ async function openEdit(row) {
     status: row.status ?? '0',
     code: row.code || '',
     icon: row.icon || '',
-    order: row.order ?? 0,
+    displayOrder: row.displayOrder ?? 0,
     remark: row.remark || '',
     roleIds: []
   })
@@ -308,8 +309,8 @@ onMounted(async () => {
       {{ row.status === '0' ? '正常' : '停用' }}
     </template>
 
-    <template #cell-order="{ row }">
-      <span class="cell-order">{{ row.order ?? 0 }}</span>
+    <template #cell-displayOrder="{ row }">
+      <span class="cell-order">{{ row.displayOrder ?? 0 }}</span>
     </template>
 
     <template #cell-remark="{ row }">
@@ -377,8 +378,8 @@ onMounted(async () => {
           </p>
         </el-form-item>
 
-        <el-form-item label="排序（order）" class="dialog-item">
-          <el-input-number v-model="form.order" :min="0" :max="9999" style="width: 100%" />
+        <el-form-item label="排序（display_order）" class="dialog-item">
+          <el-input-number v-model="form.displayOrder" :min="0" :max="9999" style="width: 100%" />
           <p class="field-hint">数值越小越靠前</p>
         </el-form-item>
 

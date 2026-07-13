@@ -8,10 +8,9 @@ import {
   updateRoleApi,
   getProtectedRoleCodesApi,
   getCurrentUserRoleApi,
-  listRolePermissionIdsApi,
-  saveRolePermissionsApi,
-  listPermissionsApi,
-} from '@/apis/system/rabc'
+} from '@/apis/system/rabc/RoleApi'
+import { listRolePermissionIdsApi, saveRolePermissionsApi } from '@/apis/system/rabc/RolePermissionApi'
+import { listPermissionsApi } from '@/apis/system/rabc/PermissionApi'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
