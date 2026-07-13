@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { constantRoutes } from './routers'
 import { useUserStore } from '@/stores/userStore'
-import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME } from './dynamicRoutes'
+import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, FALLBACK_ROUTE_NAME, ERROR_ROUTE_NAME } from './dynamicRoutes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -58,7 +58,10 @@ router.beforeEach(async (to) => {
       return { path: '/auth', query: { redirect: to.fullPath } }
     }
     if (!wasBuilt && userStore.routesBuilt) {
-      // 勿 spread to：刷新时可能先命中 404，携带 name 会导致二次导航仍进 404
+      // 勿 spread to：刷新时可能先命中 fallback，携带 name 会导致二次导航仍进错误页
+      if (to.name === FALLBACK_ROUTE_NAME || to.name === ERROR_ROUTE_NAME) {
+        return true
+      }
       return {
         path: to.fullPath,
         query: to.query,

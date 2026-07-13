@@ -1,12 +1,18 @@
 import request from '@/utils/request'
 import { listRolesApi } from './RoleApi'
 
+function toPermissionId(item) {
+  if (item == null) return NaN
+  if (typeof item === 'number' || typeof item === 'string') return Number(item)
+  return Number(item.permissionId ?? item.permission_id)
+}
+
 /** 查询角色已绑定的权限 ID 列表 */
 export async function listRolePermissionIdsApi(roleId) {
   const res = await request.get('/rolePermission/getPermissionsByRoleId', {
     params: { roleId },
   })
-  const ids = (res.data || []).map((item) => Number(item.permissionId))
+  const ids = (res.data || []).map(toPermissionId).filter((id) => !Number.isNaN(id))
   return { ...res, data: ids }
 }
 

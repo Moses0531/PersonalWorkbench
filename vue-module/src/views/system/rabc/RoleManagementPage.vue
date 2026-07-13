@@ -11,7 +11,7 @@ import {
 } from '@/apis/system/rabc/RoleApi'
 import { listRolePermissionIdsApi, saveRolePermissionsApi } from '@/apis/system/rabc/RolePermissionApi'
 import { listPermissionsApi } from '@/apis/system/rabc/PermissionApi'
-import { buildPermissionTree } from '@/utils/menu'
+import { buildPermissionTree, filterCheckedLeafIds } from '@/utils/menu'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
@@ -26,6 +26,8 @@ const searchQuery = ref('')
 const tableData = ref([])
 const form = reactive({ roleId: null, roleName: '', roleCode: '', level: null, description: '' })
 const menuTreeData = ref([])
+const permFlatList = ref([])
+const showPermTree = ref(false)
 const menuTreeRef = ref(null)
 const permForm = reactive({ roleId: null, permissionIds: [] })
 
@@ -187,14 +189,29 @@ async function removeRole(roleId) {
   }
 }
 
+async function syncPermTreeChecks() {
+  await nextTick()
+  await nextTick()
+  const tree = menuTreeRef.value
+  if (!tree) return
+  const leafKeys = filterCheckedLeafIds(permFlatList.value, permForm.permissionIds)
+  tree.setCheckedKeys(leafKeys, true)
+}
+
+function onPermDialogOpened() {
+  if (showPermTree.value) syncPermTreeChecks()
+}
+
 async function openPermissionAssign(row) {
   if (!canEditRole(row)) {
     ElMessage.warning('该角色受保护，无法修改权限')
     return
   }
+  showPermTree.value = false
   permDialogVisible.value = true
   permLoading.value = true
   menuTreeData.value = []
+  permFlatList.value = []
   permForm.roleId = row.roleId
   permForm.permissionIds = []
   try {
@@ -203,15 +220,17 @@ async function openPermissionAssign(row) {
       listRolePermissionIdsApi(row.roleId),
     ])
     const list = permissionsResp?.data || []
+    permFlatList.value = list
+    permForm.permissionIds = (selectedResp?.data || []).map(Number).filter((id) => !Number.isNaN(id))
     menuTreeData.value = buildPermissionTree(list)
-    permForm.permissionIds = (selectedResp?.data || []).map(Number)
     if (!menuTreeData.value.length) {
       ElMessage.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
     }
-    await nextTick()
-    menuTreeRef.value?.setCheckedKeys(permForm.permissionIds, false)
+    showPermTree.value = true
+    await syncPermTreeChecks()
   } catch (error) {
     menuTreeData.value = []
+    permFlatList.value = []
     ElMessage.error(error.message || '加载权限树失败')
   } finally {
     permLoading.value = false
@@ -456,6 +475,7 @@ onMounted(refreshAll)
     class="form-dialog data-operation-view"
     :close-on-click-modal="false"
     destroy-on-close
+    @opened="onPermDialogOpened"
   >
     <div class="perm-dialog-header">
       <h3 class="perm-dialog-title">分配权限</h3>
@@ -463,7 +483,8 @@ onMounted(refreshAll)
     </div>
     <div class="perm-tree-wrap" v-loading="permLoading">
       <el-tree
-        v-if="menuTreeData.length"
+        v-if="showPermTree && menuTreeData.length"
+        :key="`role-perm-${permForm.roleId}`"
         ref="menuTreeRef"
         :data="menuTreeData"
         show-checkbox
