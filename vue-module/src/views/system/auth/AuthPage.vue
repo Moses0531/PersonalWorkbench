@@ -275,11 +275,14 @@ import { ElMessage } from 'element-plus'
 import { User, Lock, Iphone, Message, CircleCheck, ArrowRight } from '@element-plus/icons-vue'
 import { loginApi, registerApi } from '@/apis/system/AuthApi'
 import { fetchCaptchaBase64Api } from '@/apis/common/CaptchaApi'
-import { useAuthStore } from '@/stores/authStore'
+import { useUserStore } from '@/stores/userStore'
+import { buildRoutes, resolveDefaultPath } from '@/router/dynamicRoutes'
+import appRouter from '@/router'
 
 const route = useRoute()
 const router = useRouter()
-const { setAuth } = useAuthStore()
+const userStore = useUserStore()
+const { setAuth, setUserLoginInfo } = userStore
 
 // --- Tab 与步骤 ---
 const registerEnabled = ref(true)
@@ -413,8 +416,11 @@ function completeLogin(data) {
     account: data.account,
     username: data.username,
   })
+  setUserLoginInfo(data)
+  buildRoutes(appRouter)
   ElMessage.success('登录成功')
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
+  const redirect =
+    typeof route.query.redirect === 'string' ? route.query.redirect : resolveDefaultPath('/dashboard')
   router.replace(redirect)
 }
 
