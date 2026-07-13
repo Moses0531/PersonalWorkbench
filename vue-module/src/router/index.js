@@ -8,18 +8,25 @@ const router = createRouter({
   routes: constantRoutes,
 })
 
-function ensureDynamicRoutes() {
+let menuRefreshPromise = null
+
+async function ensureDynamicRoutes() {
   const userStore = useUserStore()
   if (userStore.routesBuilt) return true
   if (!userStore.isLoggedIn) return false
 
-  const restored = userStore.restoreMenuFromStorage()
-  if (!restored) return false
+  if (!menuRefreshPromise) {
+    menuRefreshPromise = userStore.refreshSessionFromServer().finally(() => {
+      menuRefreshPromise = null
+    })
+  }
+  const hasMenu = await menuRefreshPromise
+  if (!hasMenu) return false
 
   return buildRoutes(router)
 }
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
 
   if (to.path === '/' && !userStore.isLoggedIn) {
@@ -28,7 +35,7 @@ router.beforeEach((to) => {
 
   if (to.meta.guest) {
     if (userStore.isLoggedIn && to.name === 'auth') {
-      const ready = ensureDynamicRoutes()
+      const ready = await ensureDynamicRoutes()
       if (!ready) {
         userStore.clearAuth()
         return true
@@ -45,7 +52,7 @@ router.beforeEach((to) => {
 
   if (userStore.isLoggedIn) {
     const wasBuilt = userStore.routesBuilt
-    const ready = ensureDynamicRoutes()
+    const ready = await ensureDynamicRoutes()
     if (!ready) {
       userStore.clearAuth()
       return { path: '/auth', query: { redirect: to.fullPath } }

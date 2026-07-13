@@ -162,6 +162,23 @@ export function normalizePermissionList(list = []) {
   return list.map(normalizePermissionRecord)
 }
 
+/** 权限平铺列表 → el-tree 树结构（含 D/M/F 全类型） */
+export function buildPermissionTree(list = [], parentId = 0) {
+  return list
+    .filter((item) => Number(item.parentId) === Number(parentId))
+    .map((item) => {
+      const children = buildPermissionTree(list, item.permissionId)
+      const node = { ...item }
+      if (children.length) node.children = children
+      return node
+    })
+    .sort(
+      (a, b) =>
+        (a.displayOrder ?? 99999) - (b.displayOrder ?? 99999) ||
+        (a.permissionId || 0) - (b.permissionId || 0),
+    )
+}
+
 export function permissionTypeOf(row) {
   return String(row?.type || '').trim().toUpperCase()
 }

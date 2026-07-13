@@ -11,6 +11,11 @@ export function loginApi(payload) {
   })
 }
 
+/** 获取当前登录用户的菜单与功能权限（实时从数据库加载） */
+export function fetchUserMenusApi() {
+  return request.get('/auth/menus')
+}
+
 /** 用户注册：phone 与 email 二选一 */
 export function registerApi(payload) {
   const body = {
