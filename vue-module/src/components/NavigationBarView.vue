@@ -203,19 +203,11 @@ const displayName = computed(
 const DEFAULT_AVATAR = 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png'
 const avatarLoadFailed = ref(false)
 
-const PAGE_FALLBACK_TITLES = {
-  403: '无权限',
-  404: '页面不存在',
-}
-
 const currentPageTitle = computed(() => {
   const path = activePath.value
   for (const menu of menuList.value) {
     if (!isMenuType(menu)) continue
     if (menu.path === path) return menu.menuName || ''
-  }
-  if (route.name && PAGE_FALLBACK_TITLES[route.name]) {
-    return PAGE_FALLBACK_TITLES[route.name]
   }
   return route.meta?.title || ''
 })

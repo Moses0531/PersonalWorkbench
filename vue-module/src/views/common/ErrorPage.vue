@@ -1,19 +1,15 @@
 <template>
-  <div class="not-found" ref="sceneRef" @mousemove="onMouseMove">
-    <!-- 纸张纹理叠加 -->
+  <div class="error-page" ref="sceneRef" @mousemove="onMouseMove">
     <div class="texture"></div>
 
-    <!-- 背景色块 -->
     <div class="bg-blob bg-blob--1"></div>
     <div class="bg-blob bg-blob--2"></div>
     <div class="bg-blob bg-blob--3"></div>
 
-    <!-- 浮动粒子 -->
     <div class="particles">
       <span v-for="n in 12" :key="n" class="particle" :class="`particle--${n}`"></span>
     </div>
 
-    <!-- 光线装饰 -->
     <div class="rays" :style="rayStyle">
       <div class="ray ray--1"></div>
       <div class="ray ray--2"></div>
@@ -21,52 +17,40 @@
     </div>
 
     <div class="content">
-      <!-- 插画区 -->
       <div class="illustration" :style="illustrationStyle">
         <svg viewBox="0 0 320 240" class="scene">
-          <!-- 地面光晕 -->
           <ellipse cx="160" cy="210" rx="120" ry="12" fill="rgba(224,122,79,0.06)" />
           <ellipse cx="160" cy="210" rx="80" ry="6" fill="rgba(224,122,79,0.04)" />
 
-          <!-- 远景小星球 -->
           <g opacity="0.2" class="far-planet">
             <circle cx="50" cy="50" r="8" fill="var(--accent)" />
             <circle cx="50" cy="50" r="3" fill="rgba(255,255,255,0.4)" />
           </g>
 
-          <!-- 主体星球 -->
           <g class="planet-group">
-            <!-- 发光底色 -->
             <circle cx="160" cy="110" r="58" fill="rgba(224,122,79,0.04)" class="planet-glow" />
 
-            <!-- 轨道环 1 -->
             <ellipse cx="160" cy="112" rx="100" ry="24" fill="none"
                      stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 8"
                      opacity="0.2" class="orbit-ring orbit-ring--1" />
-            <!-- 轨道环 2 -->
             <ellipse cx="160" cy="112" rx="78" ry="18" fill="none"
                      stroke="var(--accent)" stroke-width="0.8" stroke-dasharray="2 6"
                      opacity="0.12" class="orbit-ring orbit-ring--2" />
 
-            <!-- 星球主体 -->
             <circle cx="160" cy="108" r="48" fill="var(--planet-fill)" />
             <circle cx="160" cy="108" r="48" fill="url(#planetGrad)" />
 
-            <!-- 星球表面纹理 -->
             <ellipse cx="145" cy="96" rx="12" ry="7" fill="rgba(255,255,255,0.3)" />
             <ellipse cx="175" cy="115" rx="7" ry="5" fill="rgba(255,255,255,0.18)" />
             <ellipse cx="152" cy="122" rx="16" ry="5" fill="rgba(255,255,255,0.12)" />
             <ellipse cx="168" cy="94" rx="5" ry="4" fill="rgba(0,0,0,0.03)" />
 
-            <!-- 小卫星 1 -->
             <circle cx="242" cy="82" r="9" fill="var(--accent)" opacity="0.55"
                     class="satellite satellite--1" />
-            <!-- 小卫星 2 -->
             <circle cx="86" cy="140" r="5" fill="var(--accent)" opacity="0.3"
                     class="satellite satellite--2" />
           </g>
 
-          <!-- 星星群 -->
           <g class="stars">
             <circle cx="42" cy="32" r="2.5" fill="var(--accent)" opacity="0.5" class="star star--1" />
             <circle cx="80" cy="56" r="1.2" fill="var(--accent)" opacity="0.3" class="star star--2" />
@@ -80,7 +64,6 @@
             <circle cx="210" cy="16" r="1.3" fill="var(--accent)" opacity="0.3" class="star star--3" />
           </g>
 
-          <!-- 十字星装饰 -->
           <g class="cross-stars">
             <g transform="translate(30, 75)" class="star star--2">
               <line x1="-4" y1="0" x2="4" y2="0" stroke="var(--accent)" stroke-width="1" opacity="0.3" />
@@ -92,7 +75,6 @@
             </g>
           </g>
 
-          <!-- 路标 -->
           <g class="sign" transform="translate(40, 140)">
             <rect x="12" y="0" width="3" height="62" rx="1.5" fill="var(--text-dim)" opacity="0.2" />
             <rect x="-6" y="6" width="42" height="22" rx="5" fill="var(--accent)" opacity="0.12" />
@@ -102,7 +84,6 @@
                   font-size="10" fill="var(--accent)" font-weight="700" opacity="0.7">?</text>
           </g>
 
-          <!-- 渐变定义 -->
           <defs>
             <radialGradient id="planetGrad" cx="35%" cy="30%" r="65%">
               <stop offset="0%" stop-color="rgba(255,255,255,0.35)" />
@@ -112,18 +93,12 @@
         </svg>
       </div>
 
-      <!-- 错误码卡片 -->
       <div class="error-card">
-        <div class="error-code">
-          <span class="digit">4</span>
-          <span class="digit digit--accent">
-            <span class="digit-ring"></span>
-            0
-          </span>
-          <span class="digit">4</span>
+        <div class="error-mark" aria-hidden="true">
+          <span class="error-mark-ring"></span>
+          <span class="error-mark-icon">!</span>
         </div>
 
-        <!-- 分割线 -->
         <div class="divider">
           <span class="divider-dot"></span>
           <span class="divider-line"></span>
@@ -132,12 +107,10 @@
           <span class="divider-dot"></span>
         </div>
 
-        <!-- 文字信息 -->
-        <h1 class="title">页面不存在</h1>
-        <p class="subtitle">你访问的页面可能已被移除、更名，或暂时不可用</p>
-        <p class="subtitle-hint">请检查访问地址是否正确，或通过下方按钮返回</p>
+        <h1 class="title">页面无法访问</h1>
+        <p class="subtitle">当前页面暂不可用，请检查访问地址是否正确</p>
+        <p class="subtitle-hint">您可以通过下方按钮返回已开放的功能</p>
 
-        <!-- 按钮 -->
         <div class="actions">
           <el-button type="primary" class="btn-primary" @click="goHome">
             <span class="btn-icon">
@@ -161,11 +134,6 @@
           </el-button>
         </div>
       </div>
-    </div>
-
-    <!-- 底部装饰 -->
-    <div class="footer">
-      <span class="footer-text">Error 404 · Page Not Found</span>
     </div>
   </div>
 </template>
@@ -198,15 +166,13 @@ const rayStyle = computed(() => {
   return { transform: `translate(${dx}px, ${dy}px)` }
 })
 
-const goHome = () => router.push('/')
+const goHome = () => router.replace('/')
 const goBack = () => router.back()
 </script>
 
 <style scoped>
-/* ── 变量 ── */
-.not-found {
+.error-page {
   --bg: #f8f5f0;
-  --bg-warm: #f3ede5;
   --accent: #e07a4f;
   --accent-deep: #c96a42;
   --accent-soft: rgba(224, 122, 79, 0.1);
@@ -232,7 +198,6 @@ const goBack = () => router.back()
   font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
 }
 
-/* ── 纸张纹理 ── */
 .texture {
   position: absolute;
   inset: 0;
@@ -242,7 +207,6 @@ const goBack = () => router.back()
   background-size: 200px 200px;
 }
 
-/* ── 背景色块 ── */
 .bg-blob {
   position: absolute;
   border-radius: 50%;
@@ -283,7 +247,6 @@ const goBack = () => router.back()
   66%      { transform: translate(-20px, 18px) scale(0.96); }
 }
 
-/* ── 浮动粒子 ── */
 .particles {
   position: absolute;
   inset: 0;
@@ -318,7 +281,6 @@ const goBack = () => router.back()
   100% { opacity: 0; transform: translateY(-100px) scale(0); }
 }
 
-/* ── 光线装饰 ── */
 .rays {
   position: absolute;
   top: -20%;
@@ -366,7 +328,6 @@ const goBack = () => router.back()
   50%      { opacity: 0.8; }
 }
 
-/* ── 主内容 ── */
 .content {
   position: relative;
   z-index: 1;
@@ -375,7 +336,6 @@ const goBack = () => router.back()
   width: 100%;
 }
 
-/* ── 插画 ── */
 .illustration {
   margin-bottom: 8px;
   animation: floatIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -401,7 +361,10 @@ const goBack = () => router.back()
   50%      { transform: translateY(-10px); }
 }
 
-
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.04; transform: scale(1); }
+  50%      { opacity: 0.09; transform: scale(1.08); }
+}
 
 .far-planet {
   animation: farFloat 8s ease-in-out infinite;
@@ -448,7 +411,6 @@ const goBack = () => router.back()
   75%      { transform: translate(-4px, 5px); }
 }
 
-/* 星星闪烁 */
 .star--1 { animation: twinkle 3s ease-in-out infinite; }
 .star--2 { animation: twinkle 2.5s 0.5s ease-in-out infinite; }
 .star--3 { animation: twinkle 3.5s 1s ease-in-out infinite; }
@@ -463,7 +425,6 @@ const goBack = () => router.back()
   50%      { opacity: 0.85; transform: scale(1.5); }
 }
 
-/* ── 错误码卡片 ── */
 .error-card {
   background: var(--card-bg);
   backdrop-filter: blur(20px);
@@ -493,54 +454,42 @@ const goBack = () => router.back()
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── 404 数字 ── */
-.error-code {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-bottom: 24px;
-}
-
-.digit {
-  font-size: clamp(52px, 10vw, 76px);
-  font-weight: 800;
-  color: var(--text-dim);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-family: 'Georgia', 'Noto Serif SC', serif;
+.error-mark {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  display: grid;
+  place-items: center;
   opacity: 0;
-  animation: digitReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: markReveal 0.6s 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.digit:nth-child(1) { animation-delay: 0.3s; }
-.digit:nth-child(2) { animation-delay: 0.45s; }
-.digit:nth-child(3) { animation-delay: 0.6s; }
+.error-mark-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-glow);
+  border-radius: 50%;
+  animation: markRingSpin 8s linear infinite;
+}
 
-@keyframes digitReveal {
+.error-mark-icon {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  font-family: 'Georgia', 'Noto Serif SC', serif;
+}
+
+@keyframes markReveal {
   from { opacity: 0; transform: translateY(20px) scale(0.85); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.digit--accent {
-  color: var(--accent);
-  position: relative;
-  margin: 0 6px;
-}
-
-.digit-ring {
-  position: absolute;
-  inset: -6px;
-  border: 2px solid var(--accent-glow);
-  border-radius: 50%;
-  animation: digitRingSpin 8s linear infinite;
-}
-
-@keyframes digitRingSpin {
+@keyframes markRingSpin {
   to { transform: rotate(360deg); }
 }
 
-/* ── 分割线 ── */
 .divider {
   display: flex;
   align-items: center;
@@ -580,7 +529,6 @@ const goBack = () => router.back()
   to   { opacity: 1; transform: scaleX(1); }
 }
 
-/* ── 文字 ── */
 .title {
   margin: 0 0 10px;
   font-size: clamp(18px, 3.2vw, 24px);
@@ -609,7 +557,6 @@ const goBack = () => router.back()
   animation: slideUp 0.6s 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ── 按钮组 ── */
 .actions {
   display: flex;
   align-items: center;
@@ -693,27 +640,6 @@ const goBack = () => router.back()
   transform: translateY(0);
 }
 
-/* ── 底部 ── */
-.footer {
-  position: absolute;
-  bottom: 20px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  opacity: 0;
-  animation: slideUp 0.6s 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.footer-text {
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-family: 'Georgia', serif;
-  opacity: 0.6;
-}
-
-/* ── 入场动画 ── */
 @keyframes floatIn {
   from { opacity: 0; transform: translateY(28px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -724,9 +650,8 @@ const goBack = () => router.back()
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── 响应式 ── */
 @media (max-width: 640px) {
-  .not-found {
+  .error-page {
     padding: 24px 16px;
   }
 

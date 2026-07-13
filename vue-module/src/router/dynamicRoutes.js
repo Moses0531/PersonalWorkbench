@@ -1,17 +1,19 @@
 import { useUserStore } from '@/stores/userStore'
 import { resolveViewLoader } from '@/utils/pageComponents'
+import { ERROR_ROUTE_PATH, ERROR_ROUTE_NAME } from './routers'
 
 export const MAIN_LAYOUT_NAME = 'app-layout'
-export const NOT_FOUND_ROUTE_NAME = '404'
+/** 未匹配路径的兜底路由名（内部使用，最终会重定向到 /error） */
+export const FALLBACK_ROUTE_NAME = 'fallback'
 
-export function registerNotFoundRoute(router) {
-  if (router.hasRoute(NOT_FOUND_ROUTE_NAME)) {
-    router.removeRoute(NOT_FOUND_ROUTE_NAME)
+export function registerFallbackRoute(router) {
+  if (router.hasRoute(FALLBACK_ROUTE_NAME)) {
+    router.removeRoute(FALLBACK_ROUTE_NAME)
   }
   router.addRoute({
     path: '/:pathMatch(.*)*',
-    name: NOT_FOUND_ROUTE_NAME,
-    component: () => import('@/views/common/NotFoundPage.vue'),
+    name: FALLBACK_ROUTE_NAME,
+    redirect: { path: ERROR_ROUTE_PATH, replace: true },
   })
 }
 
@@ -58,7 +60,7 @@ export function buildRoutes(router) {
       redirect,
       children: routerList,
     })
-    registerNotFoundRoute(router)
+    registerFallbackRoute(router)
   }
 
   userStore.setRoutesBuilt(routerList.length > 0)
@@ -70,8 +72,8 @@ export function resetDynamicRoutes(router) {
   if (router.hasRoute(MAIN_LAYOUT_NAME)) {
     router.removeRoute(MAIN_LAYOUT_NAME)
   }
-  if (router.hasRoute(NOT_FOUND_ROUTE_NAME)) {
-    router.removeRoute(NOT_FOUND_ROUTE_NAME)
+  if (router.hasRoute(FALLBACK_ROUTE_NAME)) {
+    router.removeRoute(FALLBACK_ROUTE_NAME)
   }
   userStore.setRoutesBuilt(false)
 }
@@ -89,3 +91,5 @@ export function resolveDefaultPath(fallback = '/dashboard') {
   }
   return fallback
 }
+
+export { ERROR_ROUTE_PATH, ERROR_ROUTE_NAME }

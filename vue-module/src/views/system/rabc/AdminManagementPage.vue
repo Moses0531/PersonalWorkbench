@@ -103,7 +103,7 @@ async function loadAdminRoles() {
     }
   } catch (error) {
     const msg = String(error?.message || '')
-    if (msg.includes('403') || msg.includes('无权限')) {
+    if (msg.includes('403') || msg.includes('无权限') || msg.includes('权限不足')) {
       roleOptions.value = []
       return
     }
