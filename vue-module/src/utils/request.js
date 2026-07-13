@@ -2,13 +2,29 @@ import axios from 'axios'
 
 const TOKEN_KEY = 'rbac_token'
 
+/** 按标签页隔离登录态，避免多标签共用同一账号 */
+function getAuthToken() {
+  return sessionStorage.getItem(TOKEN_KEY) || ''
+}
+
+function setAuthToken(token) {
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY)
+  }
+}
+
+// 清理旧版 localStorage 共享 token，防止与标签页隔离逻辑冲突
+localStorage.removeItem(TOKEN_KEY)
+
 const request = axios.create({
   baseURL: '/api',
   timeout: 15000,
 })
 
 request.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY)
+  const token = getAuthToken()
   if (token) {
     config.headers[TOKEN_KEY] = `Bearer ${token}`
   }
@@ -32,5 +48,5 @@ request.interceptors.response.use(
   }
 )
 
-export { TOKEN_KEY }
+export { TOKEN_KEY, getAuthToken, setAuthToken }
 export default request

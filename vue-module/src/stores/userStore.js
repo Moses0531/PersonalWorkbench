@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { TOKEN_KEY } from '@/utils/request'
+import { getAuthToken, setAuthToken } from '@/utils/request'
 import { buildMenuState } from '@/utils/menu'
 import { fetchUserMenusApi } from '@/apis/system/user/AuthApi'
 import { getCurrentUserProfileApi } from '@/apis/system/user/UserProfileApi'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem(TOKEN_KEY) || '',
+    token: getAuthToken(),
     user: null,
     menuList: [],
     menuTree: [],
@@ -29,11 +29,7 @@ export const useUserStore = defineStore('user', {
     setAuth(token, user) {
       this.token = token || ''
       this.user = user || null
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token)
-      } else {
-        localStorage.removeItem(TOKEN_KEY)
-      }
+      setAuthToken(token)
     },
 
     clearAuth() {
