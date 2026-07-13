@@ -1,4 +1,6 @@
 /** D-M-F 权限类型，与 sys_permission.type 一一对应 */
+import { useUserStore } from '@/stores/userStore'
+
 export const MENU_TYPE = {
   DIRECTORY: 'D',
   MENU: 'M',
@@ -15,6 +17,13 @@ export function isMenuType(item) {
 
 export function isFunctionType(item) {
   return item?.menuType === MENU_TYPE.FUNCTION
+}
+
+/** 判断当前用户是否拥有按钮级功能权限（F 类型 code） */
+export function hasPermission(code) {
+  if (!code) return true
+  const userStore = useUserStore()
+  return userStore.functionList.some((item) => item.code === code)
 }
 
 function looksLikeRoutePath(value) {
@@ -39,6 +48,18 @@ function pathToComponentName(path) {
       .join('') + 'Page'
   )
 }
+
+/** 从权限 remark 解析 views 下的相对路径，如 common/DashboardPage.vue */
+function parseViewPath(remark) {
+  const s = String(remark ?? '').trim()
+  if (!s || /^https?:\/\//i.test(s)) return null
+  if (/\.vue$/i.test(s) || (s.includes('/') && !s.startsWith('/'))) {
+    return s.replace(/^views\//, '').replace(/^\//, '')
+  }
+  return null
+}
+
+export { pathToComponentName }
 
 /** 兼容旧库：router_name 与 component_path 曾互换语义 */
 function coalescePermissionFields(permission) {
@@ -70,6 +91,7 @@ export function normalizeMenuItem(permission) {
     parentId: permission.parentId ?? permission.parent_id ?? 0,
     path: resolveMenuPath(routePath, routerName),
     routerName: routerName.replace(/\.vue$/i, '') || null,
+    viewPath: parseViewPath(permission.remark),
     icon: permission.icon || '',
     visibleFlag: (permission.isDisplay ?? permission.is_display ?? 0) === 0,
     disabledFlag: (permission.status ?? '0') === '1',
