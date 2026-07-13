@@ -1,0 +1,80 @@
+/**
+ * 数据表格 — 克制分隔、留白优先（非 Excel 网格）
+ */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md, 13px);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table thead th {
+  padding: 10px 20px 11px;
+  text-align: left;
+  font-size: var(--text-sm, 11px);
+  font-weight: var(--font-semibold, 600);
+  color: var(--color-table-header-text, var(--color-text-dim));
+  letter-spacing: 0.02em;
+  text-transform: none;
+  background: var(--color-table-header-bg);
+  border-bottom: 1px solid var(--color-table-header-border);
+  white-space: nowrap;
+}
+
+.data-table tbody td {
+  padding: 15px 20px;
+  color: var(--color-text-primary);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-table-row-border);
+  background: var(--color-table-row-bg);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.data-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.data-table tbody tr:hover td,
+.data-table tbody tr.data-row:hover td {
+  background: var(--color-table-row-hover-bg);
+}
+
+.data-table tbody tr:hover td:first-child,
+.data-table tbody tr.data-row:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-table-accent-bar, var(--color-accent));
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-table-header-border);
+  background: linear-gradient(180deg, rgba(238, 248, 252, 0.35) 0%, transparent 100%);
+}
+
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 20px;
+  color: var(--color-text-dim);
+}
+
+.table-empty p {
+  margin: 0;
+  font-size: var(--text-md, 13px);
+}
+
+.footer-count {
+  font-size: var(--text-sm, 12px);
+  color: var(--color-text-dim);
+  font-variant-numeric: tabular-nums;
+}

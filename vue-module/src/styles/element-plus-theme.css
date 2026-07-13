@@ -1,0 +1,116 @@
+/**
+ * Element Plus 主题 — 与 MosesFrame / 登录页 Auth 青色系对齐
+ * 主色：#0891b2  深主色：#0e7490
+ */
+:root {
+  --el-color-primary: #0891b2;
+  --el-color-primary-light-3: #3db5cc;
+  --el-color-primary-light-5: #6ec9db;
+  --el-color-primary-light-7: #a3dfe9;
+  --el-color-primary-light-8: #c5ecf3;
+  --el-color-primary-light-9: #e6f7fa;
+  --el-color-primary-dark-2: #0e7490;
+
+  --el-color-success: #4aba6a;
+  --el-color-warning: #c0820a;
+  --el-color-danger: #e05545;
+  --el-color-info: #6a8fa3;
+
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: var(--color-zone-content);
+  --el-fill-color-blank: var(--color-surface);
+  --el-fill-color-light: var(--color-surface-muted);
+  --el-fill-color-lighter: var(--color-zone-content);
+
+  --el-text-color-primary: #0c2a42;
+  --el-text-color-regular: #3d6478;
+  --el-text-color-secondary: #6a8fa3;
+  --el-text-color-placeholder: #8eb4c9;
+
+  --el-border-color: rgba(34, 184, 207, 0.14);
+  --el-border-color-light: rgba(34, 184, 207, 0.1);
+  --el-border-color-lighter: rgba(34, 184, 207, 0.06);
+
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 20px;
+
+  --el-font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-dark-2);
+  --el-button-hover-border-color: var(--el-color-primary-dark-2);
+  --el-button-active-bg-color: #0c6578;
+  --el-button-active-border-color: #0c6578;
+}
+
+.el-button.is-link.el-button--primary {
+  --el-button-text-color: var(--el-color-primary);
+  --el-button-hover-text-color: var(--el-color-primary-dark-2);
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  background-color: var(--color-input-bg, #eef8fc);
+}
+
+.el-input__wrapper:focus-within,
+.el-textarea__inner:focus {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: var(--el-color-primary);
+}
+
+.el-tabs__item.is-active {
+  color: var(--el-color-primary);
+}
+
+.el-tabs__active-bar {
+  background-color: var(--el-color-primary);
+}
+
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  box-shadow: -1px 0 0 0 var(--el-color-primary);
+}
+
+/* 表格：留白分隔，悬停左指示条 */
+.el-table {
+  --el-table-header-bg-color: var(--color-table-header-bg-solid, #f8fcff);
+  --el-table-tr-bg-color: var(--color-table-row-bg, #ffffff);
+  --el-table-row-hover-bg-color: var(--color-table-row-hover-bg, rgba(34, 184, 207, 0.045));
+  --el-table-border-color: var(--color-table-row-border, rgba(8, 116, 146, 0.09));
+  --el-table-header-text-color: var(--color-table-header-text, #6a8fa3);
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(248, 252, 255, 0.65);
+}
+
+.el-table__body tr:hover > td.el-table__cell:first-child {
+  box-shadow: inset 3px 0 0 var(--color-table-accent-bar, #0891b2);
+}

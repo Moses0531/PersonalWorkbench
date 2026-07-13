@@ -1,0 +1,574 @@
+/**
+ * 统一管理列表 — 页面壳、工具栏、表格单元格与操作按钮
+ * 表格基础样式见 data-table.css
+ */
+.management-list-view {
+  --mlv-surface: var(--color-surface);
+  --mlv-accent: var(--color-accent);
+  --mlv-accent-deep: var(--color-accent-deep);
+  --mlv-accent-soft: var(--color-accent-soft);
+  --mlv-accent-glow: var(--color-accent-glow);
+  --mlv-text-primary: var(--color-text-primary);
+  --mlv-text-body: var(--color-text-body);
+  --mlv-text-dim: var(--color-text-dim);
+  --mlv-border: var(--color-border);
+  --mlv-input-bg: var(--color-input-bg);
+  --mlv-shadow-card: var(--shadow-sm);
+  --mlv-shadow-hover: var(--shadow-md);
+
+  position: relative;
+  padding: 24px;
+  min-height: 100vh;
+  background: var(--color-zone-content);
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+.management-list-view__blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.management-list-view__blob--1 {
+  width: 500px;
+  height: 500px;
+  top: -10%;
+  right: -8%;
+  background: rgba(34, 184, 207, 0.07);
+  animation: mlvBlobFloat 20s ease-in-out infinite;
+}
+
+.management-list-view__blob--2 {
+  width: 400px;
+  height: 400px;
+  bottom: -10%;
+  left: -5%;
+  background: rgba(14, 116, 144, 0.06);
+  animation: mlvBlobFloat 24s 4s ease-in-out infinite reverse;
+}
+
+@keyframes mlvBlobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -20px) scale(1.05); }
+}
+
+.management-list-view__container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.management-list-view__card {
+  background: var(--mlv-surface);
+  border: 1px solid var(--mlv-border);
+  border-radius: 18px;
+  box-shadow: var(--mlv-shadow-card);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.management-list-view__card:hover {
+  box-shadow: var(--mlv-shadow-hover);
+}
+
+.management-list-view__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--mlv-border);
+}
+
+.management-list-view__toolbar-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--mlv-text-primary);
+}
+
+.management-list-view__toolbar-desc {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--mlv-text-dim);
+}
+
+.management-list-view__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.management-list-view__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.management-list-view__search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--mlv-text-dim);
+  pointer-events: none;
+}
+
+.management-list-view__search-input {
+  height: 36px;
+  width: 200px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--mlv-border);
+  border-radius: 10px;
+  background: var(--mlv-input-bg);
+  font-size: 13px;
+  color: var(--mlv-text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.management-list-view__search-input::placeholder {
+  color: var(--mlv-text-dim);
+}
+
+.management-list-view__search-input:focus {
+  border-color: var(--mlv-accent);
+  box-shadow: 0 0 0 3px var(--mlv-accent-soft);
+  width: 240px;
+}
+
+.management-list-view__btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--mlv-border);
+  background: transparent;
+  color: var(--mlv-text-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.management-list-view__btn-icon:hover {
+  background: var(--mlv-accent-soft);
+  color: var(--mlv-accent);
+  border-color: var(--mlv-accent-glow);
+}
+
+.management-list-view .mlv-btn-primary {
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--mlv-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(34, 184, 207, 0.2);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.management-list-view .mlv-btn-primary:hover {
+  background: var(--mlv-accent-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(34, 184, 207, 0.3);
+}
+
+.management-list-view__empty-cell {
+  padding: 0 !important;
+}
+
+.management-list-view__table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  border-top: 1px solid var(--color-table-header-border);
+}
+
+.management-list-view--embedded {
+  padding: 0;
+  min-height: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.management-list-view__footer-count {
+  font-size: 12px;
+  color: var(--mlv-text-dim);
+}
+
+.management-list-view__th--center {
+  text-align: center !important;
+}
+
+.management-list-view__td--center {
+  text-align: center;
+}
+
+/* 通用列宽与单元格 */
+.management-list-view .th-id { width: 60px; }
+.management-list-view .th-role { min-width: 100px; }
+.management-list-view .th-action { width: 100px; }
+
+.management-list-view .cell-id {
+  font-weight: 600;
+  color: var(--mlv-text-dim);
+  font-size: 12px;
+}
+
+.management-list-view .cell-name { font-weight: 500; }
+.management-list-view .cell-muted { color: var(--mlv-text-body); }
+
+/* 插槽内操作按钮 */
+.management-list-view .action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.management-list-view .action-btns--text {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.management-list-view .action-btns--text .btn-action {
+  width: auto;
+  height: auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.management-list-view .btn-action {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--mlv-border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.management-list-view .btn-action--edit { color: var(--mlv-text-body); }
+
+.management-list-view .btn-action--edit:hover {
+  color: var(--mlv-accent);
+  background: var(--mlv-accent-soft);
+  border-color: var(--mlv-accent-glow);
+}
+
+.management-list-view .btn-action--add { color: var(--mlv-text-body); }
+
+.management-list-view .btn-action--add:hover {
+  color: var(--color-green);
+  background: var(--color-green-soft);
+  border-color: rgba(74, 186, 106, 0.2);
+}
+
+.management-list-view .btn-action--delete { color: var(--mlv-text-dim); }
+
+.management-list-view .btn-action--delete:hover {
+  color: var(--color-red);
+  background: var(--color-red-soft);
+  border-color: rgba(224, 85, 69, 0.15);
+}
+
+.management-list-view .btn-action--primary { color: var(--mlv-text-body); }
+
+.management-list-view .btn-action--primary:hover {
+  color: var(--mlv-accent);
+  background: var(--mlv-accent-soft);
+  border-color: var(--mlv-accent-glow);
+}
+
+.management-list-view .btn-action--danger { color: var(--mlv-text-dim); }
+
+.management-list-view .btn-action--danger:hover {
+  color: var(--color-red);
+  background: var(--color-red-soft);
+  border-color: rgba(224, 85, 69, 0.15);
+}
+
+.management-list-view .btn-action--perm { color: var(--mlv-text-body); }
+
+.management-list-view .btn-action--perm:hover:not(:disabled) {
+  color: var(--color-purple);
+  background: var(--color-purple-soft);
+  border-color: rgba(139, 126, 200, 0.2);
+}
+
+.management-list-view .btn-action:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── 层级列表 ── */
+.hierarchical-list-view .table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+
+.hierarchical-list-view__expand-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--mlv-border);
+  background: transparent;
+  color: var(--mlv-text-body);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.hierarchical-list-view__expand-btn:hover {
+  background: var(--mlv-accent-soft);
+  color: var(--mlv-accent);
+  border-color: var(--mlv-accent-glow);
+}
+
+.hierarchical-table {
+  table-layout: fixed;
+}
+
+.hierarchical-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.hierarchical-table__th-tree {
+  min-width: 200px;
+}
+
+.hierarchical-table__td-tree {
+  padding: 0 !important;
+}
+
+.hierarchical-table__tree-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px 9px calc(var(--tree-depth, 0) * 22px);
+  min-width: 0;
+  transition: padding-left 0.22s ease;
+}
+
+.hierarchical-table__toggle {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--mlv-border);
+  border-radius: 6px;
+  background: var(--mlv-input-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--mlv-text-dim);
+  transition: transform 0.22s ease, color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.hierarchical-table__toggle:hover {
+  color: var(--mlv-accent);
+  background: var(--mlv-accent-soft);
+  border-color: var(--mlv-accent-glow);
+}
+
+.hierarchical-table__toggle.is-expanded {
+  transform: rotate(90deg);
+  color: var(--mlv-accent);
+  background: var(--mlv-accent-soft);
+  border-color: var(--mlv-accent-glow);
+}
+
+.hierarchical-table__toggle-placeholder {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.hierarchical-table__node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--mlv-text-dim);
+}
+
+.hierarchical-table__node-icon--folder {
+  color: var(--color-accent);
+}
+
+.hierarchical-table__node-icon--leaf {
+  color: var(--mlv-text-dim);
+  opacity: 0.7;
+}
+
+.hierarchical-table__node-label {
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.hierarchical-table__row--parent .hierarchical-table__node-label {
+  color: var(--mlv-text-primary);
+}
+
+.hierarchical-table__row--parent > td {
+  background: rgba(34, 184, 207, 0.03);
+}
+
+.hierarchical-table__row--child > td {
+  background: rgba(107, 94, 82, 0.02);
+}
+
+.hierarchical-table__row--expanded > td {
+  border-bottom-color: rgba(34, 184, 207, 0.08);
+}
+
+.hierarchical-table__row--parent:hover > td,
+.hierarchical-table__row--child:hover > td {
+  background: var(--mlv-accent-soft);
+}
+
+.hierarchical-row-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.hierarchical-row-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.hierarchical-row-enter-from,
+.hierarchical-row-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.hierarchical-row-move {
+  transition: transform 0.22s ease;
+}
+
+.hierarchical-table tbody td:has(.action-btns) {
+  overflow: visible;
+  white-space: normal;
+}
+
+.hierarchical-table tbody td {
+  padding: 10px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hierarchical-table tbody td.hierarchical-table__td-tree {
+  overflow: visible;
+  white-space: normal;
+}
+
+/* 加载态 */
+.management-list-view--loading .table-wrap {
+  min-height: 120px;
+}
+
+.management-list-view__loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.management-list-view__loading-bar {
+  width: 120px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--mlv-accent-soft);
+  overflow: hidden;
+  position: relative;
+}
+
+.management-list-view__loading-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--mlv-accent);
+  border-radius: 3px;
+  animation: mlvLoadingSlide 1s ease-in-out infinite;
+}
+
+@keyframes mlvLoadingSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.management-list-view__loading-text {
+  font-size: 12px;
+  color: var(--mlv-text-dim);
+}
+
+@keyframes mlvSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.mlv-spin {
+  animation: mlvSpin 0.8s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .management-list-view { padding: 16px; }
+
+  .management-list-view__toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .management-list-view__toolbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .management-list-view__search-input {
+    width: 100% !important;
+    flex: 1;
+  }
+
+  .management-list-view__search-input:focus {
+    width: 100% !important;
+  }
+}

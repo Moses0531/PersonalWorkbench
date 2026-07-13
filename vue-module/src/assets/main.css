@@ -1,5 +1,11 @@
 @import './base.css';
 @import './design-tokens.css';
+@import '../styles/variables.css';
+@import '../styles/data-table.css';
+@import '../styles/management-list-view.css';
+@import '../styles/manage-cells.css';
+@import '../styles/form-dialog.css';
+@import '../styles/element-plus-theme.css';
 
 html,
 body,
