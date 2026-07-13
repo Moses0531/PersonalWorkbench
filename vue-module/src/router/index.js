@@ -51,7 +51,13 @@ router.beforeEach((to) => {
       return { path: '/auth', query: { redirect: to.fullPath } }
     }
     if (!wasBuilt && userStore.routesBuilt) {
-      return { ...to, replace: true }
+      // 勿 spread to：刷新时可能先命中 404，携带 name 会导致二次导航仍进 404
+      return {
+        path: to.fullPath,
+        query: to.query,
+        hash: to.hash,
+        replace: true,
+      }
     }
   }
 

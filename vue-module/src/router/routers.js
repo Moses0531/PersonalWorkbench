@@ -1,4 +1,4 @@
-/** 不受权限控制的静态路由 */
+/** 不受权限控制的静态路由（404 在动态路由注册后再追加，避免刷新时误匹配） */
 export const constantRoutes = [
   {
     path: '/auth',
@@ -11,10 +11,5 @@ export const constantRoutes = [
     name: '403',
     component: () => import('@/views/common/ForbiddenPage.vue'),
     meta: { requiresAuth: true },
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: '404',
-    component: () => import('@/views/common/NotFoundPage.vue'),
   },
 ]

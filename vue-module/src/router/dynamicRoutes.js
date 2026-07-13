@@ -2,6 +2,18 @@ import { useUserStore } from '@/stores/userStore'
 import { resolveViewLoader } from '@/utils/pageComponents'
 
 export const MAIN_LAYOUT_NAME = 'app-layout'
+export const NOT_FOUND_ROUTE_NAME = '404'
+
+export function registerNotFoundRoute(router) {
+  if (router.hasRoute(NOT_FOUND_ROUTE_NAME)) {
+    router.removeRoute(NOT_FOUND_ROUTE_NAME)
+  }
+  router.addRoute({
+    path: '/:pathMatch(.*)*',
+    name: NOT_FOUND_ROUTE_NAME,
+    component: () => import('@/views/common/NotFoundPage.vue'),
+  })
+}
 
 export function buildRoutes(router) {
   const userStore = useUserStore()
@@ -46,6 +58,7 @@ export function buildRoutes(router) {
       redirect,
       children: routerList,
     })
+    registerNotFoundRoute(router)
   }
 
   userStore.setRoutesBuilt(routerList.length > 0)
@@ -56,6 +69,9 @@ export function resetDynamicRoutes(router) {
   const userStore = useUserStore()
   if (router.hasRoute(MAIN_LAYOUT_NAME)) {
     router.removeRoute(MAIN_LAYOUT_NAME)
+  }
+  if (router.hasRoute(NOT_FOUND_ROUTE_NAME)) {
+    router.removeRoute(NOT_FOUND_ROUTE_NAME)
   }
   userStore.setRoutesBuilt(false)
 }
