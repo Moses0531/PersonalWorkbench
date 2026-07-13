@@ -26,6 +26,20 @@ export function hasPermission(code) {
   return userStore.functionList.some((item) => item.code === code)
 }
 
+/** v-permission="'user:add'" — 无权限时移除 DOM */
+export const permissionDirective = {
+  mounted(el, binding) {
+    if (!hasPermission(binding.value)) {
+      el.parentNode?.removeChild(el)
+    }
+  },
+  updated(el, binding) {
+    if (!hasPermission(binding.value)) {
+      el.parentNode?.removeChild(el)
+    }
+  },
+}
+
 function looksLikeRoutePath(value) {
   const s = String(value ?? '').trim()
   return s.startsWith('/')
@@ -97,7 +111,7 @@ export function normalizeMenuItem(permission) {
     disabledFlag: (permission.status ?? '0') === '1',
     cacheFlag: false,
     code: permission.code || '',
-    order: permission.order ?? 0,
+    order: permission.displayOrder ?? permission.display_order ?? 0,
   }
 }
 
@@ -122,6 +136,53 @@ export function componentPathFromRouterName(routerName) {
     result += c.toLowerCase()
   }
   return result ? `/${result}` : null
+}
+
+/** 后端 SysPermission → 管理页使用的统一实体（保留原始字段结构） */
+export function normalizePermissionRecord(permission) {
+  const { routerName, routePath } = coalescePermissionFields(permission)
+  const componentPath =
+    routePath ||
+    (routerName && !routerName.startsWith('/') ? componentPathFromRouterName(routerName) : routerName) ||
+    ''
+
+  return {
+    ...permission,
+    permissionId: permission.permissionId ?? permission.permission_id,
+    parentId: permission.parentId ?? permission.parent_id ?? 0,
+    routerName: routerName.replace(/\.vue$/i, ''),
+    componentPath,
+    isDisplay: permission.isDisplay ?? permission.is_display ?? 0,
+    displayOrder: permission.displayOrder ?? permission.display_order ?? 0,
+    type: String(permission.type || 'D').trim().toUpperCase(),
+  }
+}
+
+export function normalizePermissionList(list = []) {
+  return list.map(normalizePermissionRecord)
+}
+
+export function permissionTypeOf(row) {
+  return String(row?.type || '').trim().toUpperCase()
+}
+
+export function componentPathOf(row) {
+  if (!row) return ''
+  const path = row.componentPath ?? row.component_path ?? ''
+  if (path) return path
+  const routerName = row.routerName ?? row.router_name ?? ''
+  return componentPathFromRouterName(routerName) || ''
+}
+
+export function isDisplayOf(row) {
+  const val = row?.isDisplay ?? row?.is_display
+  return val == null ? 0 : Number(val)
+}
+
+export function viewFileFromRouterName(routerName) {
+  const name = String(routerName ?? '').trim().replace(/\.vue$/i, '')
+  if (!name) return ''
+  return `views/**/${name}.vue`
 }
 
 /** 平铺转树：仅目录 + 菜单，排除功能权限、不可见、已停用 */
