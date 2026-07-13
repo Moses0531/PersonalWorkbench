@@ -32,6 +32,9 @@ public class Login {
     /** 用户名（登录成功后返回） */
     private String username;
 
+    /** 头像 URL（登录成功后返回） */
+    private String avatar;
+
     /** 当前用户可访问的权限菜单列表（平铺） */
     private List<SysPermission> menuList;
 }

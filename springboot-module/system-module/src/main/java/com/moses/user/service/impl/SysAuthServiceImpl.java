@@ -149,6 +149,7 @@ public class SysAuthServiceImpl implements SysAuthService {
         result.setAccount(sysUser.getAccount());
         result.setUserId(sysUser.getUserId());
         result.setUsername(sysUser.getUsername());
+        result.setAvatar(sysUser.getAvatar());
         List<SysPermission> menuList = sysPermissionMapper.selectMenusByUserId(sysUser.getUserId());
         result.setMenuList(fillParentMenus(menuList != null ? menuList : new ArrayList<>()));
         return result;
