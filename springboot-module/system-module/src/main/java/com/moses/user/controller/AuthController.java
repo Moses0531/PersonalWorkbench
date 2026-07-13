@@ -1,5 +1,6 @@
 package com.moses.user.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.moses.user.entity.Login;
 import com.moses.user.entity.Register;
 import com.moses.user.service.SysAuthService;
@@ -7,6 +8,7 @@ import com.moses.config.ResultConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,5 +35,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResultConfig userLogin(@RequestBody Login login) {
         return ResultConfig.success(sysAuthService.login(login));
+    }
+
+    @Operation(summary = "获取当前用户菜单", description = "从数据库实时加载当前登录用户可访问的菜单与功能权限")
+    @SaCheckLogin
+    @GetMapping("/menus")
+    public ResultConfig getCurrentUserMenus() {
+        return ResultConfig.success(sysAuthService.getCurrentUserMenus());
     }
 }
