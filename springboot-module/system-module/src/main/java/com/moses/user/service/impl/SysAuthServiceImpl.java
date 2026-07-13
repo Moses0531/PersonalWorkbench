@@ -19,7 +19,11 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -146,8 +150,53 @@ public class SysAuthServiceImpl implements SysAuthService {
         result.setUserId(sysUser.getUserId());
         result.setUsername(sysUser.getUsername());
         List<SysPermission> menuList = sysPermissionMapper.selectMenusByUserId(sysUser.getUserId());
-        result.setMenuList(menuList != null ? menuList : new ArrayList<>());
+        result.setMenuList(fillParentMenus(menuList != null ? menuList : new ArrayList<>()));
         return result;
+    }
+
+    /**
+     * 向上递归补全父目录节点，避免只分配叶子菜单时导航树断裂。
+     */
+    private List<SysPermission> fillParentMenus(List<SysPermission> assigned) {
+        if (assigned.isEmpty()) {
+            return assigned;
+        }
+        Map<Long, SysPermission> merged = new LinkedHashMap<>();
+        for (SysPermission permission : assigned) {
+            if (permission.getPermissionId() != null) {
+                merged.put(permission.getPermissionId(), permission);
+            }
+        }
+        Set<Long> pendingParentIds = new HashSet<>();
+        for (SysPermission permission : assigned) {
+            collectMissingParentIds(permission.getParentId(), merged, pendingParentIds);
+        }
+        while (!pendingParentIds.isEmpty()) {
+            List<Long> batch = new ArrayList<>(pendingParentIds);
+            pendingParentIds.clear();
+            List<SysPermission> parents = sysPermissionMapper.selectBatchIds(batch);
+            if (parents == null || parents.isEmpty()) {
+                break;
+            }
+            for (SysPermission parent : parents) {
+                if (parent.getPermissionId() == null || merged.containsKey(parent.getPermissionId())) {
+                    continue;
+                }
+                if (!"0".equals(parent.getStatus())) {
+                    continue;
+                }
+                merged.put(parent.getPermissionId(), parent);
+                collectMissingParentIds(parent.getParentId(), merged, pendingParentIds);
+            }
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    private void collectMissingParentIds(Long parentId, Map<Long, SysPermission> merged, Set<Long> pending) {
+        if (parentId == null || parentId <= 0 || merged.containsKey(parentId)) {
+            return;
+        }
+        pending.add(parentId);
     }
 
     private void validateLoginAccount(String account) {
