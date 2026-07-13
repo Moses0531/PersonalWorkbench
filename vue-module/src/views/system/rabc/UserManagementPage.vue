@@ -1,13 +1,8 @@
 ﻿<script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  deleteUserApi,
-  pageUsersApi,
-  saveUserApi,
-  updateUserApi,
-  listRolesApi,
-} from '@/apis/system/rabc'
+import { deleteUserApi, pageUsersApi, saveUserApi, updateUserApi } from '@/apis/system/rabc/UserApi'
+import { listRolesApi } from '@/apis/system/rabc/RoleApi'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
