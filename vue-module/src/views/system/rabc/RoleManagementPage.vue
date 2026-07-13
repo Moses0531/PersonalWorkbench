@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   deleteRoleApi,
@@ -11,6 +11,7 @@ import {
 } from '@/apis/system/rabc/RoleApi'
 import { listRolePermissionIdsApi, saveRolePermissionsApi } from '@/apis/system/rabc/RolePermissionApi'
 import { listPermissionsApi } from '@/apis/system/rabc/PermissionApi'
+import { buildPermissionTree } from '@/utils/menu'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
@@ -193,33 +194,28 @@ async function openPermissionAssign(row) {
   }
   permDialogVisible.value = true
   permLoading.value = true
+  menuTreeData.value = []
   permForm.roleId = row.roleId
+  permForm.permissionIds = []
   try {
     const [permissionsResp, selectedResp] = await Promise.all([
       listPermissionsApi(),
-      listRolePermissionIdsApi(row.roleId)
+      listRolePermissionIdsApi(row.roleId),
     ])
-    menuTreeData.value = buildMenuTree(permissionsResp?.data || [])
+    const list = permissionsResp?.data || []
+    menuTreeData.value = buildPermissionTree(list)
     permForm.permissionIds = (selectedResp?.data || []).map(Number)
+    if (!menuTreeData.value.length) {
+      ElMessage.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
+    }
+    await nextTick()
+    menuTreeRef.value?.setCheckedKeys(permForm.permissionIds, false)
+  } catch (error) {
+    menuTreeData.value = []
+    ElMessage.error(error.message || '加载权限树失败')
   } finally {
     permLoading.value = false
   }
-}
-
-function buildMenuTree(permissions) {
-  const map = {}
-  const tree = []
-  permissions.forEach((permission) => {
-    map[permission.permissionId] = { ...permission, children: [] }
-  })
-  permissions.forEach((permission) => {
-    if (permission.parentId === 0 || permission.parentId === null) {
-      tree.push(map[permission.permissionId])
-    } else if (map[permission.parentId]) {
-      map[permission.parentId].children.push(map[permission.permissionId])
-    }
-  })
-  return tree
 }
 
 async function submitRoleMenusWithTree() {
@@ -230,6 +226,7 @@ async function submitRoleMenusWithTree() {
     await saveRolePermissionsApi(permForm.roleId, [...checkedKeys, ...halfCheckedKeys])
     ElMessage.success('权限保存成功')
     permDialogVisible.value = false
+    window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (_error) {
     ElMessage.error('保存失败')
   } finally {
@@ -452,21 +449,29 @@ onMounted(refreshAll)
     </el-form>
   </DataOperationView>
 
-  <el-dialog v-model="permDialogVisible" title="" width="560px" class="form-dialog data-operation-view" :close-on-click-modal="false">
+  <el-dialog
+    v-model="permDialogVisible"
+    title=""
+    width="560px"
+    class="form-dialog data-operation-view"
+    :close-on-click-modal="false"
+    destroy-on-close
+  >
     <div class="perm-dialog-header">
       <h3 class="perm-dialog-title">分配权限</h3>
       <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
     </div>
     <div class="perm-tree-wrap" v-loading="permLoading">
       <el-tree
+        v-if="menuTreeData.length"
         ref="menuTreeRef"
         :data="menuTreeData"
         show-checkbox
         node-key="permissionId"
         :props="{ label: 'name', children: 'children' }"
-        :default-checked-keys="permForm.permissionIds"
         class="perm-tree"
       />
+      <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
     </div>
     <template #footer>
       <div class="dialog-footer">

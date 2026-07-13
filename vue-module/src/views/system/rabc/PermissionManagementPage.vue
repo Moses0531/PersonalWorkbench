@@ -16,6 +16,7 @@ import {
   normalizePermissionList,
   permissionTypeOf,
   viewFileFromRouterName,
+  buildPermissionTree,
 } from '@/utils/menu'
 import HierarchicalManageListView from '@/components/ListView/HierarchicalManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
@@ -81,18 +82,7 @@ const parentOptions = computed(() => {
   return options
 })
 
-function buildTree(list, parentId = 0) {
-  return list
-    .filter((item) => Number(item.parentId) === Number(parentId))
-    .map((item) => ({ ...item, children: buildTree(list, item.permissionId) }))
-    .sort((a, b) => {
-      const ao = a.displayOrder ?? 99999
-      const bo = b.displayOrder ?? 99999
-      return ao !== bo ? ao - bo : (a.permissionId || 0) - (b.permissionId || 0)
-    })
-}
-
-const treeData = computed(() => buildTree(tableData.value))
+const treeData = computed(() => buildPermissionTree(tableData.value))
 
 async function loadPermissions() {
   loading.value = true
