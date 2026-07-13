@@ -176,4 +176,81 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
         sysUser.setUpdateTime(new Date());
         updateById(sysUser);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createManagedUser(SysUser user) {
+        if (user == null) {
+            throw new RuntimeException("用户信息不能为空");
+        }
+        String account = user.getAccount();
+        if (!StringUtils.hasText(account)) {
+            throw new RuntimeException("登录账号不能为空");
+        }
+        account = account.trim();
+        if (count(new LambdaQueryWrapper<SysUser>().eq(SysUser::getAccount, account)) > 0) {
+            throw new RuntimeException("该账号已存在");
+        }
+
+        String password = user.getPassword();
+        if (!StringUtils.hasText(password)) {
+            throw new RuntimeException("密码不能为空");
+        }
+        if (password.length() < 6 || password.length() > 20) {
+            throw new RuntimeException("密码长度需在6-20位之间");
+        }
+
+        Date now = new Date();
+        user.setAccount(account);
+        user.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
+        if (!StringUtils.hasText(user.getStatus())) {
+            user.setStatus("0");
+        }
+        user.setCreateTime(now);
+        user.setUpdateTime(now);
+        save(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateManagedUser(SysUser user) {
+        if (user == null || user.getUserId() == null) {
+            throw new RuntimeException("用户ID不能为空");
+        }
+
+        SysUser existingUser = getById(user.getUserId());
+        if (existingUser == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        if (StringUtils.hasText(user.getUsername())) {
+            existingUser.setUsername(user.getUsername().trim());
+        }
+        if (user.getRealName() != null) {
+            existingUser.setRealName(user.getRealName().trim());
+        }
+        if (user.getPhone() != null) {
+            existingUser.setPhone(StringUtils.hasText(user.getPhone()) ? user.getPhone().trim() : null);
+        }
+        if (user.getEmail() != null) {
+            existingUser.setEmail(StringUtils.hasText(user.getEmail()) ? user.getEmail().trim() : null);
+        }
+        if (user.getSex() != null) {
+            existingUser.setSex(user.getSex());
+        }
+        if (user.getRoleId() != null) {
+            existingUser.setRoleId(user.getRoleId());
+        }
+
+        String password = user.getPassword();
+        if (StringUtils.hasText(password)) {
+            if (password.length() < 6 || password.length() > 20) {
+                throw new RuntimeException("密码长度需在6-20位之间");
+            }
+            existingUser.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
+        }
+
+        existingUser.setUpdateTime(new Date());
+        updateById(existingUser);
+    }
 }

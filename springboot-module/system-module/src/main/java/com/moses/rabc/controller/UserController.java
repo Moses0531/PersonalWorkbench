@@ -53,7 +53,7 @@ public class UserController {
     @SaCheckPermission(value = {"user:add", "admin:add"}, mode = SaMode.OR)
     @PostMapping("/insertUser")
     public ResultConfig addUser(@RequestBody SysUser user) {
-        sysUserService.save(user);
+        sysUserService.createManagedUser(user);
         return ResultConfig.success();
     }
 
@@ -61,7 +61,7 @@ public class UserController {
     @SaCheckPermission(value = {"user:modify", "admin:modify"}, mode = SaMode.OR)
     @PostMapping("/updateUser")
     public ResultConfig updateUser(@RequestBody SysUser user) {
-        sysUserService.updateById(user);
+        sysUserService.updateManagedUser(user);
         return ResultConfig.success();
     }
 

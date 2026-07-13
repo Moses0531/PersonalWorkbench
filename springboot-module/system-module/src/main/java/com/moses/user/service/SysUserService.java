@@ -20,4 +20,8 @@ public interface SysUserService extends IService<SysUser> {
     String updateAvatar(Long userId, MultipartFile file);
 
     void deleteAvatar(Long userId);
+
+    void createManagedUser(SysUser user);
+
+    void updateManagedUser(SysUser user);
 }
