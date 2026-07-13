@@ -407,7 +407,7 @@ function completeLogin(data) {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
   }
-  if (!data?.userId) {
+  if (data?.userId == null) {
     throw new Error('登录成功但未获取到用户ID')
   }
 
