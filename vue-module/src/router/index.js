@@ -1,36 +1,57 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { TOKEN_KEY } from '@/utils/request'
+import { constantRoutes } from './routers'
+import { useUserStore } from '@/stores/userStore'
+import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME } from './dynamicRoutes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      redirect: '/auth',
-    },
-    {
-      path: '/auth',
-      name: 'auth',
-      component: () => import('../views/system/auth/AuthPage.vue'),
-      meta: { guest: true },
-    },
-    {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: () => import('../views/system/DashboardPage.vue'),
-      meta: { requiresAuth: true },
-    },
-  ],
+  routes: constantRoutes,
 })
+
+function ensureDynamicRoutes() {
+  const userStore = useUserStore()
+  if (userStore.routesBuilt) return true
+  if (!userStore.isLoggedIn) return false
+
+  const restored = userStore.restoreMenuFromStorage()
+  if (!restored) return false
+
+  return buildRoutes(router)
+}
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem(TOKEN_KEY)
-  if (to.meta.requiresAuth && !token) {
+  const userStore = useUserStore()
+
+  if (to.path === '/' && !userStore.isLoggedIn) {
+    return '/auth'
+  }
+
+  if (to.meta.guest) {
+    if (userStore.isLoggedIn && to.name === 'auth') {
+      ensureDynamicRoutes()
+      const first = userStore.getMenuRouterList?.[0]
+      return first?.path ? (first.path.startsWith('/') ? first.path : `/${first.path}`) : '/dashboard'
+    }
+    return true
+  }
+
+  if (to.meta.requiresAuth !== false && !userStore.isLoggedIn) {
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
-  if (to.meta.guest && token && to.name === 'auth') {
-    return { path: '/dashboard' }
+
+  if (userStore.isLoggedIn) {
+    const wasBuilt = userStore.routesBuilt
+    const ready = ensureDynamicRoutes()
+    if (!ready && to.path !== '/auth') {
+      return { path: '/auth', query: { redirect: to.fullPath } }
+    }
+    if (!wasBuilt && userStore.routesBuilt) {
+      return { ...to, replace: true }
+    }
   }
+
+  return true
 })
 
+export { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, ensureDynamicRoutes }
 export default router
