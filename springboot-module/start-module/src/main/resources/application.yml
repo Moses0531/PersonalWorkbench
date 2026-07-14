@@ -50,6 +50,13 @@ aliyun:
     bucketName: fangqianmin
     region: cn-hangzhou
 
+# 认证功能开关（按部署场景按需关闭）
+app:
+  auth:
+    register-enabled: true
+    captcha-on-login: true
+    captcha-on-register: true
+
 # Sa-Token 配置
 sa-token:
   # token 名称 (同时也是 cookie 名称)
