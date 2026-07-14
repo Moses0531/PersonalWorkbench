@@ -306,8 +306,8 @@ onMounted(async () => {
 <style scoped>
 .chat-page {
   position: relative;
-  padding: 24px;
-  min-height: 100vh;
+  padding: var(--space-6, 24px);
+  min-height: 100dvh;
   background: var(--color-bg);
   font-family: var(--font-family-sans);
   overflow: hidden;
@@ -315,8 +315,8 @@ onMounted(async () => {
 
 /* ── 背景 ── */
 .bg-blob { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; opacity: 0.4; }
-.bg-blob--1 { width: 500px; height: 500px; top: -10%; right: -8%; background: rgba(224,122,79,0.07); animation: blobFloat 20s ease-in-out infinite; }
-.bg-blob--2 { width: 400px; height: 400px; bottom: -10%; left: -5%; background: rgba(190,160,120,0.06); animation: blobFloat 24s 4s ease-in-out infinite reverse; }
+.bg-blob--1 { width: 500px; height: 500px; top: -10%; right: -8%; background: rgba(34,184,207,0.08); animation: blobFloat 20s ease-in-out infinite; }
+.bg-blob--2 { width: 400px; height: 400px; bottom: -10%; left: -5%; background: rgba(14,116,144,0.06); animation: blobFloat 24s 4s ease-in-out infinite reverse; }
 @keyframes blobFloat { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-20px) scale(1.05); } }
 
 /* ── 主容器 ── */
@@ -326,10 +326,10 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 0;
-  height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel, 18px);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
@@ -373,6 +373,13 @@ onMounted(async () => {
   cursor: pointer;
   transition: all var(--transition-normal);
 }
+.btn-new:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.btn-new:active {
+  transform: scale(0.96);
+}
 .btn-new:hover {
   background: var(--color-accent);
   color: #fff;
@@ -386,7 +393,7 @@ onMounted(async () => {
   padding: var(--space-2) var(--space-2);
 }
 .conversation-list::-webkit-scrollbar { width: 4px; }
-.conversation-list::-webkit-scrollbar-thumb { background: rgba(107,94,82,0.12); border-radius: var(--radius-xs); }
+.conversation-list::-webkit-scrollbar-thumb { background: rgba(34,184,207,0.18); border-radius: var(--radius-xs); }
 
 .conversation-item {
   display: flex;
@@ -400,12 +407,17 @@ onMounted(async () => {
   border: 1px solid transparent;
 }
 .conversation-item:hover {
-  background: rgba(255,255,255,0.7);
+  background: var(--color-accent-muted, rgba(34, 184, 207, 0.05));
 }
 .conversation-item.active {
   background: var(--color-surface);
   border-color: var(--color-accent-glow);
-  box-shadow: 0 1px 4px rgba(224,122,79,0.08);
+  box-shadow: 0 1px 4px rgba(8,145,178,0.1);
+}
+
+.conversation-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .conversation-title {
@@ -501,9 +513,16 @@ onMounted(async () => {
   transition: all var(--transition-normal);
 }
 .btn-delete:hover:not(:disabled) {
-  color: #e05545;
-  border-color: rgba(224,85,69,0.2);
-  background: rgba(224,85,69,0.06);
+  color: var(--color-red);
+  border-color: rgba(224, 85, 69, 0.2);
+  background: var(--color-red-soft);
+}
+.btn-delete:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn-delete:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .btn-delete:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -515,7 +534,7 @@ onMounted(async () => {
   scroll-behavior: smooth;
 }
 .chat-list::-webkit-scrollbar { width: 5px; }
-.chat-list::-webkit-scrollbar-thumb { background: rgba(107,94,82,0.1); border-radius: var(--radius-sm); }
+.chat-list::-webkit-scrollbar-thumb { background: rgba(34,184,207,0.16); border-radius: var(--radius-sm); }
 
 /* 空状态 */
 .chat-empty {
@@ -676,9 +695,13 @@ onMounted(async () => {
 .btn-send:hover:not(:disabled) {
   background: var(--color-accent-deep);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(224,122,79,0.35);
+  box-shadow: var(--shadow-accent);
 }
-.btn-send:active:not(:disabled) { transform: translateY(0); }
+.btn-send:active:not(:disabled) { transform: scale(0.96); }
+.btn-send:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
 .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .send-spinner {
@@ -696,7 +719,7 @@ onMounted(async () => {
   .chat-page { padding: var(--space-3); }
   .chat-container {
     grid-template-columns: 1fr;
-    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
     border-radius: var(--radius-xl);
   }
   .sidebar {

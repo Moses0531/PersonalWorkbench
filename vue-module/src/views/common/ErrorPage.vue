@@ -19,8 +19,8 @@
     <div class="content">
       <div class="illustration" :style="illustrationStyle">
         <svg viewBox="0 0 320 240" class="scene">
-          <ellipse cx="160" cy="210" rx="120" ry="12" fill="rgba(224,122,79,0.06)" />
-          <ellipse cx="160" cy="210" rx="80" ry="6" fill="rgba(224,122,79,0.04)" />
+          <ellipse cx="160" cy="210" rx="120" ry="12" fill="rgba(8,145,178,0.08)" />
+          <ellipse cx="160" cy="210" rx="80" ry="6" fill="rgba(8,145,178,0.05)" />
 
           <g opacity="0.2" class="far-planet">
             <circle cx="50" cy="50" r="8" fill="var(--accent)" />
@@ -28,7 +28,7 @@
           </g>
 
           <g class="planet-group">
-            <circle cx="160" cy="110" r="58" fill="rgba(224,122,79,0.04)" class="planet-glow" />
+            <circle cx="160" cy="110" r="58" fill="rgba(8,145,178,0.06)" class="planet-glow" />
 
             <ellipse cx="160" cy="112" rx="100" ry="24" fill="none"
                      stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 8"
@@ -172,30 +172,30 @@ const goBack = () => router.back()
 
 <style scoped>
 .error-page {
-  --bg: #f8f5f0;
-  --accent: #e07a4f;
-  --accent-deep: #c96a42;
-  --accent-soft: rgba(224, 122, 79, 0.1);
-  --accent-glow: rgba(224, 122, 79, 0.2);
-  --planet-fill: #eae0d5;
-  --text-primary: #3d3229;
-  --text-body: #6b5e52;
-  --text-dim: #b5a99a;
-  --card-bg: rgba(255, 253, 251, 0.65);
-  --card-border: rgba(107, 94, 82, 0.07);
-  --shadow-card: 0 1px 2px rgba(61, 50, 41, 0.03),
-  0 4px 16px rgba(61, 50, 41, 0.05),
-  0 16px 48px rgba(61, 50, 41, 0.04);
-  --shadow-btn: 0 2px 12px rgba(224, 122, 79, 0.2);
+  --bg: var(--color-zone-content, #f0f7fb);
+  --accent: var(--color-accent, #0891b2);
+  --accent-deep: var(--color-accent-deep, #0e7490);
+  --accent-soft: var(--color-accent-soft, rgba(34, 184, 207, 0.12));
+  --accent-glow: var(--color-accent-glow, rgba(34, 184, 207, 0.22));
+  --planet-fill: #d6eef6;
+  --text-primary: var(--color-text-primary, #0c2a42);
+  --text-body: var(--color-text-body, #3d6478);
+  --text-dim: var(--color-text-dim, #8eb4c9);
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-border: var(--color-border, rgba(34, 184, 207, 0.14));
+  --shadow-card: var(--shadow-md);
+  --shadow-btn: var(--shadow-accent);
 
   position: relative;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 32px 24px;
-  background: var(--bg);
+  background:
+    var(--color-zone-content-glow),
+    var(--bg);
   overflow: hidden;
-  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+  font-family: var(--font-family-sans);
 }
 
 .texture {
@@ -219,7 +219,7 @@ const goBack = () => router.back()
   height: 520px;
   top: -18%;
   left: -12%;
-  background: rgba(224, 122, 79, 0.08);
+  background: rgba(34, 184, 207, 0.1);
   animation: blobDrift 20s ease-in-out infinite;
 }
 
@@ -228,7 +228,7 @@ const goBack = () => router.back()
   height: 440px;
   bottom: -15%;
   right: -10%;
-  background: rgba(168, 130, 100, 0.08);
+  background: rgba(14, 116, 144, 0.08);
   animation: blobDrift 24s 3s ease-in-out infinite reverse;
 }
 
@@ -237,7 +237,7 @@ const goBack = () => router.back()
   height: 300px;
   top: 45%;
   left: 50%;
-  background: rgba(224, 122, 79, 0.05);
+  background: rgba(8, 145, 178, 0.06);
   animation: blobDrift 18s 6s ease-in-out infinite;
 }
 
@@ -291,7 +291,7 @@ const goBack = () => router.back()
 
 .ray {
   position: absolute;
-  background: linear-gradient(180deg, rgba(224, 122, 79, 0.06), transparent);
+  background: linear-gradient(180deg, rgba(8, 145, 178, 0.08), transparent);
   border-radius: 2px;
   transform-origin: top center;
 }
@@ -430,8 +430,8 @@ const goBack = () => router.back()
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--card-border);
-  border-radius: 20px;
-  padding: 32px 36px 36px;
+  border-radius: var(--radius-2xl, 20px);
+  padding: 32px 36px 40px;
   box-shadow: var(--shadow-card);
   animation: cardIn 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
@@ -446,7 +446,7 @@ const goBack = () => router.back()
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.8) 30%, rgba(224,122,79,0.15) 50%, rgba(255,255,255,0.8) 70%, transparent 95%);
+  background: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.85) 30%, rgba(8,145,178,0.2) 50%, rgba(255,255,255,0.85) 70%, transparent 95%);
 }
 
 @keyframes cardIn {
@@ -604,7 +604,12 @@ const goBack = () => router.back()
   border-color: var(--accent-deep) !important;
   color: #fff !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(224, 122, 79, 0.35);
+  box-shadow: 0 8px 28px rgba(8, 145, 178, 0.35);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .btn-primary:hover::after {
@@ -623,7 +628,7 @@ const goBack = () => router.back()
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   background: transparent !important;
-  border-color: rgba(107, 94, 82, 0.15) !important;
+  border-color: var(--card-border) !important;
   color: var(--text-body) !important;
 }
 .btn-ghost:hover {
@@ -631,7 +636,12 @@ const goBack = () => router.back()
   border-color: var(--accent-glow) !important;
   color: var(--accent) !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(224, 122, 79, 0.1);
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.12);
+}
+
+.btn-ghost:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .btn-ghost:active {

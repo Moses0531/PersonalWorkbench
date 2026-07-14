@@ -1,5 +1,4 @@
 @import './base.css';
-@import './design-tokens.css';
 @import '../styles/variables.css';
 @import '../styles/data-table.css';
 @import '../styles/management-list-view.css';
@@ -11,7 +10,7 @@ html,
 body,
 #app {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   padding: 0;
 }
@@ -23,4 +22,15 @@ body,
 a {
   text-decoration: none;
   color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

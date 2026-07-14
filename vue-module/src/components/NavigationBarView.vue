@@ -494,7 +494,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .layout {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   overflow: hidden;
   font-family: var(--font-family-sans);
@@ -575,7 +575,7 @@ onBeforeUnmount(() => {
 .rail-btn {
   width: 60px;
   min-height: 52px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: none;
   background: transparent;
   color: var(--color-text-dim);
@@ -917,7 +917,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   height: 36px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   cursor: pointer;
@@ -960,7 +960,7 @@ onBeforeUnmount(() => {
 .icon-btn {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-dim);

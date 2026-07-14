@@ -17,10 +17,10 @@
   --mlv-shadow-hover: var(--shadow-md);
 
   position: relative;
-  padding: 24px;
-  min-height: 100vh;
+  padding: var(--space-6, 24px);
+  min-height: 100dvh;
   background: var(--color-zone-content);
-  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+  font-family: var(--font-family-sans);
   overflow-x: hidden;
 }
 
@@ -60,16 +60,16 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-5, 20px);
 }
 
 .management-list-view__card {
   background: var(--mlv-surface);
   border: 1px solid var(--mlv-border);
-  border-radius: 18px;
+  border-radius: var(--radius-panel, 18px);
   box-shadow: var(--mlv-shadow-card);
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow var(--transition-slow, 300ms ease);
 }
 
 .management-list-view__card:hover {
@@ -80,28 +80,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px;
+  gap: var(--space-4, 16px);
+  padding: var(--space-5, 20px) var(--space-6, 24px);
   border-bottom: 1px solid var(--mlv-border);
 }
 
 .management-list-view__toolbar-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-2xl, 16px);
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--mlv-text-primary);
 }
 
 .management-list-view__toolbar-desc {
-  margin: 3px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: var(--text-sm, 12px);
+  line-height: var(--leading-snug, 1.35);
   color: var(--mlv-text-dim);
 }
 
 .management-list-view__toolbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2, 8px);
 }
 
 .management-list-view__search {
@@ -122,13 +124,13 @@
   width: 200px;
   padding: 0 12px 0 36px;
   border: 1px solid var(--mlv-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   background: var(--mlv-input-bg);
-  font-size: 13px;
+  font-size: var(--text-base, 13px);
   color: var(--mlv-text-primary);
   font-family: inherit;
   outline: none;
-  transition: all 0.25s ease;
+  transition: all var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .management-list-view__search-input::placeholder {
@@ -139,12 +141,13 @@
   border-color: var(--mlv-accent);
   box-shadow: 0 0 0 3px var(--mlv-accent-soft);
   width: 240px;
+  background: #fff;
 }
 
 .management-list-view__btn-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: 1px solid var(--mlv-border);
   background: transparent;
   color: var(--mlv-text-body);
@@ -152,7 +155,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal, 200ms ease);
 }
 
 .management-list-view__btn-icon:hover {
@@ -161,14 +164,23 @@
   border-color: var(--mlv-accent-glow);
 }
 
+.management-list-view__btn-icon:active {
+  transform: scale(0.96);
+}
+
+.management-list-view__btn-icon:focus-visible {
+  outline: 2px solid var(--mlv-accent);
+  outline-offset: 2px;
+}
+
 .management-list-view .mlv-btn-primary {
   height: 36px;
   padding: 0 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: none;
   background: var(--mlv-accent);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--text-base, 13px);
   font-weight: 600;
   font-family: inherit;
   display: flex;
@@ -176,13 +188,22 @@
   gap: 6px;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(34, 184, 207, 0.2);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .management-list-view .mlv-btn-primary:hover {
   background: var(--mlv-accent-deep);
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(34, 184, 207, 0.3);
+}
+
+.management-list-view .mlv-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.management-list-view .mlv-btn-primary:focus-visible {
+  outline: 2px solid var(--mlv-accent);
+  outline-offset: 2px;
 }
 
 .management-list-view__empty-cell {
@@ -260,14 +281,23 @@
 .management-list-view .btn-action {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--radius-md, 8px);
   border: 1px solid var(--mlv-border);
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal, 200ms ease);
+}
+
+.management-list-view .btn-action:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.management-list-view .btn-action:focus-visible {
+  outline: 2px solid var(--mlv-accent);
+  outline-offset: 2px;
 }
 
 .management-list-view .btn-action--edit { color: var(--mlv-text-body); }
@@ -332,15 +362,15 @@
 .hierarchical-list-view__expand-btn {
   height: 36px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control, 10px);
   border: 1px solid var(--mlv-border);
   background: transparent;
   color: var(--mlv-text-body);
-  font-size: 12px;
+  font-size: var(--text-sm, 12px);
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal, 200ms ease);
   white-space: nowrap;
 }
 
@@ -348,6 +378,11 @@
   background: var(--mlv-accent-soft);
   color: var(--mlv-accent);
   border-color: var(--mlv-accent-glow);
+}
+
+.hierarchical-list-view__expand-btn:focus-visible {
+  outline: 2px solid var(--mlv-accent);
+  outline-offset: 2px;
 }
 
 .hierarchical-table {
@@ -399,6 +434,11 @@
   border-color: var(--mlv-accent-glow);
 }
 
+.hierarchical-table__toggle:focus-visible {
+  outline: 2px solid var(--mlv-accent);
+  outline-offset: 2px;
+}
+
 .hierarchical-table__toggle.is-expanded {
   transform: rotate(90deg);
   color: var(--mlv-accent);
@@ -447,7 +487,7 @@
 }
 
 .hierarchical-table__row--child > td {
-  background: rgba(107, 94, 82, 0.02);
+  background: rgba(8, 145, 178, 0.02);
 }
 
 .hierarchical-table__row--expanded > td {

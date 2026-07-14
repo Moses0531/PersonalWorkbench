@@ -4,14 +4,14 @@
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--text-md, 13px);
+  font-size: var(--text-base, 13px);
   font-variant-numeric: tabular-nums;
 }
 
 .data-table thead th {
-  padding: 10px 20px 11px;
+  padding: 11px 20px 12px;
   text-align: left;
-  font-size: var(--text-sm, 11px);
+  font-size: var(--text-sm, 12px);
   font-weight: var(--font-semibold, 600);
   color: var(--color-table-header-text, var(--color-text-dim));
   letter-spacing: 0.02em;
@@ -22,12 +22,14 @@
 }
 
 .data-table tbody td {
-  padding: 15px 20px;
+  padding: 14px 20px;
   color: var(--color-text-primary);
   vertical-align: middle;
   border-bottom: 1px solid var(--color-table-row-border);
   background: var(--color-table-row-bg);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background var(--transition-normal, 200ms ease),
+    box-shadow var(--transition-normal, 200ms ease);
 }
 
 .data-table tbody tr {

@@ -149,11 +149,12 @@ function openCmdHint() {
   box-sizing: border-box;
   min-height: 100%;
   height: 100%;
-  padding: 28px 32px 36px;
+  padding: 28px 32px 40px;
   font-family: var(--font-family-sans);
   color: var(--home-ink);
   overflow: hidden;
   display: flex;
+  background: transparent;
 }
 
 .home-grain {

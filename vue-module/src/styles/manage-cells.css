@@ -14,7 +14,7 @@
 
 .management-list-view .perm-name-text {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-base, 13px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -26,10 +26,11 @@
 
 .management-list-view .type-badge {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 5px;
-  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs, 4px);
+  font-size: var(--text-xs, 11px);
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .management-list-view .type-badge--dir { color: var(--color-purple); background: var(--color-purple-soft); }
@@ -38,10 +39,10 @@
 
 .management-list-view .code-tag {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-family: 'DM Mono', 'Courier New', monospace;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs, 4px);
+  font-size: var(--text-xs, 11px);
+  font-family: var(--font-family-mono);
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -112,8 +113,8 @@
 
 .management-list-view .level-badge--gold { color: #c0820a; background: rgba(192, 130, 10, 0.08); }
 .management-list-view .level-badge--accent { color: var(--color-accent); background: var(--color-accent-soft); }
-.management-list-view .level-badge--dim { color: var(--color-text-body); background: rgba(107, 94, 82, 0.06); }
-.management-list-view .level-badge--default { color: var(--color-text-dim); background: rgba(107, 94, 82, 0.04); }
+.management-list-view .level-badge--dim { color: var(--color-text-body); background: rgba(8, 145, 178, 0.06); }
+.management-list-view .level-badge--default { color: var(--color-text-dim); background: rgba(8, 145, 178, 0.04); }
 
 .management-list-view .status-tag {
   display: inline-flex;
@@ -129,7 +130,7 @@
 .management-list-view .status-tag--normal { color: var(--color-green); background: var(--color-green-soft); }
 .management-list-view .status-tag--draft { color: #d69e2e; background: rgba(214, 158, 46, 0.12); }
 .management-list-view .status-tag--published { color: var(--color-green); background: var(--color-green-soft); }
-.management-list-view .status-tag--offline { color: var(--color-text-dim); background: rgba(107, 94, 82, 0.08); }
+.management-list-view .status-tag--offline { color: var(--color-text-dim); background: rgba(8, 145, 178, 0.08); }
 
 .management-list-view .normal-dot {
   width: 6px;

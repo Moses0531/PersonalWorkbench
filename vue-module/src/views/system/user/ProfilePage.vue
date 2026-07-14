@@ -662,13 +662,15 @@ onMounted(loadUserInfo)
 <style scoped>
 .profile-page {
   --profile-max: 1080px;
-  --profile-radius: var(--radius-lg);
+  --profile-radius: var(--radius-panel, 18px);
   --profile-primary: var(--color-accent);
   --profile-primary-deep: var(--color-accent-deep);
 
   min-height: 100%;
-  padding: 28px 32px 48px;
-  background: var(--color-bg);
+  padding: 28px 32px 52px;
+  background:
+    var(--color-zone-content-glow),
+    var(--color-bg);
   font-family: var(--font-family-sans);
   -webkit-font-smoothing: antialiased;
 }
@@ -689,9 +691,9 @@ onMounted(loadUserInfo)
 
 .profile-page__desc {
   margin: 8px 0 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base, 13px);
   color: var(--color-text-secondary);
-  line-height: 1.55;
+  line-height: 1.6;
   max-width: 42rem;
 }
 
@@ -940,17 +942,17 @@ onMounted(loadUserInfo)
 }
 
 .security-item__icon--email {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
 }
 
 .security-item__icon--phone {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  background: var(--color-green-soft);
+  color: var(--color-green);
 }
 
 .security-item__icon--login {
-  background: rgba(100, 116, 139, 0.1);
+  background: var(--color-accent-muted);
   color: var(--color-text-secondary);
 }
 
@@ -989,22 +991,22 @@ onMounted(loadUserInfo)
 }
 
 .status-tag--ok {
-  color: #047857;
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-green);
+  background: var(--color-green-soft);
 }
 
 .status-tag--warn {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.14);
+  color: #c0820a;
+  background: rgba(192, 130, 10, 0.1);
 }
 
 .action-btn {
   flex-shrink: 0;
   height: 34px;
   padding: 0 18px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control, 10px);
   border: 1px solid transparent;
-  font-size: 13px;
+  font-size: var(--text-base, 13px);
   font-weight: var(--font-semibold);
   font-family: inherit;
   cursor: pointer;

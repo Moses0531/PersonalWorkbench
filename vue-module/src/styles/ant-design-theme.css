@@ -1,29 +1,89 @@
 /**
- * Ant Design Vue 主题 — 与登录页 Auth 青色系对齐
- * 主色：#0891b2  深主色：#0e7490
+ * Ant Design Vue — MosesFrame cyan system
+ * Primary #0891b2 · Deep #0e7490 · Soft glow rings
  */
 :root {
-  --ant-primary-color: #0891b2;
-  --ant-primary-hover: #0e7490;
+  --ant-primary-color: var(--color-accent, #0891b2);
+  --ant-primary-hover: var(--color-accent-deep, #0e7490);
   --ant-primary-active: #0c6578;
+  --ant-focus-ring: 0 0 0 3px var(--color-accent-soft, rgba(34, 184, 207, 0.12));
+}
+
+/* ── Primary button ── */
+.ant-btn {
+  font-weight: 500;
+  transition:
+    background var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1)),
+    color var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--transition-fast, 150ms ease);
+}
+
+.ant-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .ant-btn-primary {
   background: var(--ant-primary-color);
   border-color: var(--ant-primary-color);
+  box-shadow: 0 2px 10px rgba(8, 145, 178, 0.22);
 }
 
 .ant-btn-primary:not(:disabled):hover {
   background: var(--ant-primary-hover) !important;
   border-color: var(--ant-primary-hover) !important;
+  box-shadow: 0 4px 16px rgba(8, 145, 178, 0.3);
 }
 
+.ant-btn-primary:not(:disabled):active {
+  background: var(--ant-primary-active) !important;
+  border-color: var(--ant-primary-active) !important;
+}
+
+.ant-btn-default:not(:disabled):hover {
+  color: var(--ant-primary-color) !important;
+  border-color: var(--color-border-strong, rgba(34, 184, 207, 0.24)) !important;
+}
+
+.ant-btn:focus-visible {
+  outline: 2px solid var(--ant-primary-color);
+  outline-offset: 2px;
+}
+
+/* ── Inputs / selects / pickers ── */
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
 .ant-picker,
 .ant-select-selector {
   background-color: var(--color-input-bg, #eef8fc) !important;
+  border-color: var(--color-border, rgba(34, 184, 207, 0.14)) !important;
+  transition:
+    border-color var(--transition-normal, 200ms ease),
+    box-shadow var(--transition-normal, 200ms ease),
+    background-color var(--transition-normal, 200ms ease) !important;
+}
+
+/* 带前缀/后缀时边框只保留在 wrapper，内层 input 去边避免双重框 */
+.ant-input-affix-wrapper > input.ant-input,
+.ant-input-affix-wrapper .ant-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.ant-input-affix-wrapper > input.ant-input:focus,
+.ant-input-affix-wrapper .ant-input:focus {
+  box-shadow: none !important;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):hover,
+.ant-input-number:hover,
+.ant-picker:hover,
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: var(--color-border-strong, rgba(34, 184, 207, 0.24)) !important;
 }
 
 .ant-input:focus,
@@ -32,4 +92,120 @@
 .ant-picker-focused,
 .ant-select-focused .ant-select-selector {
   background-color: #ffffff !important;
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: var(--ant-focus-ring) !important;
+}
+
+.ant-input-affix-wrapper-focused > input.ant-input,
+.ant-input-affix-wrapper-focused .ant-input {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder {
+  color: var(--color-text-dim, #8eb4c9);
+}
+
+/* ── Checkbox / Radio ── */
+.ant-checkbox-checked .ant-checkbox-inner,
+.ant-radio-checked .ant-radio-inner {
+  background-color: var(--ant-primary-color);
+  border-color: var(--ant-primary-color);
+}
+
+.ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.ant-checkbox:hover .ant-checkbox-inner,
+.ant-radio-wrapper:hover .ant-radio-inner {
+  border-color: var(--ant-primary-color);
+}
+
+/* ── Tree ── */
+.ant-tree .ant-tree-node-content-wrapper:hover {
+  background: var(--color-accent-soft, rgba(34, 184, 207, 0.12));
+}
+
+.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: var(--color-accent-soft, rgba(34, 184, 207, 0.12));
+}
+
+.ant-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+  background-color: var(--ant-primary-color);
+  border-color: var(--ant-primary-color);
+}
+
+/* ── Dropdown / menu ── */
+.ant-dropdown-menu,
+.ant-select-dropdown {
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--color-border-light, rgba(34, 184, 207, 0.08));
+  box-shadow: var(--shadow-md, 0 2px 6px rgba(6, 36, 64, 0.06), 0 12px 36px rgba(6, 36, 64, 0.1));
+  padding: 4px;
+}
+
+.ant-dropdown-menu-item,
+.ant-select-item {
+  border-radius: var(--radius-sm, 6px);
+}
+
+.ant-dropdown-menu-item:hover,
+.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: var(--color-accent-soft, rgba(34, 184, 207, 0.12)) !important;
+}
+
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: var(--color-accent-muted, rgba(34, 184, 207, 0.05)) !important;
+  color: var(--color-text-primary, #0c2a42);
+  font-weight: 600;
+}
+
+/* ── Modal (generic; form-dialog specializes further) ── */
+.ant-modal-content {
+  border-radius: var(--radius-xl, 16px);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg, 0 4px 12px rgba(6, 36, 64, 0.08), 0 24px 48px rgba(6, 36, 64, 0.12));
+}
+
+.ant-modal-header {
+  border-bottom-color: var(--color-border-light, rgba(34, 184, 207, 0.08));
+}
+
+.ant-modal-title {
+  color: var(--color-text-primary, #0c2a42);
+  font-weight: 700;
+}
+
+/* ── Message / notification ── */
+.ant-message-notice-content,
+.ant-notification-notice {
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md, 0 2px 6px rgba(6, 36, 64, 0.06), 0 12px 36px rgba(6, 36, 64, 0.1));
+  border: 1px solid var(--color-border-light, rgba(34, 184, 207, 0.08));
+}
+
+/* ── Pagination ── */
+.ant-pagination .ant-pagination-item-active {
+  border-color: var(--ant-primary-color);
+  background: var(--color-accent-soft, rgba(34, 184, 207, 0.12));
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: var(--ant-primary-color);
+}
+
+.ant-pagination .ant-pagination-item:hover {
+  border-color: var(--ant-primary-color);
+}
+
+.ant-pagination .ant-pagination-item:hover a {
+  color: var(--ant-primary-color);
+}
+
+/* ── Tag / Switch ── */
+.ant-switch.ant-switch-checked {
+  background: var(--ant-primary-color);
+}
+
+.ant-tag {
+  border-radius: var(--radius-sm, 6px);
 }

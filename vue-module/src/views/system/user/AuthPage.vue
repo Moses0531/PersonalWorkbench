@@ -3,270 +3,186 @@
     <div class="auth-backdrop" aria-hidden="true"></div>
 
     <div class="form-card">
-      <div class="card-segment card-segment--head">
-        <div v-if="registerEnabled" class="auth-tabs" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                class="auth-tab"
-                :class="{ active: activeTab === 'login' }"
-                :aria-selected="activeTab === 'login'"
-                @click="switchTab('login')"
+      <Transition name="auth-slide-up" mode="out-in">
+        <div :key="activeTab" class="auth-panel">
+          <header class="auth-head">
+            <h1 class="auth-title">{{ isLogin ? '登录' : '注册' }}</h1>
+            <p class="auth-sub">
+              {{ isLogin ? '使用系统账号、手机号或邮箱登录' : '填写资料，系统将自动生成登录账号' }}
+            </p>
+          </header>
+
+          <a-form
+            v-if="isLogin"
+            ref="loginFormRef"
+            class="auth-form"
+            :model="loginForm"
+            :rules="loginRules"
+            layout="vertical"
+            size="large"
+            @submit.prevent="handleLogin"
+          >
+            <a-form-item name="account">
+              <template #label><span class="label-text">账号 / 手机号 / 邮箱</span></template>
+              <a-input
+                v-model:value.trim="loginForm.account"
+                placeholder="请输入账号、手机号或邮箱"
+                allow-clear
               >
-                登录
-              </button>
-              <button
-                type="button"
-                role="tab"
-                class="auth-tab"
-                :class="{ active: activeTab === 'register' }"
-                :aria-selected="activeTab === 'register'"
-                @click="switchTab('register')"
+                <template #prefix><UserOutlined /></template>
+              </a-input>
+            </a-form-item>
+
+            <a-form-item name="password">
+              <template #label><span class="label-text">密码</span></template>
+              <a-input-password v-model:value.trim="loginForm.password" placeholder="请输入密码">
+                <template #prefix><LockOutlined /></template>
+              </a-input-password>
+            </a-form-item>
+
+            <a-form-item v-if="captchaOnLogin" class="form-item-last">
+              <template #label><span class="label-text">验证码</span></template>
+              <div class="captcha-row">
+                <a-input
+                  v-model:value.trim="loginForm.captcha"
+                  placeholder="请输入验证码"
+                  allow-clear
+                >
+                  <template #prefix><CheckCircleOutlined /></template>
+                </a-input>
+                <button
+                  type="button"
+                  class="captcha-box"
+                  title="点击刷新验证码"
+                  @click="refreshCaptcha"
+                >
+                  <img v-if="captchaBase64" :src="captchaBase64" alt="验证码" />
+                  <span v-else class="captcha-fallback">刷新</span>
+                </button>
+              </div>
+            </a-form-item>
+          </a-form>
+
+          <a-form
+            v-else-if="registerEnabled"
+            class="auth-form"
+            :model="registerForm"
+            layout="vertical"
+            size="large"
+            @submit.prevent="handleRegister"
+          >
+            <a-form-item>
+              <template #label><span class="label-text">手机号 / 邮箱</span></template>
+              <a-input
+                v-model:value.trim="registerForm.contact"
+                placeholder="请输入手机号或邮箱"
+                allow-clear
               >
-                注册
-              </button>
-            </div>
-            <h2 v-else class="auth-title">登录</h2>
-          </div>
+                <template #prefix>
+                  <MobileOutlined v-if="looksLikePhone(registerForm.contact)" />
+                  <MailOutlined v-else-if="looksLikeEmail(registerForm.contact)" />
+                  <UserOutlined v-else />
+                </template>
+              </a-input>
+            </a-form-item>
 
-          <!-- 段2：表单字段（固定三行高度） -->
-          <div class="card-segment card-segment--fields">
-            <a-form
-              v-show="activeTab === 'login'"
-              ref="loginFormRef"
-              class="auth-form"
-              :model="loginForm"
-              :rules="loginRules"
-              layout="vertical"
-              size="large"
-              @submit.prevent="handleLogin"
-            >
-              <a-form-item name="account">
-                <template #label><span class="label-text">账号 / 手机号 / 邮箱</span></template>
+            <a-form-item>
+              <template #label><span class="label-text">密码</span></template>
+              <a-input-password
+                v-model:value.trim="registerForm.password"
+                placeholder="至少 6 位"
+              >
+                <template #prefix><LockOutlined /></template>
+              </a-input-password>
+            </a-form-item>
+
+            <a-form-item>
+              <template #label><span class="label-text">确认密码</span></template>
+              <a-input-password
+                v-model:value.trim="registerForm.confirmPassword"
+                placeholder="请再次输入密码"
+              >
+                <template #prefix><LockOutlined /></template>
+              </a-input-password>
+            </a-form-item>
+
+            <a-form-item v-if="captchaOnRegister" class="form-item-last">
+              <template #label><span class="label-text">验证码</span></template>
+              <div class="captcha-row">
                 <a-input
-                  v-model:value.trim="loginForm.account"
-                  placeholder="请输入账号、手机号或邮箱"
+                  v-model:value.trim="registerForm.captcha"
+                  placeholder="请输入验证码"
                   allow-clear
                 >
-                  <template #prefix><UserOutlined /></template>
+                  <template #prefix><CheckCircleOutlined /></template>
                 </a-input>
-              </a-form-item>
-
-              <a-form-item name="password" :class="{ 'form-item-last': !captchaOnLogin }">
-                <template #label><span class="label-text">密码</span></template>
-                <a-input-password
-                  v-model:value.trim="loginForm.password"
-                  placeholder="请输入密码"
+                <button
+                  type="button"
+                  class="captcha-box"
+                  title="点击刷新验证码"
+                  @click="refreshCaptcha"
                 >
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
+                  <img v-if="captchaBase64" :src="captchaBase64" alt="验证码" />
+                  <span v-else class="captcha-fallback">刷新</span>
+                </button>
+              </div>
+            </a-form-item>
+          </a-form>
 
-              <a-form-item v-if="captchaOnLogin" class="form-item-last">
-                <template #label><span class="label-text">验证码</span></template>
-                <div class="captcha-row">
-                  <a-input
-                    v-model:value.trim="loginForm.captcha"
-                    placeholder="请输入验证码"
-                    allow-clear
-                  >
-                    <template #prefix><CheckCircleOutlined /></template>
-                  </a-input>
-                  <button
-                    type="button"
-                    class="captcha-box"
-                    title="点击刷新验证码"
-                    @click="refreshCaptcha"
-                  >
-                    <img v-if="captchaBase64" :src="captchaBase64" alt="验证码" />
-                    <span v-else class="captcha-fallback">刷新</span>
-                  </button>
-                </div>
-              </a-form-item>
-            </a-form>
-
-            <a-form
-              v-show="activeTab === 'register' && registerStep === 1"
-              class="auth-form"
-              :model="registerForm"
-              layout="vertical"
-              size="large"
-              @submit.prevent="onRegisterSubmit"
-            >
-              <a-form-item>
-                <template #label><span class="label-text">注册方式</span></template>
-                <div class="register-type-tabs" role="tablist">
-                  <button
-                    type="button"
-                    role="tab"
-                    class="register-type-tab"
-                    :class="{ active: registerType === 'phone' }"
-                    :aria-selected="registerType === 'phone'"
-                    @click="switchRegisterType('phone')"
-                  >
-                    手机号
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    class="register-type-tab"
-                    :class="{ active: registerType === 'email' }"
-                    :aria-selected="registerType === 'email'"
-                    @click="switchRegisterType('email')"
-                  >
-                    邮箱
-                  </button>
-                </div>
-              </a-form-item>
-
-              <a-form-item v-if="registerType === 'phone'">
-                <template #label><span class="label-text">手机号</span></template>
-                <a-input
-                  v-model:value.trim="registerForm.phone"
-                  placeholder="请输入手机号"
-                  allow-clear
-                >
-                  <template #prefix><MobileOutlined /></template>
-                </a-input>
-              </a-form-item>
-
-              <a-form-item v-else>
-                <template #label><span class="label-text">邮箱</span></template>
-                <a-input
-                  v-model:value.trim="registerForm.email"
-                  placeholder="请输入邮箱"
-                  allow-clear
-                >
-                  <template #prefix><MailOutlined /></template>
-                </a-input>
-              </a-form-item>
-
-              <a-form-item class="form-item-last">
-                <template #label><span class="label-text">提示</span></template>
-                <div class="auth-readonly-field">
-                  <span class="auth-readonly-field__body">注册成功后系统将自动生成登录账号，</span><span class="auth-readonly-field__action">点击下一步</span><span class="auth-readonly-field__body">设置密码</span>
-                </div>
-              </a-form-item>
-            </a-form>
-
-            <a-form
-              v-show="activeTab === 'register' && registerStep === 2"
-              class="auth-form"
-              :model="registerForm"
-              layout="vertical"
-              size="large"
-              @submit.prevent="onRegisterSubmit"
-            >
-              <a-form-item>
-                <template #label><span class="label-text">密码</span></template>
-                <a-input-password
-                  v-model:value.trim="registerForm.password"
-                  placeholder="至少 6 位"
-                >
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
-
-              <a-form-item :class="{ 'form-item-last': !captchaOnRegister }">
-                <template #label><span class="label-text">确认密码</span></template>
-                <a-input-password
-                  v-model:value.trim="registerForm.confirmPassword"
-                  placeholder="请再次输入密码"
-                >
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
-
-              <a-form-item v-if="captchaOnRegister" class="form-item-last">
-                <template #label><span class="label-text">验证码</span></template>
-                <div class="captcha-row">
-                  <a-input
-                    v-model:value.trim="registerForm.captcha"
-                    placeholder="请输入验证码"
-                    allow-clear
-                  >
-                    <template #prefix><CheckCircleOutlined /></template>
-                  </a-input>
-                  <button
-                    type="button"
-                    class="captcha-box"
-                    title="点击刷新验证码"
-                    @click="refreshCaptcha"
-                  >
-                    <img v-if="captchaBase64" :src="captchaBase64" alt="验证码" />
-                    <span v-else class="captcha-fallback">刷新</span>
-                  </button>
-                </div>
-              </a-form-item>
-            </a-form>
-          </div>
-
-          <!-- 段3：操作区 + 协议 -->
-          <div class="card-segment card-segment--foot">
-            <div v-show="activeTab === 'login'" class="auth-actions">
-              <a-form-item class="form-item-compact">
-                <div class="option-row">
-                  <a-checkbox v-model:checked="rememberMe">
-                    <span class="check-label">记住我</span>
-                  </a-checkbox>
-                  <a class="link" href="javascript:void(0)">忘记密码？</a>
-                </div>
-              </a-form-item>
-              <a-button class="submit-btn" type="primary" :loading="loginLoading" @click="handleLogin">
+          <div class="auth-foot">
+            <div v-if="isLogin" class="auth-actions">
+              <div class="option-row">
+                <a-checkbox v-model:checked="rememberMe">
+                  <span class="check-label">记住我</span>
+                </a-checkbox>
+                <a class="link" href="javascript:void(0)">忘记密码？</a>
+              </div>
+              <a-button
+                class="submit-btn"
+                type="primary"
+                :loading="loginLoading"
+                @click="handleLogin"
+              >
                 <span v-if="!loginLoading" class="btn-content">
                   <span>登录</span>
                   <ArrowRightOutlined class="btn-arrow" />
                 </span>
                 <span v-else>正在验证身份...</span>
               </a-button>
+              <p v-if="registerEnabled" class="switch-line">
+                还没有账号？
+                <a class="link" href="javascript:void(0)" @click="switchMode('register')">去注册</a>
+              </p>
             </div>
 
-            <div v-show="activeTab === 'register' && registerStep === 1" class="auth-actions">
-              <a-form-item class="form-item-compact">
-                <div class="option-row">
-                  <span aria-hidden="true"></span>
-                  <a class="link" href="javascript:void(0)" @click="switchTab('login')">
-                    已有账号？登录
-                  </a>
-                </div>
-              </a-form-item>
-              <a-button class="submit-btn" type="primary" @click="nextRegisterStep">
-                <span class="btn-content">
-                  <span>下一步</span>
-                  <ArrowRightOutlined class="btn-arrow" />
-                </span>
-              </a-button>
-            </div>
-
-            <div v-show="activeTab === 'register' && registerStep === 2" class="auth-actions">
-              <a-form-item class="form-item-compact">
-                <div class="option-row">
-                  <button type="button" class="text-btn" @click="prevRegisterStep">
-                    上一步
-                  </button>
-                  <span aria-hidden="true"></span>
-                </div>
-              </a-form-item>
-              <a-button class="submit-btn" type="primary" :loading="registerLoading" @click="handleRegister">
+            <div v-else-if="registerEnabled" class="auth-actions">
+              <a-button
+                class="submit-btn"
+                type="primary"
+                :loading="registerLoading"
+                @click="handleRegister"
+              >
                 <span v-if="!registerLoading" class="btn-content">
-                  <span>立即注册并登录</span>
+                  <span>立即注册</span>
                   <ArrowRightOutlined class="btn-arrow" />
                 </span>
-                <span v-else>正在注册并登录...</span>
+                <span v-else>正在注册...</span>
               </a-button>
+              <p class="switch-line">
+                已有账号？
+                <a class="link" href="javascript:void(0)" @click="switchMode('login')">去登录</a>
+              </p>
             </div>
-
-            <p class="footer-hint">
-              {{ activeTab === 'login' || !registerEnabled ? '登录' : '注册' }}系统账号
-            </p>
           </div>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup>
-/** 登录/注册页：对接后端 /auth 与验证码接口 */
-import { onMounted, reactive, ref, watch } from 'vue'
+/** 登录/注册页：标题模式切换，表单自然高度，不再用 Tab 同框硬撑 */
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -288,7 +204,6 @@ const router = useRouter()
 const userStore = useUserStore()
 const { setAuth, setUserLoginInfo } = userStore
 
-// --- Tab 与步骤 ---
 const registerEnabled = ref(true)
 const captchaOnLogin = ref(true)
 const captchaOnRegister = ref(true)
@@ -297,12 +212,11 @@ const loginLoading = ref(false)
 const registerLoading = ref(false)
 const rememberMe = ref(false)
 const loginFormRef = ref(null)
-// --- 验证码 ---
 const captchaBase64 = ref('')
 const captchaToken = ref('')
 const captchaTimestamp = ref(0)
-const registerStep = ref(1)  // 注册分两步：基本信息 -> 密码
-const registerType = ref('phone')  // phone | email，与后端 Register 二选一
+
+const isLogin = computed(() => activeTab.value === 'login')
 
 const loginForm = reactive({
   account: '',
@@ -311,25 +225,32 @@ const loginForm = reactive({
 })
 
 const registerForm = reactive({
-  phone: '',
-  email: '',
+  contact: '',
   password: '',
   confirmPassword: '',
   captcha: ''
 })
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_PATTERN = /^1[3-9]\d{9}$/
 
 const loginRules = {
   account: [{ required: true, message: '请输入账号、手机号或邮箱', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+function looksLikePhone(value) {
+  const text = value?.trim() || ''
+  return text.length > 0 && /^\d+$/.test(text)
+}
+
+function looksLikeEmail(value) {
+  const text = value?.trim() || ''
+  return text.includes('@')
+}
+
 function needCaptchaForCurrentView() {
-  if (activeTab.value === 'login') {
-    return captchaOnLogin.value
-  }
-  return captchaOnRegister.value && registerStep.value === 2
+  return isLogin.value ? captchaOnLogin.value : captchaOnRegister.value
 }
 
 watch(
@@ -340,30 +261,25 @@ watch(
     } else if (tab === 'register' && registerEnabled.value) {
       activeTab.value = 'register'
     } else if (tab === 'register' && !registerEnabled.value) {
-      switchTab('login')
+      switchMode('login')
     }
   }
 )
 
-function switchTab(tab) {
-  if (tab === 'register' && !registerEnabled.value) return
-  if (activeTab.value === tab) return
-  activeTab.value = tab
-  registerStep.value = 1
-  registerType.value = 'phone'
-  registerForm.phone = ''
-  registerForm.email = ''
-  router.replace({ path: '/auth', query: { ...route.query, tab } })
+function switchMode(mode) {
+  if (mode === 'register' && !registerEnabled.value) return
+  if (activeTab.value === mode) return
+  activeTab.value = mode
+  if (mode === 'register') {
+    registerForm.contact = ''
+    registerForm.password = ''
+    registerForm.confirmPassword = ''
+    registerForm.captcha = ''
+  }
+  router.replace({ path: '/auth', query: { ...route.query, tab: mode } })
   if (needCaptchaForCurrentView()) {
     refreshCaptcha()
   }
-}
-
-function switchRegisterType(type) {
-  if (registerType.value === type) return
-  registerType.value = type
-  registerForm.phone = ''
-  registerForm.email = ''
 }
 
 async function refreshCaptcha() {
@@ -378,47 +294,23 @@ async function refreshCaptcha() {
   }
 }
 
-function nextRegisterStep() {
-  if (registerType.value === 'phone') {
-    if (!registerForm.phone?.trim()) {
-      message.warning('请输入手机号')
-      return
-    }
-    if (!/^1[3-9]\d{9}$/.test(registerForm.phone)) {
-      message.warning('请输入正确的手机号')
-      return
-    }
-  } else {
-    if (!registerForm.email?.trim()) {
-      message.warning('请输入邮箱')
-      return
-    }
-    if (!EMAIL_PATTERN.test(registerForm.email)) {
-      message.warning('请输入正确的邮箱')
-      return
-    }
+function resolveRegisterContact() {
+  const contact = registerForm.contact?.trim() || ''
+  if (!contact) {
+    return { error: '请输入手机号或邮箱' }
   }
-  registerStep.value = 2
-  registerForm.captcha = ''
-  if (captchaOnRegister.value) {
-    refreshCaptcha()
+  if (PHONE_PATTERN.test(contact)) {
+    return { phone: contact }
   }
+  if (EMAIL_PATTERN.test(contact)) {
+    return { email: contact }
+  }
+  if (/^\d+$/.test(contact)) {
+    return { error: '请输入正确的手机号' }
+  }
+  return { error: '请输入正确的手机号或邮箱' }
 }
 
-function prevRegisterStep() {
-  registerStep.value = 1
-  registerForm.captcha = ''
-}
-
-function onRegisterSubmit() {
-  if (registerStep.value === 1) {
-    nextRegisterStep()
-  } else {
-    handleRegister()
-  }
-}
-
-/** 登录成功后：保存 token 与 sys_user 核心字段并跳转仪表盘 */
 function completeLogin(data) {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
@@ -469,6 +361,11 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  const contact = resolveRegisterContact()
+  if (contact.error) {
+    message.warning(contact.error)
+    return
+  }
   if (!registerForm.password?.trim()) {
     message.warning('请输入密码')
     return
@@ -494,11 +391,7 @@ async function handleRegister() {
       captchaCode: captchaOnRegister.value ? registerForm.captcha : undefined,
       captchaToken: captchaOnRegister.value ? captchaToken.value : undefined,
       captchaTimestamp: captchaOnRegister.value ? captchaTimestamp.value : undefined,
-    }
-    if (registerType.value === 'phone') {
-      payload.phone = registerForm.phone
-    } else {
-      payload.email = registerForm.email
+      ...contact,
     }
 
     const result = await registerApi(payload)
@@ -508,10 +401,11 @@ async function handleRegister() {
     }
     message.success(`注册成功，系统账号：${data.account}`)
     loginForm.account = data.account
+    registerForm.contact = ''
     registerForm.password = ''
     registerForm.confirmPassword = ''
-    registerStep.value = 1
-    switchTab('login')
+    registerForm.captcha = ''
+    switchMode('login')
   } catch (error) {
     message.error(error.message || '注册失败')
     if (captchaOnRegister.value) {
@@ -553,9 +447,9 @@ onMounted(async () => {
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 24px;
+  justify-content: flex-end;
+  min-height: 100dvh;
+  padding: 24px clamp(24px, 6vw, 96px) 24px 24px;
   overflow: auto;
 }
 
@@ -574,166 +468,141 @@ onMounted(async () => {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    135deg,
-    rgba(248, 245, 240, 0.82) 0%,
-    rgba(248, 245, 240, 0.55) 45%,
-    rgba(248, 245, 240, 0.35) 100%
+    120deg,
+    rgba(12, 42, 66, 0.28) 0%,
+    rgba(14, 116, 144, 0.18) 42%,
+    rgba(240, 247, 251, 0.55) 72%,
+    rgba(248, 252, 255, 0.72) 100%
   );
 }
 
 .form-card {
   position: relative;
   z-index: 1;
-  margin-left: 1000px;
-  --auth-accent: #0891b2;
-  --auth-accent-deep: #0e7490;
-  --auth-accent-light: #22d3ee;
+  width: 100%;
+  max-width: 460px;
+  margin: 0;
+  padding: 36px 32px 28px;
+  overflow: hidden;
+  --auth-accent: var(--color-accent, #0891b2);
+  --auth-accent-deep: var(--color-accent-deep, #0e7490);
+  --auth-accent-light: var(--color-accent-light, #22d3ee);
   --auth-accent-soft: rgba(34, 184, 207, 0.16);
   --auth-surface: rgba(248, 252, 255, 0.97);
-  --auth-tabs-bg: rgba(12, 48, 78, 0.07);
-  --auth-input-bg: rgba(255, 255, 255, 0.9);
+  --auth-input-bg: rgba(255, 255, 255, 0.92);
   --auth-border: rgba(34, 184, 207, 0.24);
   --auth-border-strong: rgba(34, 184, 207, 0.4);
-  --auth-text-primary: #0c2a42;
-  --auth-text-secondary: #3d6478;
-  --auth-text-dim: #6a8fa3;
+  --auth-text-primary: var(--color-text-primary, #0c2a42);
+  --auth-text-secondary: var(--color-text-body, #3d6478);
+  --auth-text-dim: var(--color-text-secondary, #6a8fa3);
   --auth-text-inverse: #f0f9ff;
 
-  width: 100%;
-  max-width: 440px;
-  padding: 32px 32px 24px;
   background: var(--auth-surface);
   border: 1px solid var(--auth-border-strong);
-  border-radius: 16px;
+  border-radius: var(--radius-xl, 16px);
   box-shadow:
     0 24px 48px rgba(6, 36, 64, 0.18),
-    0 8px 24px rgba(34, 184, 207, 0.12);
-  backdrop-filter: blur(12px);
+    0 8px 24px rgba(34, 184, 207, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px) saturate(140%);
 }
 
-.card-segment--head {
-  flex-shrink: 0;
+.auth-panel {
+  width: 100%;
+}
+
+
+.auth-slide-up-enter-active,
+.auth-slide-up-leave-active {
+  transition:
+    opacity 50ms ease,
+    transform 50ms ease;
+}
+
+.auth-slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.auth-slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-slide-up-enter-active,
+  .auth-slide-up-leave-active {
+    transition: none;
+  }
+
+  .auth-slide-up-enter-from,
+  .auth-slide-up-leave-to {
+    transform: none;
+  }
+}
+
+.auth-head {
+  margin-bottom: 24px;
 }
 
 .auth-title {
-  margin: 0 0 16px;
-  font-size: 22px;
-  font-weight: 600;
+  margin: 0;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
   color: var(--auth-text-primary);
 }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 16px;
-  background: var(--auth-tabs-bg);
-  border-radius: 8px;
-  border: 1px solid var(--auth-border);
-}
-
-.register-type-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  width: 100%;
-  padding: 4px;
-  background: var(--auth-tabs-bg);
-  border-radius: 8px;
-  border: 1px solid var(--auth-border);
-}
-
-.register-type-tab {
-  min-height: 34px;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--auth-text-secondary);
-  background: transparent;
-  cursor: pointer;
-}
-
-.register-type-tab:hover {
-  color: var(--auth-accent);
-}
-
-.register-type-tab.active {
-  color: var(--auth-text-inverse);
-  font-weight: 600;
-  background: linear-gradient(135deg, var(--auth-accent-light), var(--auth-accent));
-  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.28);
-}
-
-.auth-tab {
-  min-height: 36px;
-  border: none;
-  border-radius: 6px;
+.auth-sub {
+  margin: 8px 0 0;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--auth-text-secondary);
-  background: transparent;
-  cursor: pointer;
-}
-
-.auth-tab:hover {
-  color: var(--auth-accent);
-}
-
-.auth-tab:focus-visible {
-  outline: 2px solid var(--auth-accent);
-  outline-offset: 2px;
-}
-
-.auth-tab.active {
-  color: var(--auth-text-inverse);
-  font-weight: 600;
-  background: linear-gradient(135deg, var(--auth-accent-light), var(--auth-accent));
-  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.28);
+  line-height: 1.45;
+  color: var(--auth-text-dim);
 }
 
 .auth-form {
   margin: 0;
 }
 
-.auth-readonly-field {
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  color: var(--auth-text-secondary);
-  background: #f5f7fa;
-  border: 1px solid var(--auth-border);
-}
-
-.form-card :deep(.form-item-compact .ant-form-item-label) {
-  display: none;
-}
-
-.label-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--auth-text-primary);
-}
-
 .form-card :deep(.ant-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .form-card :deep(.ant-form-item.form-item-last) {
   margin-bottom: 0;
 }
 
+.form-card :deep(.ant-form-item-label) {
+  padding: 0 0 6px !important;
+}
+
+.form-card :deep(.ant-form-item-label > label) {
+  height: auto;
+}
+
+.label-text {
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--auth-text-primary);
+}
+
 .captcha-row {
   display: flex;
-  gap: 12px;
+  align-items: stretch;
+  gap: 10px;
   width: 100%;
 }
 
+.captcha-row :deep(.ant-input-affix-wrapper) {
+  flex: 1;
+  min-width: 0;
+}
+
 .captcha-box {
-  width: 110px;
+  width: 108px;
   min-height: 40px;
-  border-radius: 6px;
+  border-radius: var(--radius-control, 10px);
   overflow: hidden;
   cursor: pointer;
   border: 1px solid var(--auth-border-strong);
@@ -750,8 +619,17 @@ onMounted(async () => {
 }
 
 .captcha-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   font-size: 12px;
   color: var(--auth-text-dim);
+}
+
+.auth-foot {
+  margin-top: 20px;
 }
 
 .option-row {
@@ -759,9 +637,13 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  margin-bottom: 14px;
 }
 
-.text-btn,
+.check-label {
+  color: var(--auth-text-secondary);
+}
+
 .link {
   font-size: 14px;
   color: var(--auth-accent);
@@ -771,32 +653,63 @@ onMounted(async () => {
   padding: 0;
 }
 
+.link:hover {
+  color: var(--auth-accent-deep);
+}
+
 .form-card :deep(.ant-input-affix-wrapper),
 .form-card :deep(.ant-input) {
   background: var(--auth-input-bg);
   border: 1px solid var(--auth-border-strong);
   box-shadow: none;
+  border-radius: var(--radius-control, 10px);
+}
+
+.form-card :deep(.ant-input-affix-wrapper .ant-input),
+.form-card :deep(.ant-input-password .ant-input) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0;
 }
 
 .form-card :deep(.ant-input-affix-wrapper-focused),
+.form-card :deep(.ant-input-affix-wrapper:focus-within),
 .form-card :deep(.ant-input:focus) {
   border-color: var(--auth-accent);
   box-shadow: 0 0 0 3px var(--auth-accent-soft);
 }
 
+.form-card :deep(.ant-input-affix-wrapper .ant-input:focus),
+.form-card :deep(.ant-input-password .ant-input:focus) {
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .form-card :deep(.ant-btn.submit-btn) {
   width: 100%;
   height: 44px;
-  margin-top: 4px;
   border: none;
+  border-radius: var(--radius-control, 10px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--auth-text-inverse);
   background: linear-gradient(135deg, var(--auth-accent-light), var(--auth-accent));
   box-shadow: 0 6px 18px rgba(8, 145, 178, 0.3);
+  transition:
+    transform var(--transition-fast, 150ms ease),
+    box-shadow var(--transition-spring, 300ms cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .form-card :deep(.ant-btn.submit-btn:hover) {
   color: var(--auth-text-inverse);
   background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-deep)) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(8, 145, 178, 0.36);
+}
+
+.form-card :deep(.ant-btn.submit-btn:active) {
+  transform: scale(0.98);
 }
 
 .btn-content {
@@ -805,16 +718,42 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.footer-hint {
+.switch-line {
+  margin: 16px 0 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--auth-text-dim);
-  margin: 12px 0 0;
+}
+
+.switch-line .link {
+  font-size: 13px;
+  font-weight: 550;
+}
+
+@media (max-width: 900px) {
+  .auth-page {
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .auth-backdrop::after {
+    background: linear-gradient(
+      180deg,
+      rgba(12, 42, 66, 0.2) 0%,
+      rgba(240, 247, 251, 0.72) 55%,
+      rgba(248, 252, 255, 0.88) 100%
+    );
+  }
 }
 
 @media (max-width: 480px) {
   .form-card {
-    padding: 24px 20px 20px;
+    padding: 28px 20px 22px;
+    border-radius: var(--radius-lg, 12px);
+  }
+
+  .auth-title {
+    font-size: 24px;
   }
 
   .captcha-box {
