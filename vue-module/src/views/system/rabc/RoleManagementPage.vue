@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { onMounted, reactive, ref, nextTick } from 'vue'
+import { computed, onMounted, reactive, ref, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   deleteRoleApi,
@@ -11,7 +11,7 @@ import {
 } from '@/apis/system/rabc/RoleApi'
 import { listRolePermissionIdsApi, saveRolePermissionsApi } from '@/apis/system/rabc/RolePermissionApi'
 import { listPermissionsApi } from '@/apis/system/rabc/PermissionApi'
-import { buildPermissionTree, filterCheckedLeafIds } from '@/utils/menu'
+import { buildPermissionTree, filterCheckedLeafIds, permissionTypeOf } from '@/utils/menu'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 
@@ -29,7 +29,42 @@ const permFlatList = ref([])
 const showPermTree = ref(false)
 const treeCheckedKeys = ref([])
 const treeHalfCheckedKeys = ref([])
+const treeExpandedKeys = ref([])
 const permForm = reactive({ roleId: null, permissionIds: [] })
+
+const selectedPermCount = computed(() => {
+  const ids = new Set(
+    [...treeCheckedKeys.value, ...treeHalfCheckedKeys.value]
+      .map(Number)
+      .filter((id) => !Number.isNaN(id)),
+  )
+  return ids.size
+})
+
+function collectTreeKeys(nodes = [], acc = []) {
+  for (const node of nodes) {
+    const id = Number(node.permissionId)
+    if (!Number.isNaN(id)) acc.push(id)
+    if (node.children?.length) collectTreeKeys(node.children, acc)
+  }
+  return acc
+}
+
+function expandAllPermTree() {
+  treeExpandedKeys.value = collectTreeKeys(menuTreeData.value)
+}
+
+function collapseAllPermTree() {
+  treeExpandedKeys.value = []
+}
+
+function getPermNodeType(type) {
+  const t = permissionTypeOf({ type })
+  if (t === 'D') return { label: '目录', cls: 'dir' }
+  if (t === 'M') return { label: '菜单', cls: 'menu' }
+  if (t === 'F') return { label: '功能', cls: 'func' }
+  return { label: t || '-', cls: 'dir' }
+}
 
 const protectedRoleCodes = ref(new Set())
 const currentUserRole = ref('')
@@ -173,6 +208,9 @@ async function openPermissionAssign(row) {
   permLoading.value = true
   menuTreeData.value = []
   permFlatList.value = []
+  treeExpandedKeys.value = []
+  treeCheckedKeys.value = []
+  treeHalfCheckedKeys.value = []
   permForm.roleId = row.roleId
   permForm.permissionIds = []
   try {
@@ -184,6 +222,7 @@ async function openPermissionAssign(row) {
     permFlatList.value = list
     permForm.permissionIds = (selectedResp?.data || []).map(Number).filter((id) => !Number.isNaN(id))
     menuTreeData.value = buildPermissionTree(list)
+    treeExpandedKeys.value = collectTreeKeys(menuTreeData.value)
     if (!menuTreeData.value.length) {
       message.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
     }
@@ -192,6 +231,7 @@ async function openPermissionAssign(row) {
   } catch (error) {
     menuTreeData.value = []
     permFlatList.value = []
+    treeExpandedKeys.value = []
     message.error(error.message || '加载权限树失败')
   } finally {
     permLoading.value = false
@@ -354,38 +394,101 @@ onMounted(refreshAll)
   <a-modal
     v-model:open="permDialogVisible"
     :title="null"
-    width="560px"
-    class="form-dialog data-operation-view"
+    width="600px"
+    class="form-dialog data-operation-view perm-assign-dialog"
     :mask-closable="false"
     destroy-on-close
     :footer="null"
     @after-open-change="onPermDialogOpenChange"
   >
-    <div class="perm-dialog-header">
-      <h3 class="perm-dialog-title">分配权限</h3>
-      <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
-    </div>
-    <a-spin :spinning="permLoading">
-      <div class="perm-tree-wrap">
-        <a-tree
-          v-if="showPermTree && menuTreeData.length"
-          :key="`role-perm-${permForm.roleId}`"
-          checkable
-          default-expand-all
-          :tree-data="menuTreeData"
-          :checked-keys="treeCheckedKeys"
-          :field-names="{ children: 'children', title: 'name', key: 'permissionId' }"
-          class="perm-tree"
-          @check="onPermTreeCheck"
-        />
-        <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
+    <div class="perm-dialog">
+      <div class="perm-dialog-header">
+        <div class="perm-dialog-heading">
+          <span class="perm-dialog-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </span>
+          <div class="perm-dialog-heading-text">
+            <h3 class="perm-dialog-title">分配权限</h3>
+            <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
+          </div>
+        </div>
       </div>
-    </a-spin>
-    <div class="dialog-footer">
-      <button type="button" class="btn-ghost-sm" @click="permDialogVisible = false">取消</button>
-      <button type="button" class="btn-primary-sm" :disabled="permLoading" @click="submitRoleMenusWithTree">
-        {{ permLoading ? '保存中...' : '保存权限' }}
-      </button>
+
+      <div class="perm-tree-toolbar">
+        <div class="perm-tree-toolbar-meta">
+          <span class="perm-tree-count">已选 <em>{{ selectedPermCount }}</em> 项</span>
+          <span class="perm-tree-legend" aria-hidden="true">
+            <span class="perm-tree-legend-item"><i class="perm-tree-dot perm-tree-dot--dir" />目录</span>
+            <span class="perm-tree-legend-item"><i class="perm-tree-dot perm-tree-dot--menu" />菜单</span>
+            <span class="perm-tree-legend-item"><i class="perm-tree-dot perm-tree-dot--func" />功能</span>
+          </span>
+        </div>
+        <div class="perm-tree-toolbar-actions">
+          <button type="button" class="perm-tree-link-btn" :disabled="!menuTreeData.length || permLoading" @click="expandAllPermTree">
+            全部展开
+          </button>
+          <span class="perm-tree-toolbar-sep" aria-hidden="true" />
+          <button type="button" class="perm-tree-link-btn" :disabled="!menuTreeData.length || permLoading" @click="collapseAllPermTree">
+            全部折叠
+          </button>
+        </div>
+      </div>
+
+      <a-spin :spinning="permLoading">
+        <div class="perm-tree-wrap">
+          <a-tree
+            v-if="showPermTree && menuTreeData.length"
+            :key="`role-perm-${permForm.roleId}`"
+            v-model:expandedKeys="treeExpandedKeys"
+            checkable
+            block-node
+            :selectable="false"
+            :tree-data="menuTreeData"
+            :checked-keys="treeCheckedKeys"
+            :field-names="{ children: 'children', title: 'name', key: 'permissionId' }"
+            class="perm-tree"
+            @check="onPermTreeCheck"
+          >
+            <template #switcherIcon="{ expanded, isLeaf }">
+              <span v-if="isLeaf" class="perm-tree-leaf-gap" />
+              <span
+                v-else
+                class="perm-tree-chevron"
+                :class="{ 'perm-tree-chevron--open': expanded }"
+                aria-hidden="true"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </span>
+            </template>
+            <template #title="node">
+              <span
+                class="perm-tree-node"
+                :class="`perm-tree-node--${getPermNodeType(node.type).cls}`"
+              >
+                <i
+                  class="perm-tree-dot"
+                  :class="`perm-tree-dot--${getPermNodeType(node.type).cls}`"
+                  :title="getPermNodeType(node.type).label"
+                />
+                <span class="perm-tree-label">{{ node.name || node.title }}</span>
+                <span v-if="node.code" class="perm-tree-code">{{ node.code }}</span>
+              </span>
+            </template>
+          </a-tree>
+          <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
+        </div>
+      </a-spin>
+
+      <div class="dialog-footer perm-dialog-footer">
+        <button type="button" class="btn-ghost-sm" @click="permDialogVisible = false">取消</button>
+        <button type="button" class="btn-primary-sm" :disabled="permLoading" @click="submitRoleMenusWithTree">
+          {{ permLoading ? '保存中...' : '保存权限' }}
+        </button>
+      </div>
     </div>
   </a-modal>
 </template>

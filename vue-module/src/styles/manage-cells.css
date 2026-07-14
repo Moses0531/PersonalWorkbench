@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 管理列表单元格 — 标签、代码、状态点等（配合 Flat/HierarchicalManageListView）
  */
 .management-list-view .type-dot {
@@ -171,39 +171,378 @@
   background: var(--color-input-bg);
 }
 
-.management-list-view .role-assign-hint { margin-top: 0; }
+.management-list-view .role-assign-hint { margin-top: 0; margin-bottom: 8px; }
 
-.management-list-view .role-checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 8px;
-}
-
-.management-list-view .role-checkbox { margin-right: 0; }
 .management-list-view .role-assign-empty { margin: 8px 0 0; font-size: 12px; color: var(--color-text-dim); }
 
-.perm-dialog-header { text-align: center; padding: 28px 24px 12px; }
-.perm-dialog-title { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--color-text-primary); }
-.perm-dialog-desc { margin: 0; font-size: 12px; color: var(--color-text-dim); }
-
-.perm-tree-wrap {
-  padding: 0 24px 8px;
-  max-height: 400px;
-  overflow-y: auto;
+/* ── 角色「分配权限」弹窗 ── */
+.ant-modal.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body {
+  padding: 0;
 }
 
-.perm-tree-wrap .perm-tree .ant-tree-treenode {
-  height: 34px;
-  border-radius: 6px;
-  margin-bottom: 2px;
+.perm-dialog {
+  display: flex;
+  flex-direction: column;
+}
+
+.perm-dialog-header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+  background:
+    radial-gradient(ellipse 90% 80% at 0% 0%, rgba(34, 184, 207, 0.08) 0%, transparent 55%),
+    var(--color-surface);
+}
+
+.perm-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-right: 28px;
+}
+
+.perm-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-control, 10px);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.perm-dialog-heading-text {
+  min-width: 0;
+}
+
+.perm-dialog-title {
+  margin: 0 0 4px;
+  font-size: var(--text-3xl, 18px);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+}
+
+.perm-dialog-desc {
+  margin: 0;
+  font-size: var(--text-sm, 12px);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+
+.perm-tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 24px 8px;
+}
+
+.perm-tree-toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.perm-tree-count {
+  font-size: var(--text-sm, 12px);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.perm-tree-count em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--color-accent-deep);
+}
+
+.perm-tree-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.perm-tree-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.perm-tree-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.perm-tree-toolbar-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--color-border);
+}
+
+.perm-tree-link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm, 12px);
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.perm-tree-link-btn:hover:not(:disabled) {
+  color: var(--color-accent-deep);
+}
+
+.perm-tree-link-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.perm-tree-wrap {
+  margin: 0 24px;
+  padding: 8px 6px 8px 4px;
+  max-height: min(440px, 54vh);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-surface);
+}
+
+.perm-tree-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+.perm-tree-wrap::-webkit-scrollbar-thumb {
+  background: rgba(8, 145, 178, 0.2);
+  border-radius: var(--radius-full);
+}
+
+.perm-tree.ant-tree {
+  --perm-tree-row-h: 30px;
+  --perm-tree-indent: 18px;
+  background: transparent;
+  color: var(--color-text-body);
+  font-size: var(--text-base, 13px);
+}
+
+.perm-tree.ant-tree .ant-tree-list-holder-inner {
+  align-items: stretch;
+}
+
+.perm-tree.ant-tree .ant-tree-indent-unit {
+  width: var(--perm-tree-indent);
+}
+
+.perm-tree.ant-tree .ant-tree-treenode {
+  height: auto !important;
+  min-height: var(--perm-tree-row-h);
+  padding: 0 8px 0 6px;
+  margin: 0;
+  width: 100%;
+  align-items: center;
+  border-radius: 0;
+  transition: background var(--transition-fast);
+}
+
+.perm-tree.ant-tree .ant-tree-treenode:hover {
+  background: rgba(8, 145, 178, 0.045);
+}
+
+.perm-tree.ant-tree .ant-tree-switcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: var(--perm-tree-row-h);
+  margin: 0;
+  line-height: 1;
+  align-self: center;
+  background: transparent !important;
+}
+
+.perm-tree.ant-tree .ant-tree-switcher-noop {
+  width: 18px;
+}
+
+.perm-tree-leaf-gap {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+}
+
+.perm-tree-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-dim);
+  transition: color var(--transition-fast);
+}
+
+.perm-tree-chevron svg {
+  display: block;
+  transition: transform var(--transition-spring);
+}
+
+.perm-tree-chevron--open svg {
+  transform: rotate(90deg);
+}
+
+.perm-tree.ant-tree .ant-tree-treenode:hover .perm-tree-chevron {
+  color: var(--color-accent-deep);
+}
+
+.perm-tree.ant-tree .ant-tree-checkbox {
+  margin: 0 10px 0 2px;
+  top: 0;
+  align-self: center;
+}
+
+.perm-tree.ant-tree .ant-tree-checkbox .ant-tree-checkbox-inner {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(8, 116, 146, 0.3);
+  background: #fff;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.perm-tree.ant-tree .ant-tree-checkbox:hover .ant-tree-checkbox-inner {
+  border-color: var(--color-accent);
+}
+
+.perm-tree.ant-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner,
+.perm-tree.ant-tree .ant-tree-checkbox-indeterminate .ant-tree-checkbox-inner {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow: none;
+}
+
+/* 对勾居中，勿再硬改 top，否则会顶到边上看起来像歪 V */
+.perm-tree.ant-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner::after {
+  width: 5px;
+  height: 8px;
+  border: 1.5px solid #fff;
+  border-top: 0;
+  border-inline-start: 0;
+  top: 46%;
+  inset-inline-start: 25%;
+  transform: rotate(45deg) scale(1) translate(-50%, -50%);
+  opacity: 1;
+}
+
+.perm-tree.ant-tree .ant-tree-checkbox-indeterminate .ant-tree-checkbox-inner::after {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+  border: none;
+  inset-inline-start: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.perm-tree.ant-tree .ant-tree-node-content-wrapper {
+  min-height: var(--perm-tree-row-h);
+  line-height: var(--perm-tree-row-h);
+  padding: 0 4px;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.perm-tree.ant-tree .ant-tree-node-content-wrapper:hover,
+.perm-tree.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: transparent !important;
+}
+
+.perm-tree-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: top;
+}
+
+.perm-tree-dot {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.perm-tree-dot--dir { background: var(--color-purple); }
+.perm-tree-dot--menu { background: var(--color-accent); }
+.perm-tree-dot--func { background: var(--color-blue); }
+
+.perm-tree-node--dir .perm-tree-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.perm-tree-node--menu .perm-tree-label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.perm-tree-node--func .perm-tree-label {
+  font-weight: 400;
+  color: var(--color-text-body);
+  font-size: 12.5px;
+}
+
+.perm-tree-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-base, 13px);
+  line-height: 1.3;
+}
+
+.perm-tree-code {
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-dim);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.perm-tree.ant-tree .ant-tree-treenode:hover .perm-tree-code {
+  opacity: 1;
+  color: var(--color-text-secondary);
 }
 
 .perm-tree-empty {
-  padding: 48px 0;
+  padding: 56px 16px;
   text-align: center;
   color: var(--color-text-dim);
-  font-size: 14px;
+  font-size: var(--text-md, 14px);
+}
+
+.perm-dialog-footer {
+  margin-top: 14px;
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-surface);
 }
 
 @media (max-width: 1200px) {
