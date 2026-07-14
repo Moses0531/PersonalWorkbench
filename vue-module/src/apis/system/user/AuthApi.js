@@ -1,5 +1,10 @@
 import request from '@/utils/request'
 
+/** 获取认证公开配置（注册/验证码开关） */
+export function fetchAuthConfigApi() {
+  return request.get('/auth/config')
+}
+
 /** 用户登录：account 支持系统账号、手机号或邮箱 */
 export function loginApi(payload) {
   return request.post('/auth/login', {
@@ -33,3 +38,4 @@ export function registerApi(payload) {
   }
   return request.post('/auth/register', body)
 }
+

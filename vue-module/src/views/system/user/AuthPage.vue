@@ -52,7 +52,7 @@
                 </el-input>
               </el-form-item>
 
-              <el-form-item prop="password">
+              <el-form-item prop="password" :class="{ 'form-item-last': !captchaOnLogin }">
                 <template #label><span class="label-text">密码</span></template>
                 <el-input
                   v-model.trim="loginForm.password"
@@ -63,7 +63,7 @@
                 </el-input>
               </el-form-item>
 
-              <el-form-item class="form-item-last">
+              <el-form-item v-if="captchaOnLogin" class="form-item-last">
                 <template #label><span class="label-text">验证码</span></template>
                 <div class="captcha-row">
                   <el-input
@@ -169,7 +169,7 @@
                 </el-input>
               </el-form-item>
 
-              <el-form-item>
+              <el-form-item :class="{ 'form-item-last': !captchaOnRegister }">
                 <template #label><span class="label-text">确认密码</span></template>
                 <el-input
                   v-model.trim="registerForm.confirmPassword"
@@ -180,7 +180,7 @@
                 </el-input>
               </el-form-item>
 
-              <el-form-item class="form-item-last">
+              <el-form-item v-if="captchaOnRegister" class="form-item-last">
                 <template #label><span class="label-text">验证码</span></template>
                 <div class="captcha-row">
                   <el-input
@@ -273,7 +273,7 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Iphone, Message, CircleCheck, ArrowRight } from '@element-plus/icons-vue'
-import { loginApi, registerApi } from '@/apis/system/user/AuthApi'
+import { loginApi, registerApi, fetchAuthConfigApi } from '@/apis/system/user/AuthApi'
 import { fetchCaptchaBase64Api } from '@/apis/common/CaptchaApi'
 import { useUserStore } from '@/stores/userStore'
 import { buildRoutes, resolveDefaultPath } from '@/router/dynamicRoutes'
@@ -286,6 +286,8 @@ const { setAuth, setUserLoginInfo } = userStore
 
 // --- Tab 与步骤 ---
 const registerEnabled = ref(true)
+const captchaOnLogin = ref(true)
+const captchaOnRegister = ref(true)
 const activeTab = ref(route.query.tab === 'register' ? 'register' : 'login')
 const loginLoading = ref(false)
 const registerLoading = ref(false)
@@ -319,6 +321,13 @@ const loginRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+function needCaptchaForCurrentView() {
+  if (activeTab.value === 'login') {
+    return captchaOnLogin.value
+  }
+  return captchaOnRegister.value && registerStep.value === 2
+}
+
 watch(
   () => route.query.tab,
   (tab) => {
@@ -341,7 +350,9 @@ function switchTab(tab) {
   registerForm.phone = ''
   registerForm.email = ''
   router.replace({ path: '/auth', query: { ...route.query, tab } })
-  refreshCaptcha()
+  if (needCaptchaForCurrentView()) {
+    refreshCaptcha()
+  }
 }
 
 function switchRegisterType(type) {
@@ -385,13 +396,14 @@ function nextRegisterStep() {
   }
   registerStep.value = 2
   registerForm.captcha = ''
-  refreshCaptcha()
+  if (captchaOnRegister.value) {
+    refreshCaptcha()
+  }
 }
 
 function prevRegisterStep() {
   registerStep.value = 1
   registerForm.captcha = ''
-  refreshCaptcha()
 }
 
 function onRegisterSubmit() {
@@ -426,7 +438,7 @@ function completeLogin(data) {
 }
 
 async function handleLogin() {
-  if (!loginForm.captcha?.trim()) {
+  if (captchaOnLogin.value && !loginForm.captcha?.trim()) {
     ElMessage.warning('请输入验证码')
     return
   }
@@ -436,15 +448,17 @@ async function handleLogin() {
     const result = await loginApi({
       account: loginForm.account,
       password: loginForm.password,
-      captchaCode: loginForm.captcha,
-      captchaToken: captchaToken.value,
-      captchaTimestamp: captchaTimestamp.value,
+      captchaCode: captchaOnLogin.value ? loginForm.captcha : undefined,
+      captchaToken: captchaOnLogin.value ? captchaToken.value : undefined,
+      captchaTimestamp: captchaOnLogin.value ? captchaTimestamp.value : undefined,
     })
     completeLogin(result?.data || {})
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
-    refreshCaptcha()
-    loginForm.captcha = ''
+    if (captchaOnLogin.value) {
+      refreshCaptcha()
+      loginForm.captcha = ''
+    }
   } finally {
     loginLoading.value = false
   }
@@ -463,7 +477,7 @@ async function handleRegister() {
     ElMessage.warning('两次输入密码不一致')
     return
   }
-  if (!registerForm.captcha?.trim()) {
+  if (captchaOnRegister.value && !registerForm.captcha?.trim()) {
     ElMessage.warning('请输入验证码')
     return
   }
@@ -473,9 +487,9 @@ async function handleRegister() {
     const payload = {
       password: registerForm.password,
       confirmPassword: registerForm.confirmPassword,
-      captchaCode: registerForm.captcha,
-      captchaToken: captchaToken.value,
-      captchaTimestamp: captchaTimestamp.value,
+      captchaCode: captchaOnRegister.value ? registerForm.captcha : undefined,
+      captchaToken: captchaOnRegister.value ? captchaToken.value : undefined,
+      captchaTimestamp: captchaOnRegister.value ? captchaTimestamp.value : undefined,
     }
     if (registerType.value === 'phone') {
       payload.phone = registerForm.phone
@@ -496,15 +510,36 @@ async function handleRegister() {
     switchTab('login')
   } catch (error) {
     ElMessage.error(error.message || '注册失败')
-    refreshCaptcha()
-    registerForm.captcha = ''
+    if (captchaOnRegister.value) {
+      refreshCaptcha()
+      registerForm.captcha = ''
+    }
   } finally {
     registerLoading.value = false
   }
 }
 
-onMounted(() => {
-  refreshCaptcha()
+async function loadAuthConfig() {
+  try {
+    const result = await fetchAuthConfigApi()
+    const data = result?.data || {}
+    registerEnabled.value = data.registerEnabled !== false
+    captchaOnLogin.value = data.captchaOnLogin !== false
+    captchaOnRegister.value = data.captchaOnRegister !== false
+    if (!registerEnabled.value && activeTab.value === 'register') {
+      activeTab.value = 'login'
+      router.replace({ path: '/auth', query: { ...route.query, tab: 'login' } })
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '加载认证配置失败')
+  }
+}
+
+onMounted(async () => {
+  await loadAuthConfig()
+  if (needCaptchaForCurrentView()) {
+    refreshCaptcha()
+  }
 })
 </script>
 
