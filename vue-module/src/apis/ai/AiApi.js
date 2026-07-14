@@ -1,8 +1,8 @@
-import { http } from '../common/http'
+import request from '@/utils/request'
 
 /** Ai-module AiController */
 export function chatWithAiApi(message, conversationId) {
-  return http.get('/ai/chat', { params: { message, conversationId } })
+  return request.get('/ai/chat', { params: { message, conversationId } })
 }
 
 /**
@@ -16,14 +16,15 @@ export function chatWithAiStream(message, conversationId, onChunk, onComplete, o
 
   const controller = new AbortController()
 
-  http
+  request
     .get('/ai/chat', {
       params,
       headers: { Accept: 'text/event-stream' },
       adapter: 'fetch',
       responseType: 'stream',
       rawResponse: true,
-      signal: controller.signal
+      signal: controller.signal,
+      timeout: 0
     })
     .then((response) => {
       if (response.status < 200 || response.status >= 300) {
@@ -87,13 +88,13 @@ export function chatWithAiStream(message, conversationId, onChunk, onComplete, o
 }
 
 export function listAiConversationsApi() {
-  return http.get('/ai/listConversations')
+  return request.get('/ai/listConversations')
 }
 
 export function getAiHistoryApi(conversationId) {
-  return http.get('/ai/getHistory', { params: { conversationId } })
+  return request.get('/ai/getHistory', { params: { conversationId } })
 }
 
 export function deleteAiConversationApi(conversationId) {
-  return http.delete('/ai/deleteConversation', { params: { conversationId } })
+  return request.delete('/ai/deleteConversation', { params: { conversationId } })
 }

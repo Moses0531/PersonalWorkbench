@@ -33,6 +33,10 @@ request.interceptors.request.use((config) => {
 
 request.interceptors.response.use(
   (response) => {
+    // SSE / 流式等场景需要完整响应（含 status、ReadableStream）
+    if (response.config.rawResponse) {
+      return response
+    }
     const result = response.data
     if (result?.code !== 1) {
       return Promise.reject(new Error(result?.msg || '请求失败'))

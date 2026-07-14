@@ -6,7 +6,7 @@ import {
   deleteAiConversationApi,
   getAiHistoryApi,
   listAiConversationsApi
-} from '../../api/ai/AiApi'
+} from '@/apis/ai/AiApi'
 
 const loading = ref(false)
 const clearLoading = ref(false)
