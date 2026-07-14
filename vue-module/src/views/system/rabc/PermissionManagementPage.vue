@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import {
   deletePermissionApi,
   listPermissionsApi,
@@ -91,7 +91,7 @@ async function loadPermissions() {
     const list = Array.isArray(result?.data) ? result.data : []
     tableData.value = normalizePermissionList(list)
   } catch (error) {
-    ElMessage.error(error.message || '获取权限列表失败')
+    message.error(error.message || '获取权限列表失败')
   } finally {
     loading.value = false
   }
@@ -121,7 +121,7 @@ async function loadRoles() {
   } catch (error) {
     const msg = String(error?.message || '')
     if (!msg.includes('403') && !msg.includes('无权限')) {
-      ElMessage.error(msg || '加载角色列表失败')
+      message.error(msg || '加载角色列表失败')
     }
     roleOptions.value = []
   }
@@ -201,29 +201,29 @@ async function submitForm() {
       permissionId = findCreatedPermissionId(refreshed?.data || [], payload)
     }
     if (!permissionId) {
-      ElMessage.warning('权限已保存，但未能分配角色，请编辑该权限重新勾选角色')
+      message.warning('权限已保存，但未能分配角色，请编辑该权限重新勾选角色')
       dialogVisible.value = false
       await loadPermissions()
       return
     }
     await assignPermissionRolesApi(permissionId, form.roleIds.map(Number))
-    ElMessage.success(isEdit.value ? '权限与角色已保存' : '权限已创建并完成角色分配')
+    message.success(isEdit.value ? '权限与角色已保存' : '权限已创建并完成角色分配')
     dialogVisible.value = false
     await loadPermissions()
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    message.error(error.message || '操作失败')
   }
 }
 
 async function removePermission(permissionId) {
   try {
     await deletePermissionApi(permissionId)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     await loadPermissions()
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    message.error(error.message || '删除失败')
   }
 }
 
@@ -320,16 +320,14 @@ onMounted(async () => {
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
-        <el-popconfirm v-permission="'permission:remove'" title="确认删除该权限？" width="220" @confirm="removePermission(row.permissionId)">
-          <template #reference>
-            <button type="button" class="btn-action btn-action--delete" title="删除">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </button>
-          </template>
-        </el-popconfirm>
+        <a-popconfirm v-permission="'permission:remove'" title="确认删除该权限？" @confirm="removePermission(row.permissionId)">
+          <button type="button" class="btn-action btn-action--delete" title="删除">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </a-popconfirm>
       </div>
     </template>
 
@@ -345,88 +343,95 @@ onMounted(async () => {
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
-    <el-form label-position="top" :model="form" class="dialog-form">
+    <a-form layout="vertical" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <el-form-item label="名称" class="dialog-item">
-          <el-input v-model.trim="form.name" placeholder="显示名称" />
-        </el-form-item>
+        <a-form-item label="名称" class="dialog-item">
+          <a-input v-model:value.trim="form.name" placeholder="显示名称" />
+        </a-form-item>
 
-        <el-form-item label="类型（D/M/F）" class="dialog-item">
-          <el-select v-model="form.type" style="width: 100%">
-            <el-option label="D - 目录" value="D" />
-            <el-option label="M - 菜单" value="M" />
-            <el-option label="F - 功能" value="F" />
-          </el-select>
-        </el-form-item>
+        <a-form-item label="类型（D/M/F）" class="dialog-item">
+          <a-select v-model:value="form.type" style="width: 100%">
+            <a-select-option value="D">D - 目录</a-select-option>
+            <a-select-option value="M">M - 菜单</a-select-option>
+            <a-select-option value="F">F - 功能</a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <el-form-item label="上级（parent_id）" class="dialog-item">
-          <el-select v-model="form.parentId" style="width: 100%" filterable placeholder="选择上级目录或菜单">
-            <el-option v-for="opt in parentOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-          </el-select>
+        <a-form-item label="上级（parent_id）" class="dialog-item">
+          <a-select
+            v-model:value="form.parentId"
+            style="width: 100%"
+            show-search
+            option-filter-prop="label"
+            placeholder="选择上级目录或菜单"
+            :options="parentOptions"
+          />
           <p class="field-hint">
             {{ form.type === 'F' ? '功能的上级须为 M 类型菜单页' : '目录/菜单的上级为根节点或 D 类型目录' }}
           </p>
-        </el-form-item>
+        </a-form-item>
 
-        <el-form-item label="排序（display_order）" class="dialog-item">
-          <el-input-number v-model="form.displayOrder" :min="0" :max="9999" style="width: 100%" />
+        <a-form-item label="排序（display_order）" class="dialog-item">
+          <a-input-number v-model:value="form.displayOrder" :min="0" :max="9999" style="width: 100%" />
           <p class="field-hint">数值越小越靠前</p>
-        </el-form-item>
+        </a-form-item>
 
-        <el-form-item label="路由名称（router_name）" class="dialog-item dialog-item--full">
-          <el-input v-model.trim="form.routerName" placeholder="如 DashboardPage（PascalCase，以 Page 结尾）" clearable />
+        <a-form-item label="路由名称（router_name）" class="dialog-item dialog-item--full">
+          <a-input v-model:value.trim="form.routerName" placeholder="如 DashboardPage（PascalCase，以 Page 结尾）" allow-clear />
           <p v-if="form.type === 'M' && form.routerName" class="field-hint">
             将自动生成访问路径 <code>{{ previewUrlPath }}</code>，页面组件 <code>{{ previewViewFile }}</code>
           </p>
           <p v-else-if="form.type === 'M'" class="field-hint">M 类型填写 router_name，component_path 由系统自动解析</p>
-        </el-form-item>
+        </a-form-item>
 
-        <el-form-item label="权限标识（code）" class="dialog-item">
-          <el-input v-model.trim="form.code" placeholder="如 user:add" clearable />
+        <a-form-item label="权限标识（code）" class="dialog-item">
+          <a-input v-model:value.trim="form.code" placeholder="如 user:add" allow-clear />
           <p class="field-hint">与后端 @PreAuthorize 及 v-permission 对应</p>
-        </el-form-item>
+        </a-form-item>
 
-        <el-form-item label="图标（icon）" class="dialog-item">
-          <el-input v-model.trim="form.icon" placeholder="图标 URL，选填" />
-        </el-form-item>
+        <a-form-item label="图标（icon）" class="dialog-item">
+          <a-input v-model:value.trim="form.icon" placeholder="图标 URL，选填" />
+        </a-form-item>
 
-        <el-form-item label="是否显示（is_display）" class="dialog-item">
-          <el-select v-model="form.isDisplay" style="width: 100%">
-            <el-option label="0 - 显示" :value="0" />
-            <el-option label="1 - 隐藏" :value="1" />
-          </el-select>
-        </el-form-item>
+        <a-form-item label="是否显示（is_display）" class="dialog-item">
+          <a-select v-model:value="form.isDisplay" style="width: 100%">
+            <a-select-option :value="0">0 - 显示</a-select-option>
+            <a-select-option :value="1">1 - 隐藏</a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <el-form-item label="状态（status）" class="dialog-item">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option label="0 - 正常" value="0" />
-            <el-option label="1 - 停用" value="1" />
-          </el-select>
-        </el-form-item>
+        <a-form-item label="状态（status）" class="dialog-item">
+          <a-select v-model:value="form.status" style="width: 100%">
+            <a-select-option value="0">0 - 正常</a-select-option>
+            <a-select-option value="1">1 - 停用</a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <el-form-item label="备注（remark）" class="dialog-item dialog-item--full">
-          <el-input v-model.trim="form.remark" type="textarea" :rows="2" placeholder="选填" resize="none" />
-        </el-form-item>
+        <a-form-item label="备注（remark）" class="dialog-item dialog-item--full">
+          <a-textarea v-model:value.trim="form.remark" :rows="2" placeholder="选填" />
+        </a-form-item>
 
-        <el-form-item label="角色权限分配" class="dialog-item dialog-item--full">
-          <div class="role-assign-box" v-loading="roleAssignLoading">
-            <p class="field-hint role-assign-hint">
-              勾选可访问该权限的角色，保存后写入 role_permission；新增子项时继承父级已授权角色。
-            </p>
-            <el-checkbox-group v-if="roleOptions.length" v-model="form.roleIds" class="role-checkbox-group">
-              <el-checkbox
-                v-for="role in roleOptions"
-                :key="role.roleId"
-                :label="Number(role.roleId)"
-                class="role-checkbox"
-              >
-                {{ role.roleName }}（{{ role.roleCode }}）
-              </el-checkbox>
-            </el-checkbox-group>
-            <p v-else class="role-assign-empty">暂无可选角色，请先在角色管理中创建角色</p>
-          </div>
-        </el-form-item>
+        <a-form-item label="角色权限分配" class="dialog-item dialog-item--full">
+          <a-spin :spinning="roleAssignLoading">
+            <div class="role-assign-box">
+              <p class="field-hint role-assign-hint">
+                勾选可访问该权限的角色，保存后写入 role_permission；新增子项时继承父级已授权角色。
+              </p>
+              <a-checkbox-group v-if="roleOptions.length" v-model:value="form.roleIds" class="role-checkbox-group">
+                <a-checkbox
+                  v-for="role in roleOptions"
+                  :key="role.roleId"
+                  :value="Number(role.roleId)"
+                  class="role-checkbox"
+                >
+                  {{ role.roleName }}（{{ role.roleCode }}）
+                </a-checkbox>
+              </a-checkbox-group>
+              <p v-else class="role-assign-empty">暂无可选角色，请先在角色管理中创建角色</p>
+            </div>
+          </a-spin>
+        </a-form-item>
       </div>
-    </el-form>
+    </a-form>
   </DataOperationView>
 </template>

@@ -1,6 +1,6 @@
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message as antMessage } from 'ant-design-vue'
 import {
   chatWithAiStream,
   deleteAiConversationApi,
@@ -118,7 +118,7 @@ async function sendMessage() {
           scrollToBottom()
         },
         (error) => {
-          ElMessage.error(error?.message || '发送失败')
+          antMessage.error(error?.message || '发送失败')
           if (streamingMessageIndex.value >= 0 && streamingMessageIndex.value < messages.value.length) {
             if (!messages.value[streamingMessageIndex.value].content) {
               messages.value[streamingMessageIndex.value].content = '抱歉，本次回答失败，请稍后重试。'
@@ -131,7 +131,7 @@ async function sendMessage() {
         }
     )
   } catch (err) {
-    ElMessage.error(err?.message || '发送失败')
+    antMessage.error(err?.message || '发送失败')
     messages.value.push({
       role: 'assistant',
       content: '抱歉，本次回答失败，请稍后重试。',
@@ -150,9 +150,9 @@ async function clearHistory() {
     activeConversationId.value = ''
     messages.value = []
     await refreshConversationsAndHistory()
-    ElMessage.success('对话已删除')
+    antMessage.success('对话已删除')
   } catch (err) {
-    ElMessage.error(err?.message || '删除失败')
+    antMessage.error(err?.message || '删除失败')
   } finally {
     clearLoading.value = false
   }
@@ -273,11 +273,10 @@ onMounted(async () => {
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-wrap">
-            <el-input
-                v-model="message"
-                type="textarea"
+            <a-textarea
+                v-model:value="message"
                 :rows="2"
-                resize="none"
+                :auto-size="{ minRows: 2, maxRows: 6 }"
                 placeholder="输入你的问题，按 Enter 发送..."
                 @keydown.enter.exact.prevent="sendMessage"
             />
@@ -628,7 +627,7 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
-.input-wrap :deep(.el-textarea__inner) {
+.input-wrap :deep(.ant-input) {
   background: transparent;
   border: none;
   box-shadow: none;
@@ -639,10 +638,10 @@ onMounted(async () => {
   line-height: var(--leading-relaxed);
   resize: none;
 }
-.input-wrap :deep(.el-textarea__inner::placeholder) {
+.input-wrap :deep(.ant-input::placeholder) {
   color: var(--color-text-dim);
 }
-.input-wrap :deep(.el-textarea__inner:focus) {
+.input-wrap :deep(.ant-input:focus) {
   box-shadow: none;
 }
 

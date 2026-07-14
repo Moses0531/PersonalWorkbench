@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import { deleteUserApi, pageAdminsApi, saveUserApi, updateUserApi } from '@/apis/system/rabc/UserApi'
 import { listRolesApi } from '@/apis/system/rabc/RoleApi'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
@@ -84,7 +84,7 @@ async function loadAdmins() {
     tableData.value = (data.records || []).map(enrichAdminRow)
     applyFilter()
   } catch (error) {
-    ElMessage.error(error.message || '获取管理员列表失败')
+    message.error(error.message || '获取管理员列表失败')
   } finally {
     loading.value = false
   }
@@ -107,7 +107,7 @@ async function loadAdminRoles() {
       roleOptions.value = []
       return
     }
-    ElMessage.error(msg || '加载管理员角色失败')
+    message.error(msg || '加载管理员角色失败')
   }
 }
 
@@ -150,7 +150,7 @@ async function submitForm() {
     if (!isEdit.value) {
       const acc = String(form.account || '').trim()
       if (!acc) {
-        ElMessage.warning('请填写管理员登录账号')
+        message.warning('请填写管理员登录账号')
         return
       }
       payload.account = acc
@@ -158,25 +158,25 @@ async function submitForm() {
     if (form.password) payload.password = form.password
     if (isEdit.value) {
       await updateUserApi(payload)
-      ElMessage.success('编辑成功')
+      message.success('编辑成功')
     } else {
       await saveUserApi(payload)
-      ElMessage.success('新增成功')
+      message.success('新增成功')
     }
     dialogVisible.value = false
     await loadAdmins()
   } catch (error) {
-    ElMessage.error(error.message || (isEdit.value ? '编辑失败' : '新增失败'))
+    message.error(error.message || (isEdit.value ? '编辑失败' : '新增失败'))
   }
 }
 
 async function removeAdmin(id) {
   try {
     await deleteUserApi(id)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     await loadAdmins()
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    message.error(error.message || '删除失败')
   }
 }
 
@@ -234,16 +234,14 @@ onMounted(async () => {
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
         </button>
-        <el-popconfirm v-permission="'admin:remove'" title="确认删除该管理员？" width="220" @confirm="removeAdmin(row.id)">
-          <template #reference>
-            <button type="button" class="btn-action btn-action--delete" title="删除">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </button>
-          </template>
-        </el-popconfirm>
+        <a-popconfirm v-permission="'admin:remove'" title="确认删除该管理员？" @confirm="removeAdmin(row.id)">
+          <button type="button" class="btn-action btn-action--delete" title="删除">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </a-popconfirm>
       </div>
     </template>
   </FlatManageListView>
@@ -255,53 +253,54 @@ onMounted(async () => {
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
-    <el-form label-position="top" :model="form" class="dialog-form">
+    <a-form layout="vertical" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <el-form-item v-if="!isEdit" label="登录账号" class="dialog-item">
-          <el-input v-model.trim="form.account" placeholder="由创建人指定" />
-        </el-form-item>
-        <el-form-item v-else label="账号" class="dialog-item">
-          <el-input v-model="form.account" disabled />
-        </el-form-item>
+        <a-form-item v-if="!isEdit" label="登录账号" class="dialog-item">
+          <a-input v-model:value.trim="form.account" placeholder="由创建人指定" />
+        </a-form-item>
+        <a-form-item v-else label="账号" class="dialog-item">
+          <a-input v-model:value="form.account" disabled />
+        </a-form-item>
 
-        <el-form-item label="用户昵称" class="dialog-item">
-          <el-input v-model.trim="form.username" placeholder="请输入昵称" />
-        </el-form-item>
+        <a-form-item label="用户昵称" class="dialog-item">
+          <a-input v-model:value.trim="form.username" placeholder="请输入昵称" />
+        </a-form-item>
 
-        <el-form-item label="手机号" class="dialog-item">
-          <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
-        </el-form-item>
+        <a-form-item label="手机号" class="dialog-item">
+          <a-input v-model:value.trim="form.phone" placeholder="请输入手机号" />
+        </a-form-item>
 
-        <el-form-item label="邮箱" class="dialog-item">
-          <el-input v-model.trim="form.email" placeholder="请输入邮箱" />
-        </el-form-item>
+        <a-form-item label="邮箱" class="dialog-item">
+          <a-input v-model:value.trim="form.email" placeholder="请输入邮箱" />
+        </a-form-item>
 
-        <el-form-item label="性别" class="dialog-item">
-          <el-select v-model="form.sex" placeholder="请选择" style="width: 100%">
-            <el-option label="男" value="0" />
-            <el-option label="女" value="1" />
-          </el-select>
-        </el-form-item>
+        <a-form-item label="性别" class="dialog-item">
+          <a-select v-model:value="form.sex" placeholder="请选择" style="width: 100%">
+            <a-select-option value="0">男</a-select-option>
+            <a-select-option value="1">女</a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <el-form-item label="角色" class="dialog-item">
-          <el-select v-model="form.roleId" placeholder="请选择角色" style="width: 100%">
-            <el-option
+        <a-form-item label="角色" class="dialog-item">
+          <a-select v-model:value="form.roleId" placeholder="请选择角色" style="width: 100%">
+            <a-select-option
               v-for="role in roleOptions"
               :key="role.roleId"
-              :label="`${role.roleName} (${role.roleCode})`"
               :value="Number(role.roleId)"
-            />
-          </el-select>
-        </el-form-item>
+            >
+              {{ role.roleName }} ({{ role.roleCode }})
+            </a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <el-form-item label="密码" class="dialog-item dialog-item--full">
-          <el-input v-model.trim="form.password" show-password :placeholder="isEdit ? '留空则不修改' : '请设置登录密码'" />
-        </el-form-item>
+        <a-form-item label="密码" class="dialog-item dialog-item--full">
+          <a-input-password v-model:value.trim="form.password" :placeholder="isEdit ? '留空则不修改' : '请设置登录密码'" />
+        </a-form-item>
 
-        <el-form-item label="备注" class="dialog-item dialog-item--full">
-          <el-input v-model.trim="form.remark" type="textarea" :rows="2" placeholder="选填" resize="none" />
-        </el-form-item>
+        <a-form-item label="备注" class="dialog-item dialog-item--full">
+          <a-textarea v-model:value.trim="form.remark" :rows="2" placeholder="选填" />
+        </a-form-item>
       </div>
-    </el-form>
+    </a-form>
   </DataOperationView>
 </template>

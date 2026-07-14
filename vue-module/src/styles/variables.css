@@ -6,7 +6,7 @@
   /* ── 布局分区色（顶栏 / 侧栏 / 内容区 — 改此处即可全局生效）
    *  侧栏 → NavigationBarView .side-menu
    *  内容区 → NavigationBarView .main-content + 各业务页 --bg
-   *  Element Plus → element-plus-theme.css --el-bg-color-page ── */
+   *  Ant Design Vue → ant-design-theme.css ── */
   --color-zone-topbar-from: #0c4a5e;
   --color-zone-topbar-mid: #0e7490;
   --color-zone-topbar-to: #0891b2;

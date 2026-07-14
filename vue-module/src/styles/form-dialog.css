@@ -1,22 +1,24 @@
 /**
  * 管理页表单弹窗 — DataOperationView 及 dialog-form 布局
  */
-.el-dialog.form-dialog.data-operation-view {
+.ant-modal.form-dialog.data-operation-view .ant-modal-content {
   border-radius: 18px;
   overflow: hidden;
 }
 
-.el-dialog.form-dialog.data-operation-view .el-dialog__header {
+.ant-modal.form-dialog.data-operation-view .ant-modal-header {
   padding: 20px 24px 0;
+  margin-bottom: 0;
+  border-bottom: none;
 }
 
-.el-dialog.form-dialog.data-operation-view .el-dialog__title {
+.ant-modal.form-dialog.data-operation-view .ant-modal-title {
   font-size: 16px;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.el-dialog.form-dialog.data-operation-view .el-dialog__body {
+.ant-modal.form-dialog.data-operation-view .ant-modal-body {
   padding: 16px 24px 8px;
 }
 
@@ -30,37 +32,39 @@
   grid-column: 1 / -1;
 }
 
-.dialog-form .el-form-item__label {
+.dialog-form .ant-form-item-label > label {
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-body);
-  padding-bottom: 4px;
 }
 
-.dialog-form .el-input__wrapper {
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  box-shadow: none;
-  padding: 4px 12px;
+.dialog-form .ant-input,
+.dialog-form .ant-input-affix-wrapper,
+.dialog-form .ant-input-number,
+.dialog-form .ant-picker,
+.dialog-form .ant-select-selector {
+  background: var(--color-input-bg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
   transition: all 0.25s ease;
 }
 
-.dialog-form .el-input__wrapper:hover {
-  border-color: rgba(107, 94, 82, 0.15);
+.dialog-form .ant-input:hover,
+.dialog-form .ant-input-affix-wrapper:hover,
+.dialog-form .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: rgba(107, 94, 82, 0.15) !important;
 }
 
-.dialog-form .el-input__wrapper:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
+.dialog-form .ant-input:focus,
+.dialog-form .ant-input-affix-wrapper-focused,
+.dialog-form .ant-input-number-focused,
+.dialog-form .ant-select-focused .ant-select-selector {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px var(--color-accent-soft) !important;
 }
 
-.dialog-form .el-input__prefix {
-  color: var(--color-text-dim);
-  margin-right: 6px;
-}
-
-.dialog-form .el-textarea__inner {
+.dialog-form .ant-input-textarea textarea {
   background: var(--color-input-bg);
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -69,16 +73,16 @@
   transition: all 0.25s ease;
 }
 
-.dialog-form .el-textarea__inner:focus {
+.dialog-form .ant-input-textarea textarea:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
-.dialog-form .el-input-number {
+.dialog-form .ant-input-number {
   width: 100%;
 }
 
-.dialog-form .el-select {
+.dialog-form .ant-select {
   width: 100%;
 }
 
@@ -86,7 +90,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 0 24px 20px;
+  padding: 12px 0 12px;
 }
 
 .btn-ghost-sm {

@@ -26,33 +26,36 @@ function onCancel() {
 function onConfirm() {
   emit('confirm')
 }
+
+function onOpenChange(open) {
+  emit('update:modelValue', open)
+}
 </script>
 
 <template>
-  <el-dialog
-    :model-value="modelValue"
+  <a-modal
+    :open="modelValue"
     :title="title"
     :width="width"
     class="form-dialog data-operation-view"
-    :close-on-click-modal="closeOnClickModal"
+    :mask-closable="closeOnClickModal"
     :destroy-on-close="destroyOnClose"
-    @update:model-value="emit('update:modelValue', $event)"
+    :footer="null"
+    @update:open="onOpenChange"
   >
     <!-- 默认插槽：表单内容 -->
     <slot />
 
-    <template #footer>
-      <!-- footer 插槽可覆盖默认双按钮 -->
-      <slot name="footer">
-        <div class="dialog-footer">
-          <button type="button" class="btn-ghost-sm" :disabled="loading" @click="onCancel">
-            {{ cancelText }}
-          </button>
-          <button type="button" class="btn-primary-sm" :disabled="loading" @click="onConfirm">
-            {{ loading ? '保存中...' : confirmText }}
-          </button>
-        </div>
-      </slot>
-    </template>
-  </el-dialog>
+    <!-- footer 插槽可覆盖默认双按钮 -->
+    <slot name="footer">
+      <div class="dialog-footer">
+        <button type="button" class="btn-ghost-sm" :disabled="loading" @click="onCancel">
+          {{ cancelText }}
+        </button>
+        <button type="button" class="btn-primary-sm" :disabled="loading" @click="onConfirm">
+          {{ loading ? '保存中...' : confirmText }}
+        </button>
+      </div>
+    </slot>
+  </a-modal>
 </template>

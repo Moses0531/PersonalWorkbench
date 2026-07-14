@@ -112,7 +112,7 @@
         <p class="subtitle-hint">您可以通过下方按钮返回已开放的功能</p>
 
         <div class="actions">
-          <el-button type="primary" class="btn-primary" @click="goHome">
+          <a-button type="primary" class="btn-primary" @click="goHome">
             <span class="btn-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -121,8 +121,8 @@
               </svg>
             </span>
             返回首页
-          </el-button>
-          <el-button class="btn-ghost" @click="goBack">
+          </a-button>
+          <a-button class="btn-ghost" @click="goBack">
             <span class="btn-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -131,7 +131,7 @@
               </svg>
             </span>
             返回上页
-          </el-button>
+          </a-button>
         </div>
       </div>
     </div>
@@ -574,12 +574,6 @@ const goBack = () => router.back()
 }
 
 .btn-primary {
-  --el-button-bg-color: var(--accent) !important;
-  --el-button-border-color: var(--accent) !important;
-  --el-button-text-color: #fff !important;
-  --el-button-hover-bg-color: var(--accent-deep) !important;
-  --el-button-hover-border-color: var(--accent-deep) !important;
-  --el-button-hover-text-color: #fff !important;
   height: 44px;
   padding: 0 30px;
   font-size: 14px;
@@ -590,8 +584,10 @@ const goBack = () => router.back()
   box-shadow: var(--shadow-btn);
   position: relative;
   overflow: hidden;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
 }
-
 .btn-primary::after {
   content: '';
   position: absolute;
@@ -604,6 +600,9 @@ const goBack = () => router.back()
 }
 
 .btn-primary:hover {
+  background: var(--accent-deep) !important;
+  border-color: var(--accent-deep) !important;
+  color: #fff !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(224, 122, 79, 0.35);
 }
@@ -617,21 +616,20 @@ const goBack = () => router.back()
 }
 
 .btn-ghost {
-  --el-button-bg-color: transparent !important;
-  --el-button-border-color: rgba(107, 94, 82, 0.15) !important;
-  --el-button-text-color: var(--text-body) !important;
-  --el-button-hover-bg-color: var(--accent-soft) !important;
-  --el-button-hover-border-color: var(--accent-glow) !important;
-  --el-button-hover-text-color: var(--accent) !important;
   height: 44px;
   padding: 0 26px;
   font-size: 14px;
   font-weight: 500;
   border-radius: 12px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent !important;
+  border-color: rgba(107, 94, 82, 0.15) !important;
+  color: var(--text-body) !important;
 }
-
 .btn-ghost:hover {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent-glow) !important;
+  color: var(--accent) !important;
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(224, 122, 79, 0.1);
 }

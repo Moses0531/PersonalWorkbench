@@ -137,7 +137,8 @@ function onSearchInput(event) {
 
         <slot name="table-prefix" />
 
-        <div class="table-wrap" v-loading="loading">
+        <a-spin :spinning="loading">
+        <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
@@ -219,6 +220,7 @@ function onSearchInput(event) {
             </tbody>
           </table>
         </div>
+        </a-spin>
 
         <div v-if="showFooter" class="management-list-view__table-footer">
           <slot name="footer" :total="displayTotal">

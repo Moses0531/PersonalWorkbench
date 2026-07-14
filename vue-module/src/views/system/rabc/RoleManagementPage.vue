@@ -1,6 +1,6 @@
 ﻿<script setup>
-import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
+import { onMounted, reactive, ref, nextTick } from 'vue'
+import { message } from 'ant-design-vue'
 import {
   deleteRoleApi,
   pageRolesApi,
@@ -20,7 +20,6 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const permDialogVisible = ref(false)
 const permLoading = ref(false)
-const activeTab = ref('list')
 const searchQuery = ref('')
 
 const tableData = ref([])
@@ -28,24 +27,12 @@ const form = reactive({ roleId: null, roleName: '', roleCode: '', level: null, d
 const menuTreeData = ref([])
 const permFlatList = ref([])
 const showPermTree = ref(false)
-const menuTreeRef = ref(null)
+const treeCheckedKeys = ref([])
+const treeHalfCheckedKeys = ref([])
 const permForm = reactive({ roleId: null, permissionIds: [] })
 
 const protectedRoleCodes = ref(new Set())
 const currentUserRole = ref('')
-
-const hierarchyLoading = ref(false)
-const allRoles = ref([])
-
-const palette = [
-  { color: '#0891b2', bg: 'rgba(34, 184, 207, 0.1)', icon: '♛' },
-  { color: '#8b7ec8', bg: 'rgba(139, 126, 200, 0.08)', icon: '◆' },
-  { color: '#4aba6a', bg: 'rgba(74, 186, 106, 0.08)', icon: '●' },
-  { color: '#5b9bd5', bg: 'rgba(91, 155, 213, 0.08)', icon: '★' },
-  { color: '#0e7490', bg: 'rgba(14, 116, 144, 0.08)', icon: '▲' },
-  { color: '#6a8fa3', bg: 'rgba(106, 143, 163, 0.08)', icon: '■' },
-  { color: '#909399', bg: 'rgba(144, 147, 153, 0.06)', icon: '○' }
-]
 
 const columns = [
   { prop: 'roleId', label: 'ID', headerClass: 'th-id', cellClass: 'cell-id' },
@@ -58,38 +45,6 @@ const columns = [
 ]
 
 const filteredData = ref([])
-
-function paletteOf(index) {
-  return palette[Math.min(index, palette.length - 1)]
-}
-
-const hierarchyLevels = computed(() => {
-  if (!allRoles.value.length) return []
-  const hasLevel = allRoles.value.filter((r) => r.level !== null && r.level !== undefined && r.level !== '')
-  const noLevel = allRoles.value.filter((r) => r.level === null || r.level === undefined || r.level === '')
-  const sorted = [...hasLevel].sort((a, b) => Number(a.level) - Number(b.level))
-  const map = new Map()
-  sorted.forEach((r) => {
-    const lv = Number(r.level)
-    if (!map.has(lv)) map.set(lv, [])
-    map.get(lv).push(r)
-  })
-  const result = Array.from(map.entries()).map(([lv, roles]) => ({ level: lv, roles }))
-  if (noLevel.length) result.push({ level: '未定级', roles: noLevel })
-  return result
-})
-
-async function loadHierarchyData() {
-  hierarchyLoading.value = true
-  try {
-    const res = await pageRolesApi(1, 1000)
-    allRoles.value = res?.data?.records || []
-  } catch (_e) {
-    ElMessage.error('加载层级视图失败')
-  } finally {
-    hierarchyLoading.value = false
-  }
-}
 
 function isRoleProtected(role) {
   return protectedRoleCodes.value.has(String(role.roleCode || '').toUpperCase())
@@ -113,7 +68,7 @@ async function loadRoles() {
     tableData.value = data.records || []
     applyFilter()
   } catch (_error) {
-    ElMessage.error('获取角色列表失败')
+    message.error('获取角色列表失败')
   } finally {
     loading.value = false
   }
@@ -148,7 +103,7 @@ async function loadRoleProtectionInfo() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadRoles(), loadHierarchyData(), loadRoleProtectionInfo()])
+  await Promise.all([loadRoles(), loadRoleProtectionInfo()])
 }
 
 function openCreate() {
@@ -159,7 +114,7 @@ function openCreate() {
 
 function openEdit(row) {
   if (!canEditRole(row)) {
-    ElMessage.warning('该角色受保护，无法编辑')
+    message.warning('该角色受保护，无法编辑')
     return
   }
   isEdit.value = true
@@ -171,40 +126,46 @@ async function submitForm() {
   try {
     if (isEdit.value) await updateRoleApi(form)
     else await saveRoleApi(form)
-    ElMessage.success('操作成功')
+    message.success('操作成功')
     dialogVisible.value = false
     refreshAll()
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    message.error(error.message || '操作失败')
   }
 }
 
 async function removeRole(roleId) {
   try {
     await deleteRoleApi(roleId)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     refreshAll()
   } catch (_error) {
-    ElMessage.error('删除失败')
+    message.error('删除失败')
   }
 }
 
 async function syncPermTreeChecks() {
   await nextTick()
-  await nextTick()
-  const tree = menuTreeRef.value
-  if (!tree) return
   const leafKeys = filterCheckedLeafIds(permFlatList.value, permForm.permissionIds)
-  tree.setCheckedKeys(leafKeys, true)
+  treeCheckedKeys.value = leafKeys
+  const leafSet = new Set(leafKeys.map(Number))
+  treeHalfCheckedKeys.value = permForm.permissionIds
+    .map(Number)
+    .filter((id) => !Number.isNaN(id) && !leafSet.has(id))
 }
 
-function onPermDialogOpened() {
-  if (showPermTree.value) syncPermTreeChecks()
+function onPermTreeCheck(checkedKeys, e) {
+  treeCheckedKeys.value = checkedKeys
+  treeHalfCheckedKeys.value = e?.halfCheckedKeys || []
+}
+
+function onPermDialogOpenChange(open) {
+  if (open && showPermTree.value) syncPermTreeChecks()
 }
 
 async function openPermissionAssign(row) {
   if (!canEditRole(row)) {
-    ElMessage.warning('该角色受保护，无法修改权限')
+    message.warning('该角色受保护，无法修改权限')
     return
   }
   showPermTree.value = false
@@ -224,14 +185,14 @@ async function openPermissionAssign(row) {
     permForm.permissionIds = (selectedResp?.data || []).map(Number).filter((id) => !Number.isNaN(id))
     menuTreeData.value = buildPermissionTree(list)
     if (!menuTreeData.value.length) {
-      ElMessage.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
+      message.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
     }
     showPermTree.value = true
     await syncPermTreeChecks()
   } catch (error) {
     menuTreeData.value = []
     permFlatList.value = []
-    ElMessage.error(error.message || '加载权限树失败')
+    message.error(error.message || '加载权限树失败')
   } finally {
     permLoading.value = false
   }
@@ -240,14 +201,13 @@ async function openPermissionAssign(row) {
 async function submitRoleMenusWithTree() {
   permLoading.value = true
   try {
-    const checkedKeys = menuTreeRef.value.getCheckedKeys()
-    const halfCheckedKeys = menuTreeRef.value.getHalfCheckedKeys()
-    await saveRolePermissionsApi(permForm.roleId, [...checkedKeys, ...halfCheckedKeys])
-    ElMessage.success('权限保存成功')
+    const keys = [...treeCheckedKeys.value, ...treeHalfCheckedKeys.value]
+    await saveRolePermissionsApi(permForm.roleId, keys.length ? keys : permForm.permissionIds)
+    message.success('权限保存成功')
     permDialogVisible.value = false
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (_error) {
-    ElMessage.error('保存失败')
+    message.error('保存失败')
   } finally {
     permLoading.value = false
   }
@@ -261,50 +221,12 @@ function getLevelColor(level) {
   return 'dim'
 }
 
-watch(activeTab, (t) => {
-  if (t === 'hierarchy') loadHierarchyData()
-})
-
 onMounted(refreshAll)
 </script>
 
 <template>
-  <div class="management-list-view">
-    <div class="management-list-view__blob management-list-view__blob--1" />
-    <div class="management-list-view__blob management-list-view__blob--2" />
-
-    <div class="management-list-view__container">
-      <nav class="view-mode-tabs" aria-label="角色视图切换">
-        <button
-          type="button"
-          class="view-mode-tab"
-          :class="{ active: activeTab === 'list' }"
-          @click="activeTab = 'list'"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
-          列表管理
-        </button>
-        <button
-          type="button"
-          class="view-mode-tab"
-          :class="{ active: activeTab === 'hierarchy' }"
-          @click="activeTab = 'hierarchy'"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" />
-          </svg>
-          层级视图
-        </button>
-      </nav>
-
-      <FlatManageListView
-        v-show="activeTab === 'list'"
+  <FlatManageListView
         v-model:search-query="searchQuery"
-        embedded
-        :show-background="false"
         title="角色列表"
         desc="管理系统访问权限的核心载体"
         :loading="loading"
@@ -387,61 +309,22 @@ onMounted(refreshAll)
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </button>
-            <el-popconfirm
+            <a-popconfirm
               v-permission="'role:remove'"
               title="确定删除该角色？"
-              width="220"
               :disabled="!canDeleteRole(row)"
               @confirm="removeRole(row.roleId)"
             >
-              <template #reference>
-                <button type="button" class="btn-action btn-action--delete" :disabled="!canDeleteRole(row)" title="删除">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                </button>
-              </template>
-            </el-popconfirm>
+              <button type="button" class="btn-action btn-action--delete" :disabled="!canDeleteRole(row)" title="删除">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </a-popconfirm>
           </div>
         </template>
-      </FlatManageListView>
-
-      <div v-show="activeTab === 'hierarchy'" class="role-hierarchy-view" v-loading="hierarchyLoading">
-        <div v-if="hierarchyLevels.length === 0" class="role-hierarchy-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" /><path d="M12 8v4l3 3" />
-          </svg>
-          <p>暂无角色层级数据</p>
-        </div>
-
-        <div v-else class="tier-flow">
-          <template v-for="(tier, idx) in hierarchyLevels" :key="tier.level">
-            <div v-if="idx > 0" class="tier-connector">
-              <div class="connector-line" />
-              <div class="connector-arrow" />
-            </div>
-
-            <div class="tier-card" :style="{ '--tc': paletteOf(idx).color, '--tc-bg': paletteOf(idx).bg }">
-              <div class="tier-header">
-                <div class="tier-level-badge">{{ paletteOf(idx).icon }} LEVEL {{ tier.level }}</div>
-                <span class="tier-count">{{ tier.roles.length }} 个角色</span>
-              </div>
-              <div class="tier-grid">
-                <div v-for="role in tier.roles" :key="role.roleId" class="tier-role-card">
-                  <div class="trc-icon">{{ paletteOf(idx).icon }}</div>
-                  <div class="trc-body">
-                    <span class="trc-name">{{ role.roleName }}</span>
-                    <code class="trc-code">{{ role.roleCode }}</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-    </div>
-  </div>
+  </FlatManageListView>
 
   <DataOperationView
     v-model="dialogVisible"
@@ -450,59 +333,61 @@ onMounted(refreshAll)
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
-    <el-form label-position="top" :model="form" class="dialog-form">
+    <a-form layout="vertical" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <el-form-item label="角色名称" class="dialog-item">
-          <el-input v-model="form.roleName" placeholder="请输入角色名称" />
-        </el-form-item>
-        <el-form-item label="角色编码" class="dialog-item">
-          <el-input v-model="form.roleCode" placeholder="如 ADMIN" />
-        </el-form-item>
-        <el-form-item label="层级（数值越小等级越高）" class="dialog-item">
-          <el-input-number v-model="form.level" :min="0" placeholder="请输入层级" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="描述" class="dialog-item dialog-item--full">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="选填，描述角色用途" resize="none" />
-        </el-form-item>
+        <a-form-item label="角色名称" class="dialog-item">
+          <a-input v-model:value="form.roleName" placeholder="请输入角色名称" />
+        </a-form-item>
+        <a-form-item label="角色编码" class="dialog-item">
+          <a-input v-model:value="form.roleCode" placeholder="如 ADMIN" />
+        </a-form-item>
+        <a-form-item label="层级（数值越小等级越高）" class="dialog-item">
+          <a-input-number v-model:value="form.level" :min="0" placeholder="请输入层级" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="描述" class="dialog-item dialog-item--full">
+          <a-textarea v-model:value="form.description" :rows="3" placeholder="选填，描述角色用途" />
+        </a-form-item>
       </div>
-    </el-form>
+    </a-form>
   </DataOperationView>
 
-  <el-dialog
-    v-model="permDialogVisible"
-    title=""
+  <a-modal
+    v-model:open="permDialogVisible"
+    :title="null"
     width="560px"
     class="form-dialog data-operation-view"
-    :close-on-click-modal="false"
+    :mask-closable="false"
     destroy-on-close
-    @opened="onPermDialogOpened"
+    :footer="null"
+    @after-open-change="onPermDialogOpenChange"
   >
     <div class="perm-dialog-header">
       <h3 class="perm-dialog-title">分配权限</h3>
       <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
     </div>
-    <div class="perm-tree-wrap" v-loading="permLoading">
-      <el-tree
-        v-if="showPermTree && menuTreeData.length"
-        :key="`role-perm-${permForm.roleId}`"
-        ref="menuTreeRef"
-        :data="menuTreeData"
-        show-checkbox
-        node-key="permissionId"
-        :props="{ label: 'name', children: 'children' }"
-        class="perm-tree"
-      />
-      <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
-    </div>
-    <template #footer>
-      <div class="dialog-footer">
-        <button type="button" class="btn-ghost-sm" @click="permDialogVisible = false">取消</button>
-        <button type="button" class="btn-primary-sm" :disabled="permLoading" @click="submitRoleMenusWithTree">
-          {{ permLoading ? '保存中...' : '保存权限' }}
-        </button>
+    <a-spin :spinning="permLoading">
+      <div class="perm-tree-wrap">
+        <a-tree
+          v-if="showPermTree && menuTreeData.length"
+          :key="`role-perm-${permForm.roleId}`"
+          checkable
+          default-expand-all
+          :tree-data="menuTreeData"
+          :checked-keys="treeCheckedKeys"
+          :field-names="{ children: 'children', title: 'name', key: 'permissionId' }"
+          class="perm-tree"
+          @check="onPermTreeCheck"
+        />
+        <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
       </div>
-    </template>
-  </el-dialog>
+    </a-spin>
+    <div class="dialog-footer">
+      <button type="button" class="btn-ghost-sm" @click="permDialogVisible = false">取消</button>
+      <button type="button" class="btn-primary-sm" :disabled="permLoading" @click="submitRoleMenusWithTree">
+        {{ permLoading ? '保存中...' : '保存权限' }}
+      </button>
+    </div>
+  </a-modal>
 </template>
 
 <style scoped>

@@ -162,7 +162,7 @@ export function normalizePermissionList(list = []) {
   return list.map(normalizePermissionRecord)
 }
 
-/** 从已选权限 ID 中筛出叶子节点，供 el-tree setCheckedKeys(keys, true) 精确回显 */
+/** 从已选权限 ID 中筛出叶子节点，供权限树勾选回显 */
 export function filterCheckedLeafIds(flatList = [], selectedIds = []) {
   const selected = new Set(
     selectedIds.map(Number).filter((id) => !Number.isNaN(id)),
@@ -173,7 +173,7 @@ export function filterCheckedLeafIds(flatList = [], selectedIds = []) {
   )
 }
 
-/** 权限平铺列表 → el-tree 树结构（含 D/M/F 全类型） */
+/** 权限平铺列表 → 树结构（含 D/M/F 全类型） */
 export function buildPermissionTree(list = [], parentId = 0) {
   return list
     .filter((item) => Number(item.parentId) === Number(parentId))

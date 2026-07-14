@@ -933,7 +933,7 @@
   transform: scale(1.02);
 }
 
-.repair-page .ticket-detail-dialog :deep(.el-dialog__body) {
+.repair-page .ticket-detail-dialog :deep(.ant-modal-body) {
   padding-top: 8px;
   padding-bottom: 4px;
 }

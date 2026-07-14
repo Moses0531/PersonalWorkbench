@@ -53,7 +53,7 @@
 import '@wangeditor/editor/dist/css/style.css'
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { Editor as WangEditor } from '@wangeditor/editor-for-vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import { uploadFileApi } from '../api/common/upload'
 
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']
@@ -157,7 +157,7 @@ function escapeHtml(text) {
 
 function validateFile(file) {
   if (props.fileSize != null && props.fileSize > 0 && file.size / 1024 / 1024 > props.fileSize) {
-    ElMessage.error(`文件大小不能超过 ${props.fileSize} MB`)
+    message.error(`文件大小不能超过 ${props.fileSize} MB`)
     return false
   }
   return true
@@ -199,7 +199,7 @@ async function handleFileUpload(file) {
 
   const editor = editorRef.value
   if (!editor) {
-    ElMessage.warning('编辑器尚未就绪，请稍后再试')
+    message.warning('编辑器尚未就绪，请稍后再试')
     return
   }
 
@@ -207,7 +207,7 @@ async function handleFileUpload(file) {
     const { url } = await doUpload(file)
     insertFileNode(editor, file, url)
   } catch (err) {
-    ElMessage.error(err.message || '文件上传失败')
+    message.error(err.message || '文件上传失败')
   }
 }
 
@@ -318,7 +318,7 @@ async function handlePaste(event) {
 
   if (/src=["']file:/i.test(pastedHtml)) {
     event.preventDefault()
-    ElMessage.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
+    message.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
   }
 }
 
