@@ -1,10 +1,13 @@
 package com.moses.constant;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public final class AIConstants {
-
-    private AIConstants() {
-    }
-
     /** 项目命名空间，避免与共用 Redis 的其他服务串会话 */
     private static final String APP_PREFIX = "spine:";
 
