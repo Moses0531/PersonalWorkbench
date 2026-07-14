@@ -84,6 +84,13 @@ const parentOptions = computed(() => {
 
 const treeData = computed(() => buildPermissionTree(tableData.value))
 
+const roleSelectOptions = computed(() =>
+  roleOptions.value.map((role) => ({
+    value: Number(role.roleId),
+    label: `${role.roleName}（${role.roleCode}）`
+  }))
+)
+
 async function loadPermissions() {
   loading.value = true
   try {
@@ -415,18 +422,19 @@ onMounted(async () => {
           <a-spin :spinning="roleAssignLoading">
             <div class="role-assign-box">
               <p class="field-hint role-assign-hint">
-                勾选可访问该权限的角色，保存后写入 role_permission；新增子项时继承父级已授权角色。
+                选择可访问该权限的角色，保存后写入 role_permission；新增子项时继承父级已授权角色。
               </p>
-              <a-checkbox-group v-if="roleOptions.length" v-model:value="form.roleIds" class="role-checkbox-group">
-                <a-checkbox
-                  v-for="role in roleOptions"
-                  :key="role.roleId"
-                  :value="Number(role.roleId)"
-                  class="role-checkbox"
-                >
-                  {{ role.roleName }}（{{ role.roleCode }}）
-                </a-checkbox>
-              </a-checkbox-group>
+              <a-select
+                v-if="roleOptions.length"
+                v-model:value="form.roleIds"
+                mode="multiple"
+                allow-clear
+                show-search
+                option-filter-prop="label"
+                placeholder="请选择角色"
+                style="width: 100%"
+                :options="roleSelectOptions"
+              />
               <p v-else class="role-assign-empty">暂无可选角色，请先在角色管理中创建角色</p>
             </div>
           </a-spin>
