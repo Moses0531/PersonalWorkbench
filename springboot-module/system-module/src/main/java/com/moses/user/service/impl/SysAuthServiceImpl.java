@@ -5,6 +5,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.moses.rabc.entity.SysPermission;
 import com.moses.rabc.mapper.SysPermissionMapper;
+import com.moses.user.config.AppAuthProperties;
 import com.moses.user.entity.Login;
 import com.moses.user.entity.Register;
 import com.moses.user.service.SysAuthService;
@@ -30,18 +31,24 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SysAuthServiceImpl implements SysAuthService {
 
     @Autowired
-    private  CaptchaUtil captchaUtil;
+    private CaptchaUtil captchaUtil;
 
     @Autowired
-    private  SysUserService sysUserService;
+    private SysUserService sysUserService;
 
     @Autowired
     private SysPermissionMapper sysPermissionMapper;
+
+    @Autowired
+    private AppAuthProperties appAuthProperties;
 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Register register(Register register) {
+        if (!appAuthProperties.isRegisterEnabled()) {
+            throw new RuntimeException("当前系统未开放注册");
+        }
         if (register == null) {
             throw new RuntimeException("注册信息不能为空");
         }
@@ -51,7 +58,8 @@ public class SysAuthServiceImpl implements SysAuthService {
         String password = register.getPassword();
         String confirmPassword = register.getConfirmPassword();
 
-        if (!captchaUtil.verifyCaptcha(register.getCaptchaCode(), register.getCaptchaToken(), register.getCaptchaTimestamp())) {
+        if (appAuthProperties.isCaptchaOnRegister()
+                && !captchaUtil.verifyCaptcha(register.getCaptchaCode(), register.getCaptchaToken(), register.getCaptchaTimestamp())) {
             throw new RuntimeException("验证码错误或已过期");
         }
 
@@ -113,7 +121,8 @@ public class SysAuthServiceImpl implements SysAuthService {
             throw new RuntimeException("登录信息不能为空");
         }
 
-        if (!captchaUtil.verifyCaptcha(login.getCaptchaCode(), login.getCaptchaToken(), login.getCaptchaTimestamp())) {
+        if (appAuthProperties.isCaptchaOnLogin()
+                && !captchaUtil.verifyCaptcha(login.getCaptchaCode(), login.getCaptchaToken(), login.getCaptchaTimestamp())) {
             throw new RuntimeException("验证码错误或已过期");
         }
 
