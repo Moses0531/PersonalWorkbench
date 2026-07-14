@@ -25,6 +25,11 @@
             <artifactId>system-module</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.moses</groupId>
+            <artifactId>ai-module</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

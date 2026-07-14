@@ -39,6 +39,7 @@
         <module>start-module</module>
         <module>common-module</module>
         <module>system-module</module>
+        <module>ai-module</module>
     </modules>
 
     <dependencyManagement>
