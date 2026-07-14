@@ -24,8 +24,8 @@
 
 .dialog-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 16px;
+  grid-template-columns: 1fr;
+  gap: 4px;
 }
 
 .dialog-item--full {
@@ -162,8 +162,3 @@
   transform: none;
 }
 
-@media (max-width: 768px) {
-  .dialog-grid {
-    grid-template-columns: 1fr;
-  }
-}
