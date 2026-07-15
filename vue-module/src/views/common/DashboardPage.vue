@@ -69,7 +69,7 @@ function openCmdHint() {
       </div>
 
       <div class="hero-body">
-        <p class="hero-kicker">Spine Extension</p>
+        <p class="hero-kicker">ChassisElevate</p>
         <h1 id="home-greeting" class="hero-title">
           <span class="hero-greet">{{ greeting }}，</span>
           <span class="hero-name">{{ displayName }}</span>

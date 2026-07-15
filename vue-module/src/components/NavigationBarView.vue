@@ -2,7 +2,7 @@
   <div class="layout">
     <!-- 左侧图标轨道 -->
     <nav class="rail" role="navigation" aria-label="主导航">
-      <div class="rail-brand" title="Spine Extension">
+      <div class="rail-brand" title="ChassisElevate">
         <BrandMarkView :size="24" />
         <span class="rail-version">v1.0.0</span>
       </div>
@@ -97,7 +97,7 @@
     <div class="main-area">
       <header class="search-bar">
         <div class="search-bar-left">
-          <span class="search-brand">Spine Extension</span>
+          <span class="search-brand">ChassisElevate</span>
           <span v-if="currentPageTitle" class="search-page">{{ currentPageTitle }}</span>
         </div>
 
