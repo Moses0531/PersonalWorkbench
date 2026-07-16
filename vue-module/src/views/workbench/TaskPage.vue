@@ -22,10 +22,10 @@ const route = useRoute()
 const router = useRouter()
 
 const STATUS_COLUMNS = [
-  { key: '0', label: '待办', hint: '还未动手' },
-  { key: '1', label: '进行中', hint: '正在推进' },
-  { key: '2', label: '已完成', hint: '可以收尾' },
-  { key: '3', label: '已取消', hint: '不再跟进' },
+  { key: '0', label: '待办' },
+  { key: '1', label: '进行中' },
+  { key: '2', label: '已完成' },
+  { key: '3', label: '已取消' },
 ]
 
 const activeTab = ref(route.query.tab === 'projects' ? 'projects' : 'tasks')
@@ -36,11 +36,31 @@ const filterProjectId = ref(
 )
 const syncingQuery = ref(false)
 
+const inProjectSpace = computed(() => filterProjectId.value != null)
+
+const currentProject = computed(() => {
+  if (!inProjectSpace.value) return null
+  const id = Number(filterProjectId.value)
+  return projects.value.find((p) => Number(p.projectId) === id) || null
+})
+
+const filterProjectName = computed(() => {
+  if (!inProjectSpace.value) return ''
+  return currentProject.value?.name || projectMap.value.get(Number(filterProjectId.value)) || `项目 #${filterProjectId.value}`
+})
+
 const headerCopy = computed(() => {
+  if (inProjectSpace.value) {
+    const desc = (currentProject.value?.description || '').trim()
+    return {
+      title: filterProjectName.value,
+      desc: desc || '项目空间 · 按状态推进本项目任务',
+    }
+  }
   if (activeTab.value === 'projects') {
     return {
       title: '事务',
-      desc: '梳理进行中与已归档的个人项目，点项目名可跳到对应任务。',
+      desc: '梳理进行中与已归档的个人项目，点项目名进入项目空间。',
     }
   }
   return {
@@ -78,16 +98,19 @@ function syncRouteQuery() {
 }
 
 function setTab(tab) {
-  if (activeTab.value === tab) return
+  if (activeTab.value === tab && !inProjectSpace.value) return
   activeTab.value = tab
-  if (tab === 'projects') {
-    filterProjectId.value = null
-  }
+  filterProjectId.value = null
 }
 
 function viewProjectTasks(projectId) {
   filterProjectId.value = Number(projectId)
   activeTab.value = 'tasks'
+}
+
+function leaveProjectSpace() {
+  filterProjectId.value = null
+  activeTab.value = 'projects'
 }
 
 watch([activeTab, filterProjectId], () => {
@@ -106,7 +129,7 @@ watch(
   },
 )
 
-/* ---------- 任务看板 ---------- */
+/* ---------- 任务列表 ---------- */
 const taskLoading = ref(false)
 const taskSubmitting = ref(false)
 const taskDialogVisible = ref(false)
@@ -139,29 +162,16 @@ const activeProjects = computed(() =>
   projects.value.filter((p) => String(p.status) !== '1'),
 )
 
-const projectSelectOptions = computed(() => {
-  const opts = activeProjects.value.map((p) => ({
-    value: Number(p.projectId),
-    label: p.name,
-  }))
-  const selected = filterProjectId.value
-  if (selected == null) return opts
-  if (opts.some((o) => Number(o.value) === Number(selected))) return opts
-  const name = projectMap.value.get(Number(selected))
-  if (name) opts.unshift({ value: Number(selected), label: `${name}（已归档）` })
-  return opts
-})
-
-const filterProjectName = computed(() => {
-  if (filterProjectId.value == null) return ''
-  return projectMap.value.get(Number(filterProjectId.value)) || `项目 #${filterProjectId.value}`
+const projectScopedTasks = computed(() => {
+  if (!inProjectSpace.value) return tasks.value
+  const id = Number(filterProjectId.value)
+  return tasks.value.filter((t) => Number(t.projectId) === id)
 })
 
 const filteredTasks = computed(() => {
   const q = taskSearchQuery.value.trim().toLowerCase()
-  return tasks.value.filter((t) => {
+  return projectScopedTasks.value.filter((t) => {
     if (filterPriority.value != null && Number(t.priority) !== Number(filterPriority.value)) return false
-    if (filterProjectId.value != null && Number(t.projectId) !== Number(filterProjectId.value)) return false
     if (!q) return true
     return (
       (t.title || '').toLowerCase().includes(q) ||
@@ -181,8 +191,17 @@ const columnsData = computed(() =>
   })),
 )
 
+/** 当前状态 Tab */
+const statusTab = ref('0')
+
+const activeStatusColumn = computed(
+  () => columnsData.value.find((c) => c.key === statusTab.value) || columnsData.value[0],
+)
+
+const statusTabTasks = computed(() => activeStatusColumn.value?.items || [])
+
 const taskStats = computed(() => {
-  const all = tasks.value
+  const all = projectScopedTasks.value
   const todo = all.filter((t) => String(t.status) === '0').length
   const doing = all.filter((t) => String(t.status) === '1').length
   const overdue = all.filter((t) => {
@@ -257,10 +276,6 @@ async function loadTasks() {
 
 async function refreshTasks() {
   await Promise.all([loadTasks(), loadProjectsForSelect()])
-}
-
-function clearProjectFilter() {
-  filterProjectId.value = null
 }
 
 function openCreateTask(status = '0') {
@@ -518,13 +533,26 @@ onMounted(async () => {
     <div class="wb-page__blob wb-page__blob--2" aria-hidden="true" />
 
     <div class="wb-page__inner">
-      <header class="wb-header">
+      <header class="wb-header" :class="{ 'wb-header--space': inProjectSpace }">
         <div class="wb-header__text">
-          <h1 class="wb-header__title">{{ headerCopy.title }}</h1>
+          <button
+            v-if="inProjectSpace"
+            type="button"
+            class="space-back"
+            @click="leaveProjectSpace"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            返回项目
+          </button>
+          <h1 class="wb-header__title" :class="{ 'wb-header__title--space': inProjectSpace }">
+            {{ headerCopy.title }}
+          </h1>
           <p class="wb-header__desc">{{ headerCopy.desc }}</p>
         </div>
         <div class="wb-header__actions">
-          <div class="affair-tabs" role="tablist" aria-label="事务视图">
+          <div v-if="!inProjectSpace" class="affair-tabs" role="tablist" aria-label="事务视图">
             <button
               type="button"
               class="affair-tab"
@@ -550,11 +578,11 @@ onMounted(async () => {
         </div>
       </header>
 
-      <!-- 任务看板 -->
+      <!-- 任务列表 -->
       <div v-show="activeTab === 'tasks'">
         <div class="wb-stats">
           <div class="wb-stat wb-stat--accent">
-            <span class="wb-stat__label">全部任务</span>
+            <span class="wb-stat__label">{{ inProjectSpace ? '本项目任务' : '全部任务' }}</span>
             <span class="wb-stat__value">{{ taskStats.total }}</span>
           </div>
           <div class="wb-stat">
@@ -586,14 +614,12 @@ onMounted(async () => {
             style="width: 120px"
             :precision="0"
           />
-          <a-select
-            v-model:value="filterProjectId"
-            allow-clear
-            placeholder="所属项目"
-            style="width: 180px"
-            :options="projectSelectOptions"
-          />
-          <button v-permission="'task:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreateTask('0')">
+          <button
+            v-permission="'task:add'"
+            type="button"
+            class="wb-btn wb-btn--primary"
+            @click="openCreateTask(statusTab)"
+          >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -601,103 +627,118 @@ onMounted(async () => {
           </button>
         </div>
 
-        <div v-if="filterProjectId != null" class="filter-banner">
-          <span>正在查看项目「{{ filterProjectName }}」下的任务</span>
-          <button type="button" class="filter-banner__clear" @click="clearProjectFilter">清除筛选</button>
+        <div class="status-tabs" role="tablist" aria-label="任务状态">
+          <button
+            v-for="col in columnsData"
+            :key="col.key"
+            type="button"
+            class="status-tab"
+            :class="{ 'is-active': statusTab === col.key }"
+            role="tab"
+            :aria-selected="statusTab === col.key"
+            @click="statusTab = col.key"
+          >
+            <span class="status-tab__label">{{ col.label }}</span>
+            <span class="status-tab__count">{{ col.items.length }}</span>
+          </button>
         </div>
 
         <a-spin :spinning="taskLoading">
-          <div v-if="!taskLoading && !tasks.length" class="wb-empty">
-            <h2 class="wb-empty__title">看板还是空的</h2>
-            <p class="wb-empty__desc">创建第一条任务，把它放进「待办」列，再逐步推进。</p>
+          <div v-if="!taskLoading && !projectScopedTasks.length" class="wb-empty">
+            <h2 class="wb-empty__title">{{ inProjectSpace ? '项目空间还是空的' : '还没有任务' }}</h2>
+            <p class="wb-empty__desc">
+              {{ inProjectSpace ? '为本项目创建第一条任务，从「待办」开始推进。' : '创建第一条任务，放进「待办」，再逐步推进。' }}
+            </p>
             <button v-permission="'task:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreateTask('0')">
               新建任务
             </button>
           </div>
 
-          <div v-else class="kanban">
-            <section v-for="col in columnsData" :key="col.key" class="kanban-col">
-              <header class="kanban-col__head">
-                <div class="kanban-col__title-wrap">
-                  <h2 class="kanban-col__title">{{ col.label }}</h2>
-                  <span class="kanban-col__count">{{ col.items.length }}</span>
-                </div>
-                <button
-                  v-permission="'task:add'"
-                  type="button"
-                  class="kanban-col__add"
-                  :title="`在${col.label}新建`"
-                  @click="openCreateTask(col.key)"
-                >
-                  +
-                </button>
-              </header>
+          <div v-else class="task-panel">
+            <div class="task-panel__head">
+              <h2 class="task-panel__title">{{ activeStatusColumn.label }}</h2>
+              <button
+                v-permission="'task:add'"
+                type="button"
+                class="task-panel__add"
+                :title="`在${activeStatusColumn.label}新建`"
+                @click="openCreateTask(statusTab)"
+              >
+                + 添加
+              </button>
+            </div>
 
-              <div class="kanban-col__body">
-                <article
-                  v-for="task in col.items"
-                  :key="task.taskId"
-                  class="task-card"
-                  :class="{ 'task-card--overdue': isOverdue(task) }"
-                >
-                  <div class="task-card__top">
-                    <span class="wb-chip">{{ task.priority ?? 0 }}</span>
-                    <div class="task-card__ops">
-                      <button
-                        v-permission="'task:modify'"
-                        type="button"
-                        class="task-card__op"
-                        title="编辑"
-                        @click="openEditTask(task)"
-                      >
-                        编辑
-                      </button>
-                      <a-popconfirm
-                        v-permission="'task:remove'"
-                        title="确认删除该任务？"
-                        @confirm="removeTask(task.taskId)"
-                      >
-                        <button type="button" class="task-card__op task-card__op--danger">删除</button>
-                      </a-popconfirm>
-                    </div>
-                  </div>
-
-                  <h3 class="task-card__title">{{ task.title }}</h3>
-                  <p v-if="task.description" class="task-card__desc">{{ task.description }}</p>
-
-                  <div v-if="tagList(task.tags).length" class="task-card__tags">
-                    <span v-for="tag in tagList(task.tags)" :key="tag" class="task-tag">{{ tag }}</span>
-                  </div>
-
-                  <footer class="task-card__meta">
-                    <span v-if="projectNameOf(task.projectId)" class="task-card__project">
-                      {{ projectNameOf(task.projectId) }}
-                    </span>
-                    <span
-                      v-if="task.dueTime"
-                      class="task-card__due"
-                      :class="{ 'is-overdue': isOverdue(task) }"
-                    >
-                      {{ formatDue(task.dueTime) }}
-                    </span>
-                  </footer>
-
-                  <div v-permission="'task:modify'" class="task-card__move">
+            <div class="task-list">
+              <article
+                v-for="task in statusTabTasks"
+                :key="task.taskId"
+                class="task-card"
+                :class="{ 'task-card--overdue': isOverdue(task) }"
+              >
+                <div class="task-card__top">
+                  <span class="wb-chip wb-chip--prio">P{{ task.priority ?? 0 }}</span>
+                  <div class="action-btns">
                     <button
-                      v-for="target in STATUS_COLUMNS.filter((c) => c.key !== col.key)"
-                      :key="target.key"
+                      v-permission="'task:modify'"
                       type="button"
-                      class="task-move-btn"
-                      @click="moveTask(task, target.key)"
+                      class="btn-action btn-action--edit"
+                      title="编辑"
+                      @click="openEditTask(task)"
                     >
-                      → {{ target.label }}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
                     </button>
+                    <a-popconfirm
+                      v-permission="'task:remove'"
+                      title="确认删除该任务？"
+                      @confirm="removeTask(task.taskId)"
+                    >
+                      <button type="button" class="btn-action btn-action--delete" title="删除">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </a-popconfirm>
                   </div>
-                </article>
+                </div>
 
-                <div v-if="!col.items.length" class="kanban-col__empty">暂无任务</div>
+                <h3 class="task-card__title">{{ task.title }}</h3>
+                <p v-if="task.description" class="task-card__desc">{{ task.description }}</p>
+
+                <div v-if="tagList(task.tags).length" class="task-card__tags">
+                  <span v-for="tag in tagList(task.tags)" :key="tag" class="task-tag">{{ tag }}</span>
+                </div>
+
+                <footer class="task-card__meta">
+                  <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="task-card__project">
+                    {{ projectNameOf(task.projectId) }}
+                  </span>
+                  <span
+                    v-if="task.dueTime"
+                    class="task-card__due"
+                    :class="{ 'is-overdue': isOverdue(task) }"
+                  >
+                    {{ formatDue(task.dueTime) }}
+                  </span>
+                  <a-select
+                    v-permission="'task:modify'"
+                    :value="String(task.status ?? '0')"
+                    size="small"
+                    class="task-card__status"
+                    :options="STATUS_COLUMNS.map((c) => ({ value: c.key, label: c.label }))"
+                    @change="(v) => moveTask(task, v)"
+                  />
+                </footer>
+              </article>
+
+              <div v-if="!statusTabTasks.length" class="task-list__empty">
+                <p class="task-list__empty-title">暂无「{{ activeStatusColumn.label }}」任务</p>
+                <p class="task-list__empty-desc">切换其它状态查看，或在此新建一条。</p>
               </div>
-            </section>
+            </div>
           </div>
         </a-spin>
       </div>
@@ -826,7 +867,7 @@ onMounted(async () => {
     <DataOperationView
       v-model="taskDialogVisible"
       :title="taskIsEdit ? '编辑任务' : '新建任务'"
-      width="560px"
+      :columns="2"
       :loading="taskSubmitting"
       :confirm-text="taskIsEdit ? '保存修改' : '确认创建'"
       @confirm="submitTaskForm"
@@ -834,7 +875,12 @@ onMounted(async () => {
       <a-form layout="vertical" :model="taskForm" class="dialog-form">
         <div class="dialog-grid">
           <a-form-item label="标题" class="dialog-item dialog-item--full" required>
-            <a-input v-model:value.trim="taskForm.title" placeholder="要完成什么？" :maxlength="120" />
+            <a-input
+              v-model:value.trim="taskForm.title"
+              placeholder="要完成什么？"
+              :maxlength="120"
+              size="large"
+            />
           </a-form-item>
 
           <a-form-item label="状态" class="dialog-item">
@@ -850,7 +896,13 @@ onMounted(async () => {
           </a-form-item>
 
           <a-form-item label="所属项目" class="dialog-item">
-            <a-select v-model:value="taskForm.projectId" allow-clear placeholder="独立任务可不选" style="width: 100%">
+            <a-select
+              v-model:value="taskForm.projectId"
+              allow-clear
+              :disabled="inProjectSpace"
+              placeholder="独立任务可不选"
+              style="width: 100%"
+            >
               <a-select-option v-for="p in activeProjects" :key="p.projectId" :value="Number(p.projectId)">
                 {{ p.name }}
               </a-select-option>
@@ -867,20 +919,20 @@ onMounted(async () => {
             />
           </a-form-item>
 
-          <a-form-item label="标签" class="dialog-item dialog-item--full">
+          <a-form-item label="标签" class="dialog-item">
             <a-input v-model:value.trim="taskForm.tags" placeholder="逗号分隔，如：设计,本周" />
-          </a-form-item>
-
-          <a-form-item label="描述" class="dialog-item dialog-item--full">
-            <a-textarea v-model:value.trim="taskForm.description" :rows="3" placeholder="补充上下文" />
           </a-form-item>
 
           <a-form-item label="显示顺序" class="dialog-item">
             <a-input-number v-model:value="taskForm.displayOrder" :min="0" style="width: 100%" />
           </a-form-item>
 
+          <a-form-item label="描述" class="dialog-item">
+            <a-textarea v-model:value.trim="taskForm.description" :rows="2" placeholder="补充上下文" />
+          </a-form-item>
+
           <a-form-item label="备注" class="dialog-item">
-            <a-input v-model:value.trim="taskForm.remark" placeholder="选填" />
+            <a-textarea v-model:value.trim="taskForm.remark" :rows="2" placeholder="选填" />
           </a-form-item>
         </div>
       </a-form>
@@ -889,7 +941,7 @@ onMounted(async () => {
     <DataOperationView
       v-model="projectDialogVisible"
       :title="projectIsEdit ? '编辑项目' : '新建项目'"
-      width="520px"
+      :columns="2"
       :loading="projectSubmitting"
       :confirm-text="projectIsEdit ? '保存修改' : '确认创建'"
       @confirm="submitProjectForm"
@@ -959,81 +1011,88 @@ onMounted(async () => {
   background: var(--color-accent-soft);
 }
 
-.filter-banner {
-  display: flex;
-  flex-wrap: wrap;
+.space-back {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: var(--space-3);
-  padding: 10px 14px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(14, 116, 144, 0.18);
-  background: var(--color-accent-soft);
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-accent-deep);
-}
-
-.filter-banner__clear {
-  border: none;
-  background: transparent;
-  padding: 2px 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--color-accent-deep);
   cursor: pointer;
-  border-radius: 4px;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
-.filter-banner__clear:hover {
-  background: rgba(255, 255, 255, 0.55);
+.space-back:hover {
+  color: var(--color-accent);
 }
 
-.kanban {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-  align-items: start;
+.space-back:active {
+  transform: translateX(-2px);
 }
 
-.kanban-col {
+.wb-header__title--space {
+  font-size: clamp(1.75rem, 1.35rem + 1.4vw, 2.35rem);
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.wb-header--space .wb-header__desc {
+  max-width: 52ch;
+}
+
+.status-tabs {
   display: flex;
-  flex-direction: column;
-  min-height: 280px;
-  border-radius: var(--radius-xl);
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 var(--space-4);
+  padding: 4px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-xs);
-  overflow: hidden;
 }
 
-.kanban-col__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid var(--color-border-light);
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 100%);
-}
-
-.kanban-col__title-wrap {
-  display: flex;
+.status-tab {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
-.kanban-col__title {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.status-tab:hover {
   color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.7);
 }
 
-.kanban-col__count {
+.status-tab:active {
+  transform: scale(0.98);
+}
+
+.status-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.status-tab.is-active {
+  color: var(--color-accent-deep);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+.status-tab__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1044,39 +1103,90 @@ onMounted(async () => {
   font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--color-text-dim);
+  background: var(--color-surface-muted);
+}
+
+.status-tab.is-active .status-tab__count {
   color: var(--color-accent-deep);
   background: var(--color-accent-soft);
 }
 
-.kanban-col__add {
-  width: 28px;
-  height: 28px;
+.task-panel {
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.task-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  background: linear-gradient(180deg, rgba(248, 252, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 100%);
+}
+
+.task-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.task-panel__add {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 12px;
   border: none;
   border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.kanban-col__add:hover {
   background: var(--color-accent-soft);
   color: var(--color-accent-deep);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
-.kanban-col__body {
+.task-panel__add:hover {
+  filter: brightness(0.97);
+}
+
+.task-panel__add:active {
+  transform: scale(0.98);
+}
+
+.task-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
-  min-height: 160px;
+  padding: 14px 16px 18px;
+  min-height: 200px;
 }
 
-.kanban-col__empty {
-  padding: 28px 8px;
+.task-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 48px 16px;
   text-align: center;
+}
+
+.task-list__empty-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--color-text-secondary);
+}
+
+.task-list__empty-desc {
+  margin: 0;
   font-size: 0.8rem;
   color: var(--color-text-dim);
 }
@@ -1085,12 +1195,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
+  padding: 14px 16px;
   border-radius: var(--radius-lg);
   background: #fff;
   border: 1px solid var(--color-border-light);
   box-shadow: var(--shadow-xs);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .task-card:hover {
@@ -1110,52 +1220,69 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.task-card__ops {
+.task-card .action-btns {
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  align-items: center;
+  gap: 6px;
 }
 
-.task-card:hover .task-card__ops,
-.task-card:focus-within .task-card__ops {
-  opacity: 1;
-}
-
-.task-card__op {
-  border: none;
+.task-card .btn-action {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
   background: transparent;
-  padding: 2px 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
-.task-card__op:hover {
+.task-card .btn-action:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.task-card .btn-action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.task-card .btn-action--edit {
+  color: var(--color-text-secondary);
+}
+
+.task-card .btn-action--edit:hover {
   color: var(--color-accent-deep);
   background: var(--color-accent-soft);
+  border-color: var(--color-accent);
 }
 
-.task-card__op--danger:hover {
+.task-card .btn-action--delete {
+  color: var(--color-text-dim);
+}
+
+.task-card .btn-action--delete:hover {
   color: var(--color-red);
   background: var(--color-red-soft);
+  border-color: rgba(224, 85, 69, 0.35);
 }
 
 .task-card__title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--color-text-primary);
+  text-wrap: pretty;
 }
 
 .task-card__desc {
   margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
+  max-width: 65ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1182,14 +1309,13 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  gap: 10px;
   font-size: 0.72rem;
   color: var(--color-text-dim);
 }
 
 .task-card__project {
-  max-width: 60%;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1202,28 +1328,9 @@ onMounted(async () => {
   font-weight: 650;
 }
 
-.task-card__move {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.task-move-btn {
-  border: none;
-  background: transparent;
-  padding: 2px 4px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--color-text-dim);
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.task-move-btn:hover {
-  color: var(--color-accent-deep);
-  background: var(--color-accent-soft);
+.task-card__status {
+  width: 108px;
+  margin-left: auto;
 }
 
 .wb-stats--inline {
@@ -1279,26 +1386,28 @@ onMounted(async () => {
   max-width: 320px;
 }
 
-@media (max-width: 1100px) {
-  .kanban {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .kanban {
-    grid-template-columns: 1fr;
+@media (max-width: 720px) {
+  .status-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .task-card__ops {
-    opacity: 1;
+  .status-tab {
+    flex: 0 0 auto;
+  }
+
+  .task-card__status {
+    margin-left: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .affair-tab,
+  .status-tab,
+  .space-back,
   .task-card,
-  .task-card__ops {
+  .task-panel__add {
     transition: none;
   }
 }

@@ -568,7 +568,7 @@ onMounted(refreshAll)
     <DataOperationView
       v-model="dialogVisible"
       :title="isEdit ? '编辑日程' : '新建日程'"
-      width="560px"
+      :columns="2"
       :loading="submitting"
       :confirm-text="isEdit ? '保存修改' : '确认创建'"
       @confirm="submitForm"
