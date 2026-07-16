@@ -6,8 +6,11 @@ import dayjs from 'dayjs'
 import {
   addTaskApi,
   deleteTasksApi,
+  listProjectAttachmentsApi,
   pageTasksApi,
+  removeTaskAttachmentApi,
   updateTaskApi,
+  uploadTaskAttachmentApi,
 } from '@/apis/workbench/TaskApi'
 import {
   addProjectApi,
@@ -49,12 +52,21 @@ const filterProjectName = computed(() => {
   return currentProject.value?.name || projectMap.value.get(Number(filterProjectId.value)) || `项目 #${filterProjectId.value}`
 })
 
+const projectAttachmentsReadonly = computed(
+  () => inProjectSpace.value && String(currentProject.value?.status) === '1',
+)
+
 const headerCopy = computed(() => {
   if (inProjectSpace.value) {
+    const archived = projectAttachmentsReadonly.value
     const desc = (currentProject.value?.description || '').trim()
     return {
       title: filterProjectName.value,
-      desc: desc || '项目空间 · 按状态推进本项目任务',
+      desc:
+        desc ||
+        (archived
+          ? '项目已归档 · 附件只读，可下载存档'
+          : '项目空间 · 按状态推进本项目任务，可审查附件'),
     }
   }
   if (activeTab.value === 'projects') {
@@ -253,6 +265,117 @@ function tagList(tags) {
     .slice(0, 4)
 }
 
+function parseAttachments(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw
+  if (typeof raw === 'string') {
+    try {
+      const list = JSON.parse(raw)
+      return Array.isArray(list) ? list : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+function attachmentCount(task) {
+  return parseAttachments(task?.attachments).length
+}
+
+function formatFileSize(size) {
+  const n = Number(size)
+  if (!n || n < 0) return ''
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function isTaskAttachmentsReadonly(projectId) {
+  if (projectId == null || projectId === '') return false
+  const p = projects.value.find((x) => Number(x.projectId) === Number(projectId))
+  return p != null && String(p.status) === '1'
+}
+
+/* ---------- 任务附件 ---------- */
+const taskAttachments = ref([])
+const attachmentUploading = ref(false)
+const attachmentInputRef = ref(null)
+
+const taskFormAttachmentsReadonly = computed(() =>
+  isTaskAttachmentsReadonly(taskForm.projectId),
+)
+
+const projectAttachmentList = ref([])
+const projectAttachmentLoading = ref(false)
+
+async function loadProjectAttachments() {
+  if (!inProjectSpace.value) {
+    projectAttachmentList.value = []
+    return
+  }
+  projectAttachmentLoading.value = true
+  try {
+    const result = await listProjectAttachmentsApi(filterProjectId.value)
+    projectAttachmentList.value = result?.data || []
+  } catch {
+    projectAttachmentList.value = []
+  } finally {
+    projectAttachmentLoading.value = false
+  }
+}
+
+watch(
+  () => [inProjectSpace.value, filterProjectId.value, tasks.value],
+  () => {
+    if (inProjectSpace.value) loadProjectAttachments()
+    else projectAttachmentList.value = []
+  },
+)
+
+function openAttachmentUrl(url) {
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+function triggerAttachmentPick() {
+  if (!taskIsEdit.value || taskFormAttachmentsReadonly.value) return
+  attachmentInputRef.value?.click()
+}
+
+async function onAttachmentFileChange(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file || !taskForm.taskId) return
+  attachmentUploading.value = true
+  try {
+    await uploadTaskAttachmentApi(taskForm.taskId, file)
+    message.success('附件已上传')
+    await loadTasks()
+    const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
+    taskAttachments.value = parseAttachments(row?.attachments)
+    if (inProjectSpace.value) await loadProjectAttachments()
+  } catch (error) {
+    message.error(error.message || '上传失败')
+  } finally {
+    attachmentUploading.value = false
+  }
+}
+
+async function removeAttachment(attachmentId) {
+  if (!taskForm.taskId || taskFormAttachmentsReadonly.value) return
+  try {
+    await removeTaskAttachmentApi(taskForm.taskId, attachmentId)
+    message.success('已删除附件')
+    await loadTasks()
+    const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
+    taskAttachments.value = parseAttachments(row?.attachments)
+    if (inProjectSpace.value) await loadProjectAttachments()
+  } catch (error) {
+    message.error(error.message || '删除失败')
+  }
+}
+
 async function loadProjectsForSelect() {
   try {
     const result = await pageProjectsApi(1, null)
@@ -280,6 +403,7 @@ async function refreshTasks() {
 
 function openCreateTask(status = '0') {
   taskIsEdit.value = false
+  taskAttachments.value = []
   resetTaskForm({
     status: String(status),
     projectId: filterProjectId.value != null ? Number(filterProjectId.value) : null,
@@ -289,6 +413,7 @@ function openCreateTask(status = '0') {
 
 function openEditTask(row) {
   taskIsEdit.value = true
+  taskAttachments.value = parseAttachments(row.attachments)
   resetTaskForm({
     taskId: row.taskId,
     projectId: row.projectId != null ? Number(row.projectId) : null,
@@ -627,6 +752,36 @@ onMounted(async () => {
           </button>
         </div>
 
+        <section v-if="inProjectSpace" class="attach-review" aria-label="项目附件审查">
+          <div class="attach-review__head">
+            <h2 class="attach-review__title">附件审查</h2>
+            <span class="attach-review__meta">
+              {{ projectAttachmentList.length }} 个文件
+              <template v-if="projectAttachmentsReadonly"> · 已归档只读</template>
+            </span>
+          </div>
+          <a-spin :spinning="projectAttachmentLoading">
+            <ul v-if="projectAttachmentList.length" class="attach-review__list">
+              <li v-for="file in projectAttachmentList" :key="`${file.taskId}-${file.id}`" class="attach-review__item">
+                <div class="attach-review__info">
+                  <button type="button" class="attach-review__name" @click="openAttachmentUrl(file.url)">
+                    {{ file.name }}
+                  </button>
+                  <span class="attach-review__sub">
+                    {{ file.taskTitle || `任务 #${file.taskId}` }}
+                    <template v-if="formatFileSize(file.size)"> · {{ formatFileSize(file.size) }}</template>
+                    <template v-if="file.createTime"> · {{ file.createTime }}</template>
+                  </span>
+                </div>
+                <button type="button" class="wb-btn wb-btn--ghost attach-review__dl" @click="openAttachmentUrl(file.url)">
+                  下载
+                </button>
+              </li>
+            </ul>
+            <p v-else class="attach-review__empty">本项目任务下还没有附件</p>
+          </a-spin>
+        </section>
+
         <div class="status-tabs" role="tablist" aria-label="任务状态">
           <button
             v-for="col in columnsData"
@@ -715,6 +870,9 @@ onMounted(async () => {
                 <footer class="task-card__meta">
                   <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="task-card__project">
                     {{ projectNameOf(task.projectId) }}
+                  </span>
+                  <span v-if="attachmentCount(task)" class="task-card__files" title="附件数">
+                    {{ attachmentCount(task) }} 附件
                   </span>
                   <span
                     v-if="task.dueTime"
@@ -933,6 +1091,51 @@ onMounted(async () => {
 
           <a-form-item label="备注" class="dialog-item">
             <a-textarea v-model:value.trim="taskForm.remark" :rows="2" placeholder="选填" />
+          </a-form-item>
+
+          <a-form-item label="附件" class="dialog-item dialog-item--full">
+            <div class="task-attach">
+              <p v-if="!taskIsEdit" class="task-attach__hint">先创建任务，再上传附件</p>
+              <template v-else>
+                <p v-if="taskFormAttachmentsReadonly" class="task-attach__hint">
+                  所属项目已归档，附件只读，可下载
+                </p>
+                <ul v-if="taskAttachments.length" class="task-attach__list">
+                  <li v-for="file in taskAttachments" :key="file.id" class="task-attach__item">
+                    <button type="button" class="task-attach__name" @click="openAttachmentUrl(file.url)">
+                      {{ file.name }}
+                    </button>
+                    <span class="task-attach__size">{{ formatFileSize(file.size) }}</span>
+                    <button type="button" class="task-attach__dl" @click="openAttachmentUrl(file.url)">下载</button>
+                    <a-popconfirm
+                      v-if="!taskFormAttachmentsReadonly"
+                      title="确认删除该附件？"
+                      @confirm="removeAttachment(file.id)"
+                    >
+                      <button v-permission="'task:modify'" type="button" class="task-attach__del">删除</button>
+                    </a-popconfirm>
+                  </li>
+                </ul>
+                <p v-else class="task-attach__hint">暂无附件</p>
+                <div v-if="!taskFormAttachmentsReadonly" class="task-attach__actions">
+                  <input
+                    ref="attachmentInputRef"
+                    type="file"
+                    class="task-attach__input"
+                    @change="onAttachmentFileChange"
+                  />
+                  <button
+                    v-permission="'task:modify'"
+                    type="button"
+                    class="wb-btn wb-btn--ghost"
+                    :disabled="attachmentUploading"
+                    @click="triggerAttachmentPick"
+                  >
+                    {{ attachmentUploading ? '上传中…' : '上传附件' }}
+                  </button>
+                </div>
+              </template>
+            </div>
           </a-form-item>
         </div>
       </a-form>
@@ -1321,6 +1524,140 @@ onMounted(async () => {
   white-space: nowrap;
   color: var(--color-accent-deep);
   font-weight: 600;
+}
+
+.task-card__files {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.attach-review {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.attach-review__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.attach-review__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.attach-review__meta {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.attach-review__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attach-review__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.attach-review__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.attach-review__name,
+.task-attach__name {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-accent-deep);
+  cursor: pointer;
+}
+
+.attach-review__name:hover,
+.task-attach__name:hover {
+  text-decoration: underline;
+}
+
+.attach-review__sub {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
+.attach-review__empty,
+.task-attach__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-dim);
+}
+
+.task-attach {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-attach__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-attach__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-attach__size {
+  font-size: 0.72rem;
+  color: var(--color-text-dim);
+}
+
+.task-attach__dl,
+.task-attach__del {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-accent-deep);
+}
+
+.task-attach__del {
+  color: var(--color-red);
+}
+
+.task-attach__input {
+  display: none;
 }
 
 .task-card__due.is-overdue {

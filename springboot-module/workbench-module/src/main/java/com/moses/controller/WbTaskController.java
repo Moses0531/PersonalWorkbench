@@ -12,8 +12,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/wbTask")
@@ -45,6 +47,7 @@ public class WbTaskController {
     public ResultConfig addTask(@RequestBody WbTask wbTask) {
         wbTask.setTaskId(null);
         wbTask.setUserId(StpUtil.getLoginIdAsLong());
+        wbTask.setAttachments(null);
         wbTaskService.save(wbTask);
         return ResultConfig.success();
     }
@@ -55,6 +58,8 @@ public class WbTaskController {
     public ResultConfig updateTask(@RequestBody WbTask wbTask) {
         Long userId = StpUtil.getLoginIdAsLong();
         wbTask.setUserId(userId);
+        // 附件仅走专用接口，避免普通更新覆盖 / 绕过归档只读
+        wbTask.setAttachments(null);
         wbTaskService.update(
                 wbTask,
                 new LambdaQueryWrapper<WbTask>()
@@ -75,5 +80,34 @@ public class WbTaskController {
                         .eq(WbTask::getUserId, userId)
         );
         return ResultConfig.success();
+    }
+
+    @PostMapping("/uploadAttachment")
+    @Operation(summary = "上传任务附件（阿里云 OSS）")
+    @SaCheckPermission("task:modify")
+    public ResultConfig uploadAttachment(@RequestParam("taskId") Long taskId,
+                                         @RequestParam("file") MultipartFile file) {
+        return ResultConfig.success(
+                wbTaskService.uploadAttachment(StpUtil.getLoginIdAsLong(), taskId, file)
+        );
+    }
+
+    @DeleteMapping("/removeAttachment")
+    @Operation(summary = "删除任务附件")
+    @SaCheckPermission("task:modify")
+    public ResultConfig removeAttachment(@RequestBody Map<String, Object> body) {
+        Long taskId = body.get("taskId") != null ? Long.valueOf(String.valueOf(body.get("taskId"))) : null;
+        String attachmentId = body.get("attachmentId") != null ? String.valueOf(body.get("attachmentId")) : null;
+        wbTaskService.removeAttachment(StpUtil.getLoginIdAsLong(), taskId, attachmentId);
+        return ResultConfig.success();
+    }
+
+    @GetMapping("/listProjectAttachments")
+    @Operation(summary = "项目附件审查（汇总下属任务附件）")
+    @SaCheckPermission("task:query")
+    public ResultConfig listProjectAttachments(@RequestParam("projectId") Long projectId) {
+        return ResultConfig.success(
+                wbTaskService.listProjectAttachments(StpUtil.getLoginIdAsLong(), projectId)
+        );
     }
 }
