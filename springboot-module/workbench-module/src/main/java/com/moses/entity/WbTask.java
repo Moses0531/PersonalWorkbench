@@ -56,9 +56,9 @@ public class WbTask {
     private String status;
 
     /**
-     * 优先级（0-低，1-中，2-高）
+     * 优先级（整数，用户自填）
      */
-    private String priority;
+    private Integer priority;
 
     /**
      * 截止时间

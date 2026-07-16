@@ -255,21 +255,6 @@
   background: rgba(8, 145, 178, 0.06);
 }
 
-.wb-chip--prio-low {
-  color: var(--color-text-secondary);
-  background: rgba(8, 145, 178, 0.06);
-}
-
-.wb-chip--prio-mid {
-  color: var(--color-orange);
-  background: var(--color-orange-soft);
-}
-
-.wb-chip--prio-high {
-  color: var(--color-red);
-  background: var(--color-red-soft);
-}
-
 .wb-empty {
   display: flex;
   flex-direction: column;
