@@ -395,7 +395,7 @@ onMounted(refreshAll)
     v-model:open="permDialogVisible"
     :title="null"
     width="600px"
-    class="form-dialog data-operation-view perm-assign-dialog"
+    wrap-class-name="form-dialog data-operation-view perm-assign-dialog"
     :mask-closable="false"
     destroy-on-close
     :footer="null"
