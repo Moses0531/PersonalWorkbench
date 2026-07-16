@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import {
@@ -21,6 +21,9 @@ const WEEKDAY_OPTIONS = [
   { value: '7', label: '日' },
 ]
 
+const WEEKDAY_HEADERS = ['一', '二', '三', '四', '五', '六', '日']
+const MONTH_EVENT_LIMIT = 3
+
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
@@ -28,7 +31,9 @@ const isEdit = ref(false)
 const events = ref([])
 const tasks = ref([])
 const searchQuery = ref('')
-const rangeMode = ref('upcoming')
+const viewMode = ref('month')
+const cursorDate = ref(dayjs())
+const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
 
 const form = reactive({
   eventId: null,
@@ -51,12 +56,8 @@ const taskMap = computed(() => {
 
 const filteredEvents = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  const now = dayjs().startOf('day')
   return events.value
     .filter((ev) => {
-      const start = dayjs(ev.startTime)
-      if (rangeMode.value === 'upcoming' && start.isBefore(now, 'day')) return false
-      if (rangeMode.value === 'past' && !start.isBefore(now, 'day')) return false
       if (!q) return true
       return (
         (ev.title || '').toLowerCase().includes(q) ||
@@ -68,19 +69,68 @@ const filteredEvents = computed(() => {
     .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf())
 })
 
-const agendaGroups = computed(() => {
-  const groups = new Map()
+const eventsByDate = computed(() => {
+  const map = new Map()
   for (const ev of filteredEvents.value) {
     const key = dayjs(ev.startTime).format('YYYY-MM-DD')
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(ev)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(ev)
   }
-  return [...groups.entries()].map(([date, items]) => ({
-    date,
-    label: formatDayLabel(date),
-    items,
-  }))
+  return map
 })
+
+const periodLabel = computed(() => {
+  const d = cursorDate.value
+  if (viewMode.value === 'week') {
+    const start = d.startOf('week')
+    const end = d.endOf('week')
+    if (start.month() === end.month()) {
+      return `${start.format('YYYY年M月D日')} – ${end.format('D日')}`
+    }
+    return `${start.format('YYYY年M月D日')} – ${end.format('M月D日')}`
+  }
+  return d.format('YYYY年M月')
+})
+
+const calendarDays = computed(() => {
+  const cursor = cursorDate.value
+  let start
+  let end
+  if (viewMode.value === 'week') {
+    start = cursor.startOf('week')
+    end = cursor.endOf('week')
+  } else {
+    start = cursor.startOf('month').startOf('week')
+    end = cursor.startOf('month').endOf('month').endOf('week')
+  }
+
+  const todayKey = dayjs().format('YYYY-MM-DD')
+  const monthKey = cursor.format('YYYY-MM')
+  const days = []
+  let cur = start
+  while (cur.isBefore(end) || cur.isSame(end, 'day')) {
+    const key = cur.format('YYYY-MM-DD')
+    const dayEvents = eventsByDate.value.get(key) || []
+    days.push({
+      key,
+      date: cur,
+      dayNum: cur.date(),
+      weekdayLabel: WEEKDAY_HEADERS[(cur.day() + 6) % 7],
+      isToday: key === todayKey,
+      isSelected: key === selectedDate.value,
+      isOutside: viewMode.value === 'month' && cur.format('YYYY-MM') !== monthKey,
+      isWeekend: cur.day() === 0 || cur.day() === 6,
+      events: dayEvents,
+      overflow: Math.max(0, dayEvents.length - MONTH_EVENT_LIMIT),
+    })
+    cur = cur.add(1, 'day')
+  }
+  return days
+})
+
+const selectedDayEvents = computed(() => eventsByDate.value.get(selectedDate.value) || [])
+
+const selectedDayLabel = computed(() => formatDayLabel(selectedDate.value))
 
 const stats = computed(() => {
   const all = events.value
@@ -89,6 +139,11 @@ const stats = computed(() => {
   const upcoming = all.filter((e) => !dayjs(e.startTime).isBefore(dayjs(), 'day')).length
   const repeating = all.filter((e) => String(e.repeatType) === '1').length
   return { total: all.length, today, upcoming, repeating }
+})
+
+watch(viewMode, () => {
+  const selected = dayjs(selectedDate.value)
+  if (selected.isValid()) cursorDate.value = selected
 })
 
 function formatDayLabel(dateStr) {
@@ -113,6 +168,12 @@ function formatTimeRange(ev) {
   return end ? `${start} - ${end}` : start
 }
 
+function formatChipTime(ev) {
+  if (Number(ev.isAllDay) === 1) return '全天'
+  const s = dayjs(ev.startTime)
+  return s.isValid() ? s.format('HH:mm') : ''
+}
+
 function repeatLabel(ev) {
   if (String(ev.repeatType) !== '1') return ''
   const days = String(ev.repeatWeekdays || '')
@@ -131,13 +192,33 @@ function taskTitleOf(taskId) {
   return taskMap.value.get(Number(taskId)) || ''
 }
 
-function resetForm() {
+function shiftPeriod(delta) {
+  const unit = viewMode.value === 'week' ? 'week' : 'month'
+  cursorDate.value = cursorDate.value.add(delta, unit)
+}
+
+function goToday() {
+  const today = dayjs()
+  cursorDate.value = today
+  selectedDate.value = today.format('YYYY-MM-DD')
+}
+
+function selectDay(day) {
+  selectedDate.value = day.key
+  if (viewMode.value === 'month' && day.isOutside) {
+    cursorDate.value = day.date
+  }
+}
+
+function resetForm(dateStr) {
+  const base = dateStr && dayjs(dateStr).isValid() ? dayjs(dateStr) : dayjs()
+  const start = base.hour(9).minute(0).second(0)
   Object.assign(form, {
     eventId: null,
     taskId: null,
     title: '',
     location: '',
-    range: [dayjs().hour(9).minute(0).second(0), dayjs().hour(10).minute(0).second(0)],
+    range: [start, start.add(1, 'hour')],
     isAllDay: 0,
     repeatType: '0',
     repeatWeekdays: [],
@@ -171,9 +252,9 @@ async function refreshAll() {
   await Promise.all([loadEvents(), loadTasks()])
 }
 
-function openCreate() {
+function openCreate(dateStr) {
   isEdit.value = false
-  resetForm()
+  resetForm(dateStr || selectedDate.value)
   dialogVisible.value = true
 }
 
@@ -197,6 +278,12 @@ function openEdit(row) {
     remark: row.remark || '',
   })
   dialogVisible.value = true
+}
+
+function onEventChipClick(ev, e) {
+  e.stopPropagation()
+  selectedDate.value = dayjs(ev.startTime).format('YYYY-MM-DD')
+  openEdit(ev)
 }
 
 function toPayload() {
@@ -239,6 +326,10 @@ async function submitForm() {
     else await addEventApi(payload)
     message.success('操作成功')
     dialogVisible.value = false
+    if (payload.startTime) {
+      selectedDate.value = dayjs(payload.startTime).format('YYYY-MM-DD')
+      cursorDate.value = dayjs(payload.startTime)
+    }
     await loadEvents()
   } catch (error) {
     message.error(error.message || '操作失败')
@@ -269,11 +360,11 @@ onMounted(refreshAll)
       <header class="wb-header">
         <div class="wb-header__text">
           <h1 class="wb-header__title">日程管理</h1>
-          <p class="wb-header__desc">按日浏览个人日程，支持全天与每周重复。</p>
+          <p class="wb-header__desc">按周或按月查看个人日程，支持全天与每周重复。</p>
         </div>
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="refreshAll">刷新</button>
-          <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate">
+          <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -310,77 +401,151 @@ onMounted(refreshAll)
           placeholder="搜索标题、地点..."
           aria-label="搜索日程"
         />
-        <div class="range-tabs" role="tablist" aria-label="时间范围">
+        <div class="range-tabs" role="tablist" aria-label="日历视图">
           <button
             type="button"
             class="range-tab"
-            :class="{ 'is-active': rangeMode === 'upcoming' }"
+            :class="{ 'is-active': viewMode === 'week' }"
             role="tab"
-            :aria-selected="rangeMode === 'upcoming'"
-            @click="rangeMode = 'upcoming'"
+            :aria-selected="viewMode === 'week'"
+            @click="viewMode = 'week'"
           >
-            即将到来
+            周视图
           </button>
           <button
             type="button"
             class="range-tab"
-            :class="{ 'is-active': rangeMode === 'all' }"
+            :class="{ 'is-active': viewMode === 'month' }"
             role="tab"
-            :aria-selected="rangeMode === 'all'"
-            @click="rangeMode = 'all'"
+            :aria-selected="viewMode === 'month'"
+            @click="viewMode = 'month'"
           >
-            全部
-          </button>
-          <button
-            type="button"
-            class="range-tab"
-            :class="{ 'is-active': rangeMode === 'past' }"
-            role="tab"
-            :aria-selected="rangeMode === 'past'"
-            @click="rangeMode = 'past'"
-          >
-            已过去
+            月视图
           </button>
         </div>
       </div>
 
       <a-spin :spinning="loading">
-        <div v-if="!loading && !agendaGroups.length" class="wb-empty">
-          <h2 class="wb-empty__title">这段时间没有日程</h2>
-          <p class="wb-empty__desc">安排一次会议、提醒或专注时段，它会出现在议程里。</p>
-          <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate">
-            新建日程
-          </button>
-        </div>
+        <div class="cal-layout">
+          <section class="cal-panel" aria-label="日程日历">
+            <div class="cal-nav">
+              <div class="cal-nav__period">
+                <h2 class="cal-nav__title">{{ periodLabel }}</h2>
+                <span class="cal-nav__hint">{{ viewMode === 'week' ? '本周安排' : '本月安排' }}</span>
+              </div>
+              <div class="cal-nav__actions">
+                <button type="button" class="wb-btn wb-btn--ghost cal-nav__btn" aria-label="上一周期" @click="shiftPeriod(-1)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+                <button type="button" class="wb-btn wb-btn--ghost cal-nav__today" @click="goToday">今天</button>
+                <button type="button" class="wb-btn wb-btn--ghost cal-nav__btn" aria-label="下一周期" @click="shiftPeriod(1)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-        <div v-else class="agenda">
-          <section v-for="group in agendaGroups" :key="group.date" class="agenda-day">
-            <header class="agenda-day__head">
-              <h2 class="agenda-day__title">{{ group.label }}</h2>
-              <span class="agenda-day__count">{{ group.items.length }} 项</span>
+            <div class="cal-weekdays" aria-hidden="true">
+              <span v-for="label in WEEKDAY_HEADERS" :key="label" class="cal-weekday">{{ label }}</span>
+            </div>
+
+            <div
+              class="cal-grid"
+              :class="viewMode === 'week' ? 'cal-grid--week' : 'cal-grid--month'"
+              role="grid"
+              :aria-label="periodLabel"
+            >
+              <div
+                v-for="day in calendarDays"
+                :key="day.key"
+                class="cal-cell"
+                :class="{
+                  'is-today': day.isToday,
+                  'is-selected': day.isSelected,
+                  'is-outside': day.isOutside,
+                  'is-weekend': day.isWeekend,
+                  'has-events': day.events.length > 0,
+                }"
+                role="gridcell"
+                tabindex="0"
+                :aria-selected="day.isSelected"
+                :aria-label="`${day.key}，${day.events.length} 项日程`"
+                @click="selectDay(day)"
+                @dblclick="openCreate(day.key)"
+                @keydown.enter.prevent="selectDay(day)"
+                @keydown.space.prevent="selectDay(day)"
+              >
+                <div class="cal-cell__head">
+                  <span class="cal-cell__day">{{ day.dayNum }}</span>
+                  <span v-if="viewMode === 'week'" class="cal-cell__wd">周{{ day.weekdayLabel }}</span>
+                  <span v-if="day.events.length" class="cal-cell__count">{{ day.events.length }}</span>
+                </div>
+
+                <div class="cal-cell__events">
+                  <button
+                    v-for="ev in day.events.slice(0, viewMode === 'week' ? 6 : MONTH_EVENT_LIMIT)"
+                    :key="ev.eventId"
+                    type="button"
+                    class="cal-chip"
+                    :class="{ 'is-allday': Number(ev.isAllDay) === 1 }"
+                    :title="ev.title"
+                    @click="onEventChipClick(ev, $event)"
+                  >
+                    <em class="cal-chip__time">{{ formatChipTime(ev) }}</em>
+                    <span class="cal-chip__title">{{ ev.title }}</span>
+                  </button>
+                  <span v-if="viewMode === 'month' && day.overflow > 0" class="cal-more">
+                    +{{ day.overflow }} 更多
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="day-panel" aria-label="当日日程">
+            <header class="day-panel__head">
+              <div>
+                <h2 class="day-panel__title">{{ selectedDayLabel }}</h2>
+                <p class="day-panel__meta">{{ selectedDayEvents.length }} 项日程</p>
+              </div>
+              <button
+                v-permission="'event:add'"
+                type="button"
+                class="wb-btn wb-btn--ghost day-panel__add"
+                @click="openCreate(selectedDate)"
+              >
+                + 添加
+              </button>
             </header>
 
-            <ul class="agenda-list">
-              <li v-for="ev in group.items" :key="ev.eventId" class="agenda-item">
-                <div class="agenda-item__time">
-                  <span class="agenda-item__clock">{{ formatTimeRange(ev) }}</span>
+            <div v-if="!selectedDayEvents.length" class="day-panel__empty">
+              <p class="day-panel__empty-title">这天还没有安排</p>
+              <p class="day-panel__empty-desc">双击日历格子，或点下方按钮快速新建。</p>
+              <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate(selectedDate)">
+                新建日程
+              </button>
+            </div>
+
+            <ul v-else class="day-list">
+              <li v-for="ev in selectedDayEvents" :key="ev.eventId" class="day-item">
+                <div class="day-item__time">
+                  <span class="day-item__clock">{{ formatTimeRange(ev) }}</span>
                   <span v-if="repeatLabel(ev)" class="wb-chip wb-chip--active">{{ repeatLabel(ev) }}</span>
                 </div>
-
-                <div class="agenda-item__body">
-                  <h3 class="agenda-item__title">{{ ev.title }}</h3>
-                  <p v-if="ev.location" class="agenda-item__loc">{{ ev.location }}</p>
-                  <p v-if="taskTitleOf(ev.taskId)" class="agenda-item__task">
-                    关联任务：{{ taskTitleOf(ev.taskId) }}
-                  </p>
-                  <p v-if="ev.remark" class="agenda-item__remark">{{ ev.remark }}</p>
+                <div class="day-item__body">
+                  <h3 class="day-item__title">{{ ev.title }}</h3>
+                  <p v-if="ev.location" class="day-item__loc">{{ ev.location }}</p>
+                  <p v-if="taskTitleOf(ev.taskId)" class="day-item__task">关联任务：{{ taskTitleOf(ev.taskId) }}</p>
+                  <p v-if="ev.remark" class="day-item__remark">{{ ev.remark }}</p>
                 </div>
-
-                <div class="agenda-item__actions">
+                <div class="day-item__actions">
                   <button
                     v-permission="'event:modify'"
                     type="button"
-                    class="wb-btn wb-btn--ghost agenda-item__btn"
+                    class="wb-btn wb-btn--ghost day-item__btn"
                     @click="openEdit(ev)"
                   >
                     编辑
@@ -390,12 +555,12 @@ onMounted(refreshAll)
                     title="确认删除该日程？"
                     @confirm="removeEvent(ev.eventId)"
                   >
-                    <button type="button" class="wb-btn wb-btn--ghost agenda-item__btn is-danger">删除</button>
+                    <button type="button" class="wb-btn wb-btn--ghost day-item__btn is-danger">删除</button>
                   </a-popconfirm>
                 </div>
               </li>
             </ul>
-          </section>
+          </aside>
         </div>
       </a-spin>
     </div>
@@ -495,7 +660,15 @@ onMounted(refreshAll)
   font-weight: 600;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.range-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.range-tab:active {
+  transform: scale(0.98);
 }
 
 .range-tab.is-active {
@@ -503,23 +676,269 @@ onMounted(refreshAll)
   background: var(--color-accent-soft);
 }
 
-.agenda {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+.cal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: var(--space-4);
+  align-items: start;
 }
 
-.agenda-day__head {
+.cal-panel,
+.day-panel {
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.cal-panel {
+  padding: var(--space-4);
+  overflow: hidden;
+}
+
+.cal-nav {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  margin-bottom: var(--space-4);
+}
+
+.cal-nav__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-nav__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+}
+
+.cal-nav__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-nav__btn {
+  width: 36px;
+  padding: 0;
+}
+
+.cal-nav__today {
+  min-width: 56px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-grid--month .cal-cell {
+  min-height: 104px;
+}
+
+.cal-grid--week .cal-cell {
+  min-height: 220px;
+}
+
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(238, 248, 252, 0.55);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.cal-cell:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--color-border);
+}
+
+.cal-cell:active {
+  transform: scale(0.99);
+}
+
+.cal-cell:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.cal-cell.is-weekend {
+  background: rgba(8, 145, 178, 0.04);
+}
+
+.cal-cell.is-outside {
+  opacity: 0.45;
+}
+
+.cal-cell.is-today {
+  background: linear-gradient(160deg, rgba(8, 145, 178, 0.12) 0%, rgba(255, 255, 255, 0.92) 70%);
+  border-color: rgba(8, 145, 178, 0.22);
+}
+
+.cal-cell.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft), var(--shadow-sm);
+  background: #fff;
+}
+
+.cal-cell__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.cal-cell__day {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.cal-cell.is-today .cal-cell__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-deep) 100%);
+}
+
+.cal-cell__wd {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+}
+
+.cal-cell__count {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-deep);
+  background: var(--color-accent-soft);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.cal-cell__events {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  flex: 1;
+}
+
+.cal-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(8, 145, 178, 0.12);
+  color: var(--color-accent-deep);
+  font-size: 0.7rem;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.cal-chip:hover {
+  background: rgba(8, 145, 178, 0.2);
+}
+
+.cal-chip:active {
+  transform: scale(0.98);
+}
+
+.cal-chip.is-allday {
+  background: rgba(74, 186, 106, 0.14);
+  color: #2f8a4a;
+}
+
+.cal-chip__time {
+  flex-shrink: 0;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.cal-chip__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-more {
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--color-text-secondary);
+  padding: 1px 4px;
+}
+
+.day-panel {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+  max-height: min(720px, calc(100vh - 120px));
+  padding: var(--space-4);
+}
+
+.day-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--space-4);
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
-.agenda-day__title {
+.day-panel__title {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
@@ -527,103 +946,140 @@ onMounted(refreshAll)
   color: var(--color-text-primary);
 }
 
-.agenda-day__count {
+.day-panel__meta {
+  margin: 4px 0 0;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text-dim);
   font-variant-numeric: tabular-nums;
 }
 
-.agenda-list {
+.day-panel__add {
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.day-panel__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.day-panel__empty-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+
+.day-panel__empty-desc {
+  margin: 0 0 6px;
+  max-width: 26ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.day-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
 }
 
-.agenda-item {
-  display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: start;
-  padding: 14px 16px;
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.agenda-item:hover {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-sm);
-}
-
-.agenda-item__time {
+.day-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(238, 248, 252, 0.65);
+  border: 1px solid var(--color-border-light);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.day-item:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-xs);
+}
+
+.day-item__time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
-.agenda-item__clock {
-  font-size: 0.875rem;
+.day-item__clock {
+  font-size: 0.82rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   color: var(--color-accent-deep);
 }
 
-.agenda-item__title {
+.day-item__title {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
   font-weight: 650;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
 }
 
-.agenda-item__loc,
-.agenda-item__task,
-.agenda-item__remark {
+.day-item__loc,
+.day-item__task,
+.day-item__remark {
   margin: 6px 0 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1.45;
   color: var(--color-text-secondary);
 }
 
-.agenda-item__task {
+.day-item__task {
   color: var(--color-accent-deep);
   font-weight: 600;
 }
 
-.agenda-item__actions {
+.day-item__actions {
   display: flex;
-  flex-direction: column;
   gap: 6px;
 }
 
-.agenda-item__btn {
-  height: 32px;
-  min-width: 64px;
+.day-item__btn {
+  height: 30px;
+  min-width: 56px;
 }
 
-.agenda-item__btn.is-danger:hover {
+.day-item__btn.is-danger:hover {
   color: var(--color-red);
   border-color: rgba(224, 85, 69, 0.35);
 }
 
-@media (max-width: 768px) {
-  .agenda-item {
+@media (max-width: 1100px) {
+  .cal-layout {
     grid-template-columns: 1fr;
-    gap: 10px;
   }
 
-  .agenda-item__actions {
-    flex-direction: row;
+  .day-panel {
+    position: static;
+    max-height: none;
+    min-height: 0;
   }
 
+  .cal-grid--week .cal-cell {
+    min-height: 160px;
+  }
+}
+
+@media (max-width: 768px) {
   .wb-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -632,11 +1088,34 @@ onMounted(refreshAll)
   .wb-search {
     max-width: none;
   }
+
+  .cal-grid--month .cal-cell {
+    min-height: 72px;
+    padding: 6px;
+  }
+
+  .cal-chip__time {
+    display: none;
+  }
+
+  .cal-grid--week {
+    grid-template-columns: 1fr;
+  }
+
+  .cal-weekdays {
+    display: none;
+  }
+
+  .cal-grid--week .cal-cell {
+    min-height: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .agenda-item,
-  .range-tab {
+  .cal-cell,
+  .cal-chip,
+  .range-tab,
+  .day-item {
     transition: none;
   }
 }
