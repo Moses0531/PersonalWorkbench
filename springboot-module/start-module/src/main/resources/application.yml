@@ -9,6 +9,11 @@ server:
 spring:
   application:
     name: springboot-module
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
   ai:
     deepseek:
       api-key: ${DEEPSEEK_KEY}
