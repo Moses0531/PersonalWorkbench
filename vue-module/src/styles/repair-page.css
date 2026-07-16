@@ -1,4 +1,4 @@
-/* 报修业务页 — 与 MosesFrame 底座（UserManagementPage 等）统一视觉 */
+/* 报修业务页 — 与 统一视觉 */
 .repair-page {
   position: relative;
   padding: var(--space-6);
@@ -1009,7 +1009,6 @@
 
 .repair-page .location-preview {
   padding: 10px 12px;
-  background: var(--color-bg-secondary, #f5f7fa);
   border-radius: 8px;
 }
 

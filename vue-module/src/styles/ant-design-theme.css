@@ -1,7 +1,4 @@
-/**
- * Ant Design Vue — MosesFrame cyan system
- * Primary #0891b2 · Deep #0e7490 · Soft glow rings
- */
+
 :root {
   --ant-primary-color: var(--color-accent, #0891b2);
   --ant-primary-hover: var(--color-accent-deep, #0e7490);
