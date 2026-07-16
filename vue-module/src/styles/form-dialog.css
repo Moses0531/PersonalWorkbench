@@ -1,27 +1,7 @@
 /**
- * 管理页表单弹窗 — DataOperationView 及 dialog-form 布局
+ * 管理页表单弹窗 — 输入控件与单列栅格基础样式
+ * 双列布局由 DataOperationView（.dop-body--2）内联样式负责，避免 teleport 后选择器失效
  */
-.ant-modal.form-dialog.data-operation-view .ant-modal-content {
-  border-radius: var(--radius-panel, 18px);
-  overflow: hidden;
-}
-
-.ant-modal.form-dialog.data-operation-view .ant-modal-header {
-  padding: 20px 24px 0;
-  margin-bottom: 0;
-  border-bottom: none;
-}
-
-.ant-modal.form-dialog.data-operation-view .ant-modal-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.ant-modal.form-dialog.data-operation-view .ant-modal-body {
-  padding: 16px 24px 8px;
-}
-
 .dialog-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -32,9 +12,18 @@
   grid-column: 1 / -1;
 }
 
+.dialog-form .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.dialog-form .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
 .dialog-form .ant-form-item-label > label {
   font-size: var(--text-sm, 12px);
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--color-text-body);
 }
 

@@ -176,7 +176,8 @@
 .management-list-view .role-assign-empty { margin: 8px 0 0; font-size: 12px; color: var(--color-text-dim); }
 
 /* ── 角色「分配权限」弹窗 ── */
-.ant-modal.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body {
+.ant-modal.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body,
+.ant-modal-wrap.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body {
   padding: 0;
 }
 
