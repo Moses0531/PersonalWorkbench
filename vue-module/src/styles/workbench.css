@@ -255,6 +255,12 @@
   background: rgba(8, 145, 178, 0.06);
 }
 
+.wb-chip--prio {
+  color: var(--color-accent-deep);
+  background: var(--color-accent-soft);
+  font-variant-numeric: tabular-nums;
+}
+
 .wb-empty {
   display: flex;
   flex-direction: column;

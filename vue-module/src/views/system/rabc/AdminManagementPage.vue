@@ -249,7 +249,7 @@ onMounted(async () => {
   <DataOperationView
     v-model="dialogVisible"
     :title="isEdit ? '编辑管理员' : '新增管理员'"
-    width="520px"
+    :columns="2"
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
@@ -293,12 +293,12 @@ onMounted(async () => {
           </a-select>
         </a-form-item>
 
-        <a-form-item label="密码" class="dialog-item dialog-item--full">
+        <a-form-item label="密码" class="dialog-item">
           <a-input-password v-model:value.trim="form.password" :placeholder="isEdit ? '留空则不修改' : '请设置登录密码'" />
         </a-form-item>
 
-        <a-form-item label="备注" class="dialog-item dialog-item--full">
-          <a-textarea v-model:value.trim="form.remark" :rows="2" placeholder="选填" />
+        <a-form-item label="备注" class="dialog-item">
+          <a-input v-model:value.trim="form.remark" placeholder="选填" />
         </a-form-item>
       </div>
     </a-form>

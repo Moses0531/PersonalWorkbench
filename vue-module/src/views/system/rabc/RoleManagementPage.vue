@@ -194,10 +194,6 @@ function onPermTreeCheck(checkedKeys, e) {
   treeHalfCheckedKeys.value = e?.halfCheckedKeys || []
 }
 
-function onPermDialogOpenChange(open) {
-  if (open && showPermTree.value) syncPermTreeChecks()
-}
-
 async function openPermissionAssign(row) {
   if (!canEditRole(row)) {
     message.warning('该角色受保护，无法修改权限')
@@ -369,7 +365,7 @@ onMounted(refreshAll)
   <DataOperationView
     v-model="dialogVisible"
     :title="isEdit ? '编辑角色' : '新增角色'"
-    width="480px"
+    :columns="2"
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
@@ -381,40 +377,27 @@ onMounted(refreshAll)
         <a-form-item label="角色编码" class="dialog-item">
           <a-input v-model:value="form.roleCode" placeholder="如 ADMIN" />
         </a-form-item>
-        <a-form-item label="层级（数值越小等级越高）" class="dialog-item">
+        <a-form-item label="层级（数值越小等级越高）" class="dialog-item dialog-item--full">
           <a-input-number v-model:value="form.level" :min="0" placeholder="请输入层级" style="width: 100%" />
         </a-form-item>
         <a-form-item label="描述" class="dialog-item dialog-item--full">
-          <a-textarea v-model:value="form.description" :rows="3" placeholder="选填，描述角色用途" />
+          <a-textarea v-model:value="form.description" :rows="2" placeholder="选填，描述角色用途" />
         </a-form-item>
       </div>
     </a-form>
   </DataOperationView>
 
-  <a-modal
-    v-model:open="permDialogVisible"
-    :title="null"
-    width="600px"
-    wrap-class-name="form-dialog data-operation-view perm-assign-dialog"
-    :mask-closable="false"
+  <DataOperationView
+    v-model="permDialogVisible"
+    title="分配权限"
+    width="720px"
+    :loading="permLoading"
+    confirm-text="保存权限"
     destroy-on-close
-    :footer="null"
-    @after-open-change="onPermDialogOpenChange"
+    @confirm="submitRoleMenusWithTree"
   >
     <div class="perm-dialog">
-      <div class="perm-dialog-header">
-        <div class="perm-dialog-heading">
-          <span class="perm-dialog-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </span>
-          <div class="perm-dialog-heading-text">
-            <h3 class="perm-dialog-title">分配权限</h3>
-            <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
-          </div>
-        </div>
-      </div>
+      <p class="perm-dialog-desc">勾选该角色可访问的权限项（目录 / 菜单 / 功能）</p>
 
       <div class="perm-tree-toolbar">
         <div class="perm-tree-toolbar-meta">
@@ -482,15 +465,8 @@ onMounted(refreshAll)
           <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
         </div>
       </a-spin>
-
-      <div class="dialog-footer perm-dialog-footer">
-        <button type="button" class="btn-ghost-sm" @click="permDialogVisible = false">取消</button>
-        <button type="button" class="btn-primary-sm" :disabled="permLoading" @click="submitRoleMenusWithTree">
-          {{ permLoading ? '保存中...' : '保存权限' }}
-        </button>
-      </div>
     </div>
-  </a-modal>
+  </DataOperationView>
 </template>
 
 <style scoped>

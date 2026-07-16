@@ -346,13 +346,13 @@ onMounted(async () => {
   <DataOperationView
     v-model="dialogVisible"
     :title="isEdit ? '编辑权限' : '新增权限'"
-    width="640px"
+    :columns="2"
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
     <a-form layout="vertical" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <a-form-item label="名称" class="dialog-item">
+        <a-form-item label="名称" class="dialog-item" required>
           <a-input v-model:value.trim="form.name" placeholder="显示名称" />
         </a-form-item>
 
@@ -383,7 +383,7 @@ onMounted(async () => {
           <p class="field-hint">数值越小越靠前</p>
         </a-form-item>
 
-        <a-form-item label="路由名称（router_name）" class="dialog-item dialog-item--full">
+        <a-form-item label="路由名称（router_name）" class="dialog-item">
           <a-input v-model:value.trim="form.routerName" placeholder="如 DashboardPage（PascalCase，以 Page 结尾）" allow-clear />
           <p v-if="form.type === 'M' && form.routerName" class="field-hint">
             将自动生成访问路径 <code>{{ previewUrlPath }}</code>，页面组件 <code>{{ previewViewFile }}</code>
@@ -414,8 +414,8 @@ onMounted(async () => {
           </a-select>
         </a-form-item>
 
-        <a-form-item label="备注（remark）" class="dialog-item dialog-item--full">
-          <a-textarea v-model:value.trim="form.remark" :rows="2" placeholder="选填" />
+        <a-form-item label="备注（remark）" class="dialog-item">
+          <a-input v-model:value.trim="form.remark" placeholder="选填" />
         </a-form-item>
 
         <a-form-item label="角色权限分配" class="dialog-item dialog-item--full">
