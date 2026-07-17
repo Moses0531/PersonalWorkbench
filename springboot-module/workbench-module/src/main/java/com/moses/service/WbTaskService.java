@@ -25,6 +25,4 @@ public interface WbTaskService extends IService<WbTask> {
     /** phases: [{title, description, steps:[{title, description, priority, status}]}] */
     Map<String, Object> applyPlanBatch(Long userId, Long projectId, String planBatchId,
                                        List<Map<String, Object>> phases);
-
-    int revokeByPlanBatchId(Long userId, String planBatchId);
 }

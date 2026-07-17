@@ -13,13 +13,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * 工作台 AI Tool（读看板 / 落板 / 撤销批次）。
+ * 工作台 AI Tool（读看板 / 落板）。
  */
 @Slf4j
 @Component
@@ -45,16 +44,6 @@ public class WorkbenchTools {
                 ? planBatchId.trim()
                 : UUID.randomUUID().toString().replace("-", "");
         return toJson(wbTaskService.applyPlanBatch(userId, projectId, batchId, parsePhases(phasesJson)));
-    }
-
-    @Tool(description = "按 planBatchId 撤销本用户某次 AI 规划落板产生的全部任务。")
-    public String undoTaskPlan(@ToolParam(description = "规划批次号 planBatchId") String planBatchId) {
-        Long userId = StpUtil.getLoginIdAsLong();
-        int removed = wbTaskService.revokeByPlanBatchId(userId, planBatchId);
-        Map<String, Object> result = new HashMap<>();
-        result.put("removed", removed);
-        result.put("planBatchId", planBatchId);
-        return toJson(result);
     }
 
     private List<Map<String, Object>> parsePhases(String phasesJson) {

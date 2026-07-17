@@ -36,7 +36,7 @@ public class WbTask {
     private Long parentTaskId;
 
     /**
-     * AI规划批次号（同批落板/撤销）
+     * AI规划批次号（同批落板）
      */
     private String planBatchId;
 

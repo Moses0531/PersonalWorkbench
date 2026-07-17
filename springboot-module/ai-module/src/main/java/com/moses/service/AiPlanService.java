@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 项目 AI 规划：预览用结构化 JSON（Map），落板/撤销走 WbTaskService。
+ * 项目 AI 规划：预览用结构化 JSON（Map），落板走 WbTaskService。
  */
 @Slf4j
 @Service
@@ -139,15 +139,6 @@ public class AiPlanService {
             throw new RuntimeException("规划阶段不能为空");
         }
         return wbTaskService.applyPlanBatch(userId, projectId, planBatchId, phases);
-    }
-
-    public Map<String, Object> revoke(Long userId, Map<String, Object> body) {
-        String planBatchId = body != null ? text(body.get("planBatchId")) : "";
-        int removed = wbTaskService.revokeByPlanBatchId(userId, planBatchId);
-        Map<String, Object> result = new HashMap<>();
-        result.put("removed", removed);
-        result.put("planBatchId", planBatchId);
-        return result;
     }
 
     private String buildUserPrompt(WbProject project, String goal, String constraints,

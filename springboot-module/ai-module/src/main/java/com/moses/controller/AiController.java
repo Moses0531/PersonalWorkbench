@@ -103,11 +103,4 @@ public class AiController {
     public ResultConfig planApply(@RequestBody Map<String, Object> body) {
         return ResultConfig.success(aiPlanService.apply(StpUtil.getLoginIdAsLong(), body));
     }
-
-    @PostMapping("/plan/revoke")
-    @Operation(summary = "按 planBatchId 撤销规划批次")
-    @SaCheckPermission("task:remove")
-    public ResultConfig planRevoke(@RequestBody Map<String, Object> body) {
-        return ResultConfig.success(aiPlanService.revoke(StpUtil.getLoginIdAsLong(), body));
-    }
 }

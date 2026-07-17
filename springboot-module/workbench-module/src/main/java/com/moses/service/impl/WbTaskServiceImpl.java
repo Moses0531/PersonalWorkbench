@@ -283,29 +283,6 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         return result;
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int revokeByPlanBatchId(Long userId, String planBatchId) {
-        if (!StringUtils.hasText(planBatchId)) {
-            throw new RuntimeException("规划批次号不能为空");
-        }
-        List<WbTask> batch = list(
-                new LambdaQueryWrapper<WbTask>()
-                        .eq(WbTask::getUserId, userId)
-                        .eq(WbTask::getPlanBatchId, planBatchId.trim())
-        );
-        if (batch.isEmpty()) {
-            return 0;
-        }
-        List<Long> ids = batch.stream().map(WbTask::getTaskId).toList();
-        remove(
-                new LambdaQueryWrapper<WbTask>()
-                        .eq(WbTask::getUserId, userId)
-                        .in(WbTask::getTaskId, ids)
-        );
-        return ids.size();
-    }
-
     private WbProject requireOwnedProject(Long userId, Long projectId) {
         if (projectId == null) {
             throw new RuntimeException("项目 ID 不能为空");
