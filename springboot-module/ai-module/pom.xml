@@ -22,5 +22,10 @@
             <artifactId>system-module</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.moses</groupId>
+            <artifactId>workbench-module</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -19,4 +19,12 @@ public interface WbTaskService extends IService<WbTask> {
     void removeAttachment(Long userId, Long taskId, String attachmentId);
 
     List<Map<String, Object>> listProjectAttachments(Long userId, Long projectId);
+
+    Map<String, Object> getProjectBoardSnapshot(Long userId, Long projectId);
+
+    /** phases: [{title, description, steps:[{title, description, priority, status}]}] */
+    Map<String, Object> applyPlanBatch(Long userId, Long projectId, String planBatchId,
+                                       List<Map<String, Object>> phases);
+
+    int revokeByPlanBatchId(Long userId, String planBatchId);
 }

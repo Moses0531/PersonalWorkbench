@@ -147,6 +147,180 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         return result;
     }
 
+    @Override
+    public Map<String, Object> getProjectBoardSnapshot(Long userId, Long projectId) {
+        WbProject project = requireOwnedProject(userId, projectId);
+        List<WbTask> tasks = list(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getUserId, userId)
+                        .eq(WbTask::getProjectId, projectId)
+                        .orderByAsc(WbTask::getDisplayOrder)
+                        .orderByDesc(WbTask::getUpdateTime)
+        );
+
+        List<Map<String, Object>> taskSummaries = new ArrayList<>();
+        int todo = 0;
+        int doing = 0;
+        int done = 0;
+        int cancelled = 0;
+        for (WbTask task : tasks) {
+            String status = task.getStatus() != null ? String.valueOf(task.getStatus()) : "0";
+            switch (status) {
+                case "1" -> doing++;
+                case "2" -> done++;
+                case "3" -> cancelled++;
+                default -> todo++;
+            }
+            Map<String, Object> row = new HashMap<>();
+            row.put("taskId", task.getTaskId());
+            row.put("parentTaskId", task.getParentTaskId());
+            row.put("planBatchId", task.getPlanBatchId());
+            row.put("title", task.getTitle());
+            row.put("status", status);
+            row.put("priority", task.getPriority());
+            row.put("dueTime", task.getDueTime());
+            taskSummaries.add(row);
+        }
+
+        Map<String, Object> counts = new HashMap<>();
+        counts.put("total", tasks.size());
+        counts.put("todo", todo);
+        counts.put("doing", doing);
+        counts.put("done", done);
+        counts.put("cancelled", cancelled);
+
+        Map<String, Object> snapshot = new HashMap<>();
+        snapshot.put("projectId", project.getProjectId());
+        snapshot.put("name", project.getName());
+        snapshot.put("description", project.getDescription());
+        snapshot.put("status", project.getStatus());
+        snapshot.put("counts", counts);
+        snapshot.put("tasks", taskSummaries);
+        return snapshot;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> applyPlanBatch(Long userId, Long projectId, String planBatchId,
+                                              List<Map<String, Object>> phases) {
+        if (!StringUtils.hasText(planBatchId)) {
+            throw new RuntimeException("规划批次号不能为空");
+        }
+        if (phases == null || phases.isEmpty()) {
+            throw new RuntimeException("规划阶段不能为空");
+        }
+        WbProject project = requireOwnedProject(userId, projectId);
+        if ("1".equals(String.valueOf(project.getStatus()))) {
+            throw new RuntimeException("项目已归档，无法写入规划任务");
+        }
+
+        int created = 0;
+        int phaseOrder = 0;
+        for (Map<String, Object> phase : phases) {
+            if (phase == null) {
+                continue;
+            }
+            String title = str(phase.get("title"));
+            if (!StringUtils.hasText(title)) {
+                continue;
+            }
+            WbTask parent = new WbTask();
+            parent.setUserId(userId);
+            parent.setProjectId(projectId);
+            parent.setPlanBatchId(planBatchId.trim());
+            parent.setTitle(title);
+            parent.setDescription(str(phase.get("description")));
+            parent.setDueTime(toDate(phase.get("dueTime")));
+            parent.setStatus("0");
+            parent.setDisplayOrder(phaseOrder++);
+            parent.setRemark("AI规划·阶段");
+            save(parent);
+            created++;
+
+            Object stepsObj = phase.get("steps");
+            if (!(stepsObj instanceof List<?> steps) || steps.isEmpty()) {
+                continue;
+            }
+            int stepOrder = 0;
+            for (Object stepObj : steps) {
+                if (!(stepObj instanceof Map<?, ?> stepRaw)) {
+                    continue;
+                }
+                Map<String, Object> step = (Map<String, Object>) stepRaw;
+                String stepTitle = str(step.get("title"));
+                if (!StringUtils.hasText(stepTitle)) {
+                    continue;
+                }
+                WbTask child = new WbTask();
+                child.setUserId(userId);
+                child.setProjectId(projectId);
+                child.setParentTaskId(parent.getTaskId());
+                child.setPlanBatchId(planBatchId.trim());
+                child.setTitle(stepTitle);
+                child.setDescription(str(step.get("description")));
+                child.setDueTime(toDate(step.get("dueTime")));
+                child.setPriority(toInt(step.get("priority")));
+                String status = str(step.get("status"));
+                if (!List.of("0", "1", "2", "3").contains(status)) {
+                    status = "0";
+                }
+                child.setStatus(status);
+                child.setDisplayOrder(stepOrder++);
+                child.setRemark("AI规划·步骤");
+                save(child);
+                created++;
+            }
+        }
+        if (created == 0) {
+            throw new RuntimeException("没有可写入的有效阶段或步骤");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("created", created);
+        result.put("planBatchId", planBatchId.trim());
+        result.put("projectId", projectId);
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int revokeByPlanBatchId(Long userId, String planBatchId) {
+        if (!StringUtils.hasText(planBatchId)) {
+            throw new RuntimeException("规划批次号不能为空");
+        }
+        List<WbTask> batch = list(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getUserId, userId)
+                        .eq(WbTask::getPlanBatchId, planBatchId.trim())
+        );
+        if (batch.isEmpty()) {
+            return 0;
+        }
+        List<Long> ids = batch.stream().map(WbTask::getTaskId).toList();
+        remove(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getUserId, userId)
+                        .in(WbTask::getTaskId, ids)
+        );
+        return ids.size();
+    }
+
+    private WbProject requireOwnedProject(Long userId, Long projectId) {
+        if (projectId == null) {
+            throw new RuntimeException("项目 ID 不能为空");
+        }
+        WbProject project = wbProjectService.getOne(
+                new LambdaQueryWrapper<WbProject>()
+                        .eq(WbProject::getProjectId, projectId)
+                        .eq(WbProject::getUserId, userId)
+        );
+        if (project == null) {
+            throw new RuntimeException("项目不存在");
+        }
+        return project;
+    }
+
     private WbTask requireOwnedTask(Long userId, Long taskId) {
         if (taskId == null) {
             throw new RuntimeException("任务 ID 不能为空");
@@ -198,5 +372,47 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         } catch (Exception e) {
             throw new RuntimeException("附件数据序列化失败");
         }
+    }
+
+    private static String str(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private static Integer toInt(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return Integer.valueOf(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static Date toDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Date d) {
+            return d;
+        }
+        String raw = String.valueOf(value).trim();
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        try {
+            if (raw.length() >= 19) {
+                return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(raw.substring(0, 19));
+            }
+            if (raw.length() >= 10) {
+                return new SimpleDateFormat("yyyy-MM-dd").parse(raw.substring(0, 10));
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+        return null;
     }
 }
