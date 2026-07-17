@@ -860,9 +860,42 @@ onMounted(async () => {
                   <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="task-card__project">
                     {{ projectNameOf(task.projectId) }}
                   </span>
-                  <span v-if="attachmentCount(task)" class="task-card__files" title="附件数">
-                    {{ attachmentCount(task) }} 附件
-                  </span>
+                  <a-popover
+                    v-if="attachmentCount(task)"
+                    trigger="click"
+                    placement="bottomLeft"
+                    overlay-class-name="task-files-popover"
+                  >
+                    <template #content>
+                      <ul class="task-files-menu" @click.stop>
+                        <li
+                          v-for="file in parseAttachments(task.attachments)"
+                          :key="file.id || file.url"
+                          class="task-files-menu__item"
+                        >
+                          <button
+                            type="button"
+                            class="task-files-menu__name"
+                            :title="file.name"
+                            @click="openAttachmentUrl(file.url)"
+                          >
+                            {{ file.name || '未命名文件' }}
+                          </button>
+                          <span v-if="file.size" class="task-files-menu__size">{{ formatFileSize(file.size) }}</span>
+                          <button
+                            type="button"
+                            class="task-files-menu__dl"
+                            @click="openAttachmentUrl(file.url)"
+                          >
+                            查看
+                          </button>
+                        </li>
+                      </ul>
+                    </template>
+                    <button type="button" class="task-card__files" title="查看附件">
+                      {{ attachmentCount(task) }} 附件
+                    </button>
+                  </a-popover>
                   <span
                     v-if="task.dueTime"
                     class="task-card__due"
@@ -1510,8 +1543,87 @@ onMounted(async () => {
 }
 
 .task-card__files {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-accent-deep);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.task-card__files:hover {
+  color: var(--color-accent);
+  text-decoration-color: var(--color-accent);
+}
+
+.task-files-menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.task-files-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.task-files-menu__item + .task-files-menu__item {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.task-files-menu__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-files-menu__name:hover {
+  color: var(--color-accent);
+}
+
+.task-files-menu__size {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.task-files-menu__dl {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent-deep);
+  cursor: pointer;
+}
+
+.task-files-menu__dl:hover {
+  color: var(--color-accent);
 }
 
 .attach-review {
