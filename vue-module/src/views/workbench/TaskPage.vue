@@ -21,6 +21,18 @@ import {
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import EditorView from '@/components/EditorView.vue'
+import { openKkFileViewPreview } from '@/utils/kkFileView'
+import {
+  LeftOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  PaperClipOutlined,
+  ClockCircleOutlined,
+  CheckSquareOutlined,
+  InboxOutlined,
+} from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -337,6 +349,67 @@ function openAttachmentUrl(url) {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+function previewAttachment(file) {
+  if (!file?.url) {
+    message.warning('文件地址无效')
+    return
+  }
+  openKkFileViewPreview(file.url)
+}
+
+function downloadAttachment(file) {
+  openAttachmentUrl(file?.url)
+}
+
+/* ---------- 卡片附件弹窗 ---------- */
+const filesModalVisible = ref(false)
+const filesModalTask = ref(null)
+
+const filesModalTitle = computed(() => {
+  const title = (filesModalTask.value?.title || '').trim()
+  return title ? `附件 · ${title}` : '附件'
+})
+
+const filesModalFiles = computed(() => parseAttachments(filesModalTask.value?.attachments))
+
+const filesModalReadonly = computed(() =>
+  isTaskAttachmentsReadonly(filesModalTask.value?.projectId),
+)
+
+function openFilesModal(task) {
+  filesModalTask.value = task
+  filesModalVisible.value = true
+}
+
+function closeFilesModal() {
+  filesModalVisible.value = false
+  filesModalTask.value = null
+}
+
+function removeFilesModalAttachment(attachmentId) {
+  const task = filesModalTask.value
+  if (!task) return
+  return removeAttachment(attachmentId, {
+    taskId: task.taskId,
+    projectId: task.projectId,
+  })
+}
+
+function syncAttachmentViews(taskId) {
+  const row = tasks.value.find((t) => Number(t.taskId) === Number(taskId))
+  if (Number(taskForm.taskId) === Number(taskId)) {
+    taskAttachments.value = parseAttachments(row?.attachments)
+  }
+  if (filesModalTask.value && Number(filesModalTask.value.taskId) === Number(taskId)) {
+    const list = parseAttachments(row?.attachments)
+    if (!row || !list.length) {
+      closeFilesModal()
+    } else {
+      filesModalTask.value = row
+    }
+  }
+}
+
 /** 交给 EditorView 的 uploadHandler，仍走任务附件接口 */
 async function handleAttachmentUpload(file) {
   if (!file || !taskForm.taskId) {
@@ -345,20 +418,20 @@ async function handleAttachmentUpload(file) {
   await uploadTaskAttachmentApi(taskForm.taskId, file)
   message.success('附件已上传')
   await loadTasks()
-  const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
-  taskAttachments.value = parseAttachments(row?.attachments)
+  syncAttachmentViews(taskForm.taskId)
   if (inProjectSpace.value) await loadProjectAttachments()
   return { url: '' }
 }
 
-async function removeAttachment(attachmentId) {
-  if (!taskForm.taskId || taskFormAttachmentsReadonly.value) return
+async function removeAttachment(attachmentId, ctx = {}) {
+  const taskId = ctx.taskId ?? taskForm.taskId
+  const projectId = ctx.projectId ?? taskForm.projectId
+  if (!taskId || isTaskAttachmentsReadonly(projectId)) return
   try {
-    await removeTaskAttachmentApi(taskForm.taskId, attachmentId)
+    await removeTaskAttachmentApi(taskId, attachmentId)
     message.success('已删除附件')
     await loadTasks()
-    const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
-    taskAttachments.value = parseAttachments(row?.attachments)
+    syncAttachmentViews(taskId)
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
     message.error(error.message || '删除失败')
@@ -450,16 +523,6 @@ async function submitTaskForm() {
     message.error(error.message || '操作失败')
   } finally {
     taskSubmitting.value = false
-  }
-}
-
-async function moveTask(task, nextStatus) {
-  if (String(task.status) === String(nextStatus)) return
-  try {
-    await updateTaskApi({ ...task, status: String(nextStatus) })
-    await loadTasks()
-  } catch (error) {
-    message.error(error.message || '状态更新失败')
   }
 }
 
@@ -645,6 +708,7 @@ onMounted(async () => {
   <div class="wb-page task-page">
     <div class="wb-page__blob wb-page__blob--1" aria-hidden="true" />
     <div class="wb-page__blob wb-page__blob--2" aria-hidden="true" />
+    <div class="task-page__grain" aria-hidden="true" />
 
     <div class="wb-page__inner">
       <header class="wb-header" :class="{ 'wb-header--space': inProjectSpace }">
@@ -655,9 +719,7 @@ onMounted(async () => {
             class="space-back"
             @click="leaveProjectSpace"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <LeftOutlined />
             返回项目
           </button>
           <h1 class="wb-header__title" :class="{ 'wb-header__title--space': inProjectSpace }">
@@ -693,28 +755,44 @@ onMounted(async () => {
       </header>
 
       <!-- 任务列表 -->
-      <div v-show="activeTab === 'tasks'">
-        <div class="wb-stats">
-          <div class="wb-stat wb-stat--accent">
-            <span class="wb-stat__label">{{ inProjectSpace ? '本项目任务' : '全部任务' }}</span>
-            <span class="wb-stat__value">{{ taskStats.total }}</span>
+      <div v-show="activeTab === 'tasks'" class="task-view">
+        <div class="tp-pulse" aria-label="任务概览">
+          <div class="tp-pulse__hero">
+            <span class="tp-pulse__value">{{ taskStats.total }}</span>
+            <span class="tp-pulse__label">{{ inProjectSpace ? '本项目任务' : '全部任务' }}</span>
           </div>
-          <div class="wb-stat">
-            <span class="wb-stat__label">待办</span>
-            <span class="wb-stat__value">{{ taskStats.todo }}</span>
-          </div>
-          <div class="wb-stat">
-            <span class="wb-stat__label">进行中</span>
-            <span class="wb-stat__value">{{ taskStats.doing }}</span>
-          </div>
-          <div class="wb-stat">
-            <span class="wb-stat__label">已逾期</span>
-            <span class="wb-stat__value">{{ taskStats.overdue }}</span>
-            <span class="wb-stat__hint">未完成且已过截止日</span>
+          <div class="tp-pulse__rail" role="group" aria-label="快捷筛选">
+            <button
+              type="button"
+              class="tp-pulse__item"
+              :class="{ 'is-on': statusTab === '0' }"
+              @click="statusTab = '0'"
+            >
+              <span class="tp-pulse__item-val">{{ taskStats.todo }}</span>
+              <span class="tp-pulse__item-lab">待办</span>
+            </button>
+            <button
+              type="button"
+              class="tp-pulse__item"
+              :class="{ 'is-on': statusTab === '1' }"
+              @click="statusTab = '1'"
+            >
+              <span class="tp-pulse__item-val">{{ taskStats.doing }}</span>
+              <span class="tp-pulse__item-lab">进行中</span>
+            </button>
+            <button
+              type="button"
+              class="tp-pulse__item tp-pulse__item--warn"
+              :class="{ 'is-on': taskStats.overdue > 0 }"
+              title="未完成且已过截止日"
+            >
+              <span class="tp-pulse__item-val">{{ taskStats.overdue }}</span>
+              <span class="tp-pulse__item-lab">已逾期</span>
+            </button>
           </div>
         </div>
 
-        <div class="wb-toolbar">
+        <div class="wb-toolbar task-view__toolbar">
           <input
             v-model="taskSearchQuery"
             type="search"
@@ -725,7 +803,7 @@ onMounted(async () => {
           <a-input-number
             v-model:value="filterPriority"
             placeholder="优先级"
-            style="width: 120px"
+            class="task-view__prio"
             :precision="0"
           />
           <button
@@ -734,9 +812,7 @@ onMounted(async () => {
             class="wb-btn wb-btn--primary"
             @click="openCreateTask(statusTab)"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <PlusOutlined />
             新建任务
           </button>
         </div>
@@ -753,7 +829,7 @@ onMounted(async () => {
             <ul v-if="projectAttachmentList.length" class="attach-review__list">
               <li v-for="file in projectAttachmentList" :key="`${file.taskId}-${file.id}`" class="attach-review__item">
                 <div class="attach-review__info">
-                  <button type="button" class="attach-review__name" @click="openAttachmentUrl(file.url)">
+                  <button type="button" class="attach-review__name" :title="file.name" @click="previewAttachment(file)">
                     {{ file.name }}
                   </button>
                   <span class="attach-review__sub">
@@ -762,9 +838,10 @@ onMounted(async () => {
                     <template v-if="file.createTime"> · {{ file.createTime }}</template>
                   </span>
                 </div>
-                <button type="button" class="wb-btn wb-btn--ghost attach-review__dl" @click="openAttachmentUrl(file.url)">
-                  下载
-                </button>
+                <div class="attach-review__actions">
+                  <button type="button" class="attach-review__act" @click="previewAttachment(file)">预览</button>
+                  <button type="button" class="attach-review__act" @click="downloadAttachment(file)">下载</button>
+                </div>
               </li>
             </ul>
             <p v-else class="attach-review__empty">本项目任务下还没有附件</p>
@@ -777,11 +854,12 @@ onMounted(async () => {
             :key="col.key"
             type="button"
             class="status-tab"
-            :class="{ 'is-active': statusTab === col.key }"
+            :class="[`status-tab--s${col.key}`, { 'is-active': statusTab === col.key }]"
             role="tab"
             :aria-selected="statusTab === col.key"
             @click="statusTab = col.key"
           >
+            <span class="status-tab__dot" aria-hidden="true" />
             <span class="status-tab__label">{{ col.label }}</span>
             <span class="status-tab__count">{{ col.items.length }}</span>
           </button>
@@ -800,7 +878,10 @@ onMounted(async () => {
 
           <div v-else class="task-panel">
             <div class="task-panel__head">
-              <h2 class="task-panel__title">{{ activeStatusColumn.label }}</h2>
+              <div class="task-panel__heading">
+                <h2 class="task-panel__title">{{ activeStatusColumn.label }}</h2>
+                <span class="task-panel__count">{{ statusTabTasks.length }}</span>
+              </div>
               <button
                 v-permission="'task:add'"
                 type="button"
@@ -808,109 +889,81 @@ onMounted(async () => {
                 :title="`在${activeStatusColumn.label}新建`"
                 @click="openCreateTask(statusTab)"
               >
-                + 添加
+                添加
               </button>
             </div>
 
-            <div class="task-list">
+            <div class="task-list" role="list">
               <article
-                v-for="task in statusTabTasks"
+                v-for="(task, idx) in statusTabTasks"
                 :key="task.taskId"
                 class="task-card"
-                :class="{ 'task-card--overdue': isOverdue(task) }"
+                :class="[
+                  `task-card--s${String(task.status ?? '0')}`,
+                  { 'task-card--overdue': isOverdue(task) },
+                ]"
+                :style="{ '--card-i': idx }"
+                role="listitem"
               >
-                <div class="task-card__top">
-                  <span class="wb-chip wb-chip--prio">P{{ task.priority ?? 0 }}</span>
-                  <div class="action-btns">
-                    <button
-                      v-permission="'task:modify'"
-                      type="button"
-                      class="btn-action btn-action--edit"
-                      title="编辑"
-                      @click="openEditTask(task)"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </button>
-                    <a-popconfirm
-                      v-permission="'task:remove'"
-                      title="确认删除该任务？"
-                      @confirm="removeTask(task.taskId)"
-                    >
-                      <button type="button" class="btn-action btn-action--delete" title="删除">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
+                <div class="task-card__main">
+                  <div class="task-card__top">
+                    <span class="wb-chip wb-chip--prio">P{{ task.priority ?? 0 }}</span>
+                    <div class="action-btns">
+                      <button
+                        v-permission="'task:modify'"
+                        type="button"
+                        class="btn-action btn-action--edit"
+                        title="编辑"
+                        @click="openEditTask(task)"
+                      >
+                        <EditOutlined />
                       </button>
-                    </a-popconfirm>
+                      <a-popconfirm
+                        v-permission="'task:remove'"
+                        title="确认删除该任务？"
+                        @confirm="removeTask(task.taskId)"
+                      >
+                        <button type="button" class="btn-action btn-action--delete" title="删除">
+                          <DeleteOutlined />
+                        </button>
+                      </a-popconfirm>
+                    </div>
+                  </div>
+
+                  <h3 class="task-card__title">{{ task.title }}</h3>
+                  <p v-if="task.description" class="task-card__desc">{{ task.description }}</p>
+
+                  <div v-if="tagList(task.tags).length" class="task-card__tags">
+                    <span v-for="tag in tagList(task.tags)" :key="tag" class="task-tag">{{ tag }}</span>
                   </div>
                 </div>
 
-                <h3 class="task-card__title">{{ task.title }}</h3>
-                <p v-if="task.description" class="task-card__desc">{{ task.description }}</p>
-
-                <div v-if="tagList(task.tags).length" class="task-card__tags">
-                  <span v-for="tag in tagList(task.tags)" :key="tag" class="task-tag">{{ tag }}</span>
-                </div>
-
-                <footer class="task-card__meta">
-                  <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="task-card__project">
+                <footer
+                  v-if="(!inProjectSpace && projectNameOf(task.projectId)) || attachmentCount(task) || task.dueTime"
+                  class="task-card__meta"
+                >
+                  <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="meta-chip meta-chip--project">
+                    <FolderOutlined />
                     {{ projectNameOf(task.projectId) }}
                   </span>
-                  <a-popover
+                  <button
                     v-if="attachmentCount(task)"
-                    trigger="click"
-                    placement="bottomLeft"
-                    overlay-class-name="task-files-popover"
+                    type="button"
+                    class="meta-chip meta-chip--files"
+                    title="查看附件"
+                    @click="openFilesModal(task)"
                   >
-                    <template #content>
-                      <ul class="task-files-menu" @click.stop>
-                        <li
-                          v-for="file in parseAttachments(task.attachments)"
-                          :key="file.id || file.url"
-                          class="task-files-menu__item"
-                        >
-                          <button
-                            type="button"
-                            class="task-files-menu__name"
-                            :title="file.name"
-                            @click="openAttachmentUrl(file.url)"
-                          >
-                            {{ file.name || '未命名文件' }}
-                          </button>
-                          <span v-if="file.size" class="task-files-menu__size">{{ formatFileSize(file.size) }}</span>
-                          <button
-                            type="button"
-                            class="task-files-menu__dl"
-                            @click="openAttachmentUrl(file.url)"
-                          >
-                            查看
-                          </button>
-                        </li>
-                      </ul>
-                    </template>
-                    <button type="button" class="task-card__files" title="查看附件">
-                      {{ attachmentCount(task) }} 附件
-                    </button>
-                  </a-popover>
+                    <PaperClipOutlined />
+                    {{ attachmentCount(task) }} 附件
+                  </button>
                   <span
                     v-if="task.dueTime"
-                    class="task-card__due"
+                    class="meta-chip meta-chip--due"
                     :class="{ 'is-overdue': isOverdue(task) }"
                   >
+                    <ClockCircleOutlined />
                     {{ formatDue(task.dueTime) }}
                   </span>
-                  <a-select
-                    v-permission="'task:modify'"
-                    :value="String(task.status ?? '0')"
-                    size="small"
-                    class="task-card__status"
-                    :options="STATUS_COLUMNS.map((c) => ({ value: c.key, label: c.label }))"
-                    @change="(v) => moveTask(task, v)"
-                  />
                 </footer>
               </article>
 
@@ -959,9 +1012,7 @@ onMounted(async () => {
 
           <template #toolbar-actions>
             <button v-permission="'project:add'" type="button" class="mlv-btn-primary" @click="openCreateProject">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <PlusOutlined />
               新建项目
             </button>
           </template>
@@ -1000,10 +1051,7 @@ onMounted(async () => {
                 title="查看任务"
                 @click="viewProjectTasks(row.projectId)"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 11l3 3L22 4" />
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
+                <CheckSquareOutlined />
               </button>
               <button
                 v-permission="'project:modify'"
@@ -1012,10 +1060,7 @@ onMounted(async () => {
                 title="编辑"
                 @click="openEditProject(row)"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
+                <EditOutlined />
               </button>
               <button
                 v-permission="'project:modify'"
@@ -1024,18 +1069,11 @@ onMounted(async () => {
                 :title="String(row.status) === '0' ? '归档' : '恢复'"
                 @click="toggleArchive(row)"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="21 8 21 21 3 21 3 8" />
-                  <rect x="1" y="3" width="22" height="5" />
-                  <line x1="10" y1="12" x2="14" y2="12" />
-                </svg>
+                <InboxOutlined />
               </button>
               <a-popconfirm v-permission="'project:remove'" title="确认删除该项目？" @confirm="removeProject(row.projectId)">
                 <button type="button" class="btn-action btn-action--delete" title="删除">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
+                  <DeleteOutlined />
                 </button>
               </a-popconfirm>
             </div>
@@ -1124,17 +1162,18 @@ onMounted(async () => {
                 </p>
                 <ul v-if="taskAttachments.length" class="task-attach__list">
                   <li v-for="file in taskAttachments" :key="file.id" class="task-attach__item">
-                    <button type="button" class="task-attach__name" @click="openAttachmentUrl(file.url)">
+                    <button type="button" class="task-attach__name" :title="file.name" @click="previewAttachment(file)">
                       {{ file.name }}
                     </button>
                     <span class="task-attach__size">{{ formatFileSize(file.size) }}</span>
-                    <button type="button" class="task-attach__dl" @click="openAttachmentUrl(file.url)">下载</button>
+                    <button type="button" class="task-attach__dl" @click="previewAttachment(file)">预览</button>
+                    <button type="button" class="task-attach__dl" @click="downloadAttachment(file)">下载</button>
                     <a-popconfirm
                       v-if="!taskFormAttachmentsReadonly"
                       title="确认删除该附件？"
                       @confirm="removeAttachment(file.id)"
                     >
-                      <button v-permission="'task:modify'" type="button" class="task-attach__del">删除</button>
+                      <button v-permission="'task:modify'" type="button" class="task-attach__del">移除</button>
                     </a-popconfirm>
                   </li>
                 </ul>
@@ -1155,6 +1194,63 @@ onMounted(async () => {
           </a-form-item>
         </div>
       </a-form>
+    </DataOperationView>
+
+    <DataOperationView
+      v-model="filesModalVisible"
+      :title="filesModalTitle"
+      :width="560"
+      :columns="1"
+      close-on-click-modal
+      destroy-on-close
+      @cancel="closeFilesModal"
+    >
+      <p v-if="filesModalReadonly" class="task-attach__hint files-modal__hint">
+        所属项目已归档，附件只读，可预览与下载
+      </p>
+      <ul v-if="filesModalFiles.length" class="files-modal__list">
+        <li
+          v-for="file in filesModalFiles"
+          :key="file.id || file.url"
+          class="files-modal__item"
+        >
+          <div class="files-modal__info">
+            <button
+              type="button"
+              class="files-modal__name"
+              :title="file.name"
+              @click="previewAttachment(file)"
+            >
+              {{ file.name || '未命名文件' }}
+            </button>
+            <span class="files-modal__meta">
+              <template v-if="formatFileSize(file.size)">{{ formatFileSize(file.size) }}</template>
+              <template v-if="file.createTime">
+                <template v-if="formatFileSize(file.size)"> · </template>{{ file.createTime }}
+              </template>
+            </span>
+          </div>
+          <div class="files-modal__actions">
+            <button type="button" class="files-modal__act" @click="previewAttachment(file)">预览</button>
+            <button type="button" class="files-modal__act" @click="downloadAttachment(file)">下载</button>
+            <a-popconfirm
+              v-if="!filesModalReadonly"
+              title="确认移除该附件？"
+              @confirm="removeFilesModalAttachment(file.id)"
+            >
+              <button v-permission="'task:modify'" type="button" class="files-modal__act files-modal__act--danger">
+                移除
+              </button>
+            </a-popconfirm>
+          </div>
+        </li>
+      </ul>
+      <p v-else class="task-attach__hint">暂无附件</p>
+      <template #footer>
+        <div class="dialog-footer dop-footer">
+          <button type="button" class="btn-ghost-sm" @click="closeFilesModal">关闭</button>
+        </div>
+      </template>
     </DataOperationView>
 
     <DataOperationView
@@ -1196,25 +1292,190 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.task-page {
+  --tp-ink: var(--color-text-primary);
+  --tp-lift: 0 10px 32px rgba(6, 36, 64, 0.09), 0 2px 6px rgba(6, 36, 64, 0.04);
+  --tp-glass: rgba(255, 255, 255, 0.72);
+  --tp-glass-border: rgba(255, 255, 255, 0.7);
+  --tp-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.task-page__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+/* —— Asymmetric pulse metrics (anti 4-card row) —— */
+.tp-pulse {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.85fr) minmax(0, 2.15fr);
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: var(--space-5);
+}
+
+.tp-pulse__hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 22px 22px;
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(8, 145, 178, 0.14) 0%, rgba(255, 255, 255, 0.88) 62%);
+  border: 1px solid rgba(8, 145, 178, 0.2);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(12px);
+}
+
+.tp-pulse__value {
+  font-size: clamp(2.25rem, 1.8rem + 1.4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.95;
+  color: var(--color-accent-deep);
+}
+
+.tp-pulse__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.tp-pulse__rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-radius: 18px;
+  background: var(--tp-glass);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.tp-pulse__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 18px 16px 20px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.22s var(--tp-ease), transform 0.15s var(--tp-ease);
+}
+
+.tp-pulse__item + .tp-pulse__item {
+  border-left: 1px solid rgba(6, 36, 64, 0.06);
+}
+
+.tp-pulse__item:hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.tp-pulse__item:active {
+  transform: scale(0.985);
+}
+
+.tp-pulse__item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.tp-pulse__item.is-on {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.tp-pulse__item.is-on::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-accent);
+}
+
+.tp-pulse__item--warn {
+  cursor: default;
+}
+
+.tp-pulse__item--warn.is-on {
+  background: rgba(224, 85, 69, 0.05);
+}
+
+.tp-pulse__item--warn.is-on::after {
+  background: var(--color-red, #e05545);
+}
+
+.tp-pulse__item--warn .tp-pulse__item-val {
+  color: var(--color-text-primary);
+}
+
+.tp-pulse__item--warn.is-on .tp-pulse__item-val {
+  color: var(--color-red, #e05545);
+}
+
+.tp-pulse__item-val {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.tp-pulse__item-lab {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-text-dim);
+}
+
+.task-view__toolbar {
+  margin-bottom: var(--space-4);
+}
+
+.task-view__prio {
+  width: 120px;
+}
+
 .affair-tabs {
   display: inline-flex;
-  padding: 3px;
-  border-radius: var(--radius-control);
-  background: rgba(255, 255, 255, 0.8);
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--tp-glass);
   border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(10px);
 }
 
 .affair-tab {
-  height: 30px;
-  padding: 0 14px;
+  height: 32px;
+  padding: 0 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   background: transparent;
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  transition: background 0.22s var(--tp-ease), color 0.22s ease, transform 0.15s var(--tp-ease), box-shadow 0.22s ease;
 }
 
 .affair-tab:hover {
@@ -1222,31 +1483,39 @@ onMounted(async () => {
 }
 
 .affair-tab:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+
+.affair-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .affair-tab.is-active {
-  color: var(--color-accent-deep);
-  background: var(--color-accent-soft);
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-deep) 100%);
+  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.28);
 }
 
 .space-back {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin: 0 0 8px;
-  padding: 0;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 4px 8px 4px 4px;
   border: none;
+  border-radius: 8px;
   background: transparent;
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-accent-deep);
   cursor: pointer;
-  transition: color 0.15s ease, transform 0.15s ease;
+  transition: color 0.15s ease, transform 0.15s var(--tp-ease), background 0.15s ease;
 }
 
 .space-back:hover {
   color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 .space-back:active {
@@ -1254,9 +1523,10 @@ onMounted(async () => {
 }
 
 .wb-header__title--space {
-  font-size: clamp(1.75rem, 1.35rem + 1.4vw, 2.35rem);
-  letter-spacing: -0.04em;
-  line-height: 1.15;
+  font-size: clamp(1.85rem, 1.4rem + 1.6vw, 2.5rem);
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+  text-wrap: balance;
 }
 
 .wb-header--space .wb-header__desc {
@@ -1269,27 +1539,42 @@ onMounted(async () => {
   gap: 4px;
   margin: 0 0 var(--space-4);
   padding: 4px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
+  background: var(--tp-glass);
   border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(12px);
 }
 
 .status-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 14px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: transparent;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  transition: background 0.22s var(--tp-ease), color 0.22s ease, transform 0.15s var(--tp-ease), box-shadow 0.22s ease;
 }
+
+.status-tab__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-dim);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s var(--tp-ease);
+}
+
+.status-tab--s0 .status-tab__dot { background: #b8922a; }
+.status-tab--s1 .status-tab__dot { background: var(--color-accent); }
+.status-tab--s2 .status-tab__dot { background: var(--color-green, #22a06b); }
+.status-tab--s3 .status-tab__dot { background: var(--color-text-muted, #94a3b8); }
 
 .status-tab:hover {
   color: var(--color-text-primary);
@@ -1306,10 +1591,20 @@ onMounted(async () => {
 }
 
 .status-tab.is-active {
-  color: var(--color-accent-deep);
+  color: var(--color-text-primary);
   background: #fff;
   box-shadow: var(--shadow-xs);
 }
+
+.status-tab.is-active .status-tab__dot {
+  transform: scale(1.2);
+  animation: tp-dot-breathe 2.4s ease-in-out infinite;
+}
+
+.status-tab--s0.is-active { color: #7a6210; }
+.status-tab--s1.is-active { color: var(--color-accent-deep); }
+.status-tab--s2.is-active { color: var(--color-green, #16794c); }
+.status-tab--s3.is-active { color: var(--color-text-secondary); }
 
 .status-tab__count {
   display: inline-flex;
@@ -1324,18 +1619,25 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
   color: var(--color-text-dim);
   background: var(--color-surface-muted);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .status-tab.is-active .status-tab__count {
-  color: var(--color-accent-deep);
+  color: inherit;
   background: var(--color-accent-soft);
 }
 
+@keyframes tp-dot-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .task-panel {
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  background: var(--tp-glass);
   border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(14px);
   overflow: hidden;
 }
 
@@ -1344,17 +1646,30 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border-light);
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 100%);
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(6, 36, 64, 0.06);
+}
+
+.task-panel__heading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
 }
 
 .task-panel__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--color-text-primary);
+}
+
+.task-panel__count {
+  font-size: 0.78rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-dim);
 }
 
 .task-panel__add {
@@ -1362,28 +1677,29 @@ onMounted(async () => {
   height: 30px;
   padding: 0 12px;
   border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
+  border-radius: 8px;
+  background: transparent;
   color: var(--color-accent-deep);
   font-size: 0.8125rem;
   font-weight: 650;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s var(--tp-ease), color 0.15s ease;
 }
 
 .task-panel__add:hover {
-  filter: brightness(0.97);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .task-panel__add:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 18px;
+  gap: 0;
+  padding: 6px 10px 12px;
   min-height: 200px;
 }
 
@@ -1393,13 +1709,13 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 48px 16px;
+  padding: 56px 16px;
   text-align: center;
 }
 
 .task-list__empty-title {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 650;
   color: var(--color-text-secondary);
 }
@@ -1411,25 +1727,80 @@ onMounted(async () => {
 }
 
 .task-card {
+  --accent-bar: var(--color-accent);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: var(--radius-lg);
-  background: #fff;
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  gap: 0;
+  margin: 4px 0;
+  padding: 14px 14px 14px 16px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  overflow: hidden;
+  animation: task-card-in 0.4s var(--tp-ease) both;
+
+  transition:
+    background 0.22s var(--tp-ease),
+    border-color 0.22s ease,
+    box-shadow 0.25s var(--tp-ease),
+    transform 0.25s var(--tp-ease);
 }
 
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  background: var(--accent-bar);
+  border-radius: 0 2px 2px 0;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, top 0.2s ease, bottom 0.2s ease;
+}
+
+.task-card--s0 { --accent-bar: #b8922a; }
+.task-card--s1 { --accent-bar: var(--color-accent); }
+.task-card--s2 { --accent-bar: var(--color-green, #22a06b); }
+.task-card--s3 { --accent-bar: var(--color-text-muted, #94a3b8); }
+
 .task-card:hover {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-sm);
+  background: #fff;
+  border-color: rgba(6, 36, 64, 0.06);
+  box-shadow: var(--tp-lift);
+  transform: translateY(-1px);
+}
+
+.task-card:hover::before {
+  opacity: 1;
+  top: 10px;
+  bottom: 10px;
 }
 
 .task-card--overdue {
-  border-color: rgba(224, 85, 69, 0.28);
-  background: linear-gradient(180deg, rgba(224, 85, 69, 0.04) 0%, #fff 40%);
+  background: linear-gradient(90deg, rgba(224, 85, 69, 0.05) 0%, transparent 40%);
+}
+
+.task-card--overdue::before {
+  background: var(--color-red, #e05545);
+}
+
+@keyframes task-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .task-card__top {
@@ -1443,23 +1814,32 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 6px;
+  opacity: 0;
+  transform: translateX(4px);
+  transition: opacity 0.2s var(--tp-ease), transform 0.2s var(--tp-ease);
+}
+
+.task-card:hover .action-btns,
+.task-card:focus-within .action-btns {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .task-card .btn-action {
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
+  border-radius: 9px;
+  border: 1px solid transparent;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s var(--tp-ease);
 }
 
 .task-card .btn-action:active:not(:disabled) {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .task-card .btn-action:focus-visible {
@@ -1474,7 +1854,7 @@ onMounted(async () => {
 .task-card .btn-action--edit:hover {
   color: var(--color-accent-deep);
   background: var(--color-accent-soft);
-  border-color: var(--color-accent);
+  border-color: rgba(8, 145, 178, 0.25);
 }
 
 .task-card .btn-action--delete {
@@ -1484,14 +1864,14 @@ onMounted(async () => {
 .task-card .btn-action--delete:hover {
   color: var(--color-red);
   background: var(--color-red-soft);
-  border-color: rgba(224, 85, 69, 0.35);
+  border-color: rgba(224, 85, 69, 0.3);
 }
 
 .task-card__title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.4;
   color: var(--color-text-primary);
   text-wrap: pretty;
@@ -1501,7 +1881,7 @@ onMounted(async () => {
   margin: 0;
   max-width: 65ch;
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1512,126 +1892,196 @@ onMounted(async () => {
 .task-card__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
 }
 
 .task-tag {
-  padding: 2px 7px;
-  border-radius: var(--radius-xs);
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 0.68rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--color-text-body);
   background: var(--color-surface-muted);
 }
 
+/* —— Meta chips (attachments / due) —— */
 .task-card__meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 0;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(6, 36, 64, 0.08);
+  background: rgba(6, 36, 64, 0.03);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  line-height: 1;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s var(--tp-ease);
+}
+
+.meta-chip svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.meta-chip--project {
+  color: var(--color-accent-deep);
+  background: var(--color-accent-soft);
+  border-color: rgba(8, 145, 178, 0.16);
+}
+
+.meta-chip--files {
+  margin: 0;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-accent-deep);
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.16);
+}
+
+.meta-chip--files:hover {
+  background: rgba(8, 145, 178, 0.14);
+  border-color: rgba(8, 145, 178, 0.28);
+  transform: translateY(-1px);
+}
+
+.meta-chip--files:active {
+  transform: scale(0.98);
+}
+
+.meta-chip--due {
+  color: var(--color-text-body);
+  background: #fff;
+  border-color: rgba(6, 36, 64, 0.1);
+}
+
+.meta-chip--due.is-overdue {
+  color: var(--color-red, #e05545);
+  background: rgba(224, 85, 69, 0.08);
+  border-color: rgba(224, 85, 69, 0.28);
+}
+
+.files-modal__hint {
+  margin-bottom: 12px;
+}
+
+.files-modal__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(60vh, 420px);
+  overflow: auto;
+}
+
+.files-modal__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.files-modal__item:hover {
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+.files-modal__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.files-modal__name {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-modal__name:hover {
+  color: var(--color-accent);
+}
+
+.files-modal__meta {
   font-size: 0.72rem;
   color: var(--color-text-dim);
 }
 
-.task-card__project {
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-accent-deep);
-  font-weight: 600;
-}
-
-.task-card__files {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  color: var(--color-accent-deep);
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  text-underline-offset: 3px;
-  transition: color 0.15s ease, text-decoration-color 0.15s ease;
-}
-
-.task-card__files:hover {
-  color: var(--color-accent);
-  text-decoration-color: var(--color-accent);
-}
-
-.task-files-menu {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  min-width: 220px;
-  max-width: 320px;
-}
-
-.task-files-menu__item {
-  display: flex;
+.files-modal__actions {
+  flex-shrink: 0;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 10px;
 }
 
-.task-files-menu__item + .task-files-menu__item {
-  border-top: 1px solid var(--color-border-light);
-}
-
-.task-files-menu__name {
-  flex: 1;
-  min-width: 0;
+.files-modal__act {
   margin: 0;
   padding: 0;
   border: none;
   background: none;
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  text-align: left;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.task-files-menu__name:hover {
-  color: var(--color-accent);
-}
-
-.task-files-menu__size {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--color-text-dim);
-}
-
-.task-files-menu__dl {
-  flex-shrink: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-accent-deep);
   cursor: pointer;
 }
 
-.task-files-menu__dl:hover {
+.files-modal__act:hover {
   color: var(--color-accent);
+}
+
+.files-modal__act--danger {
+  color: var(--color-red);
+}
+
+.files-modal__act--danger:hover {
+  color: var(--color-red);
+  opacity: 0.85;
 }
 
 .attach-review {
   margin: 0 0 var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 16px;
+  background: var(--tp-glass);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 var(--tp-glass-border);
+  backdrop-filter: blur(12px);
 }
 
 .attach-review__head {
@@ -1640,17 +2090,19 @@ onMounted(async () => {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .attach-review__title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .attach-review__meta {
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-dim);
 }
 
@@ -1668,9 +2120,17 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  border-radius: 10px;
   background: var(--color-surface-muted);
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.attach-review__item:hover {
+  background: #fff;
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-xs);
 }
 
 .attach-review__info {
@@ -1678,6 +2138,29 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.attach-review__actions {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.attach-review__act {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-accent-deep);
+  cursor: pointer;
+}
+
+.attach-review__act:hover {
+  color: var(--color-accent);
 }
 
 .attach-review__name,
@@ -1695,6 +2178,7 @@ onMounted(async () => {
 .attach-review__name:hover,
 .task-attach__name:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .attach-review__sub {
@@ -1751,16 +2235,6 @@ onMounted(async () => {
   color: var(--color-red);
 }
 
-.task-card__due.is-overdue {
-  color: var(--color-red);
-  font-weight: 650;
-}
-
-.task-card__status {
-  width: 108px;
-  margin-left: auto;
-}
-
 .wb-stats--inline {
   margin-bottom: var(--space-4);
 }
@@ -1814,6 +2288,12 @@ onMounted(async () => {
   max-width: 320px;
 }
 
+@media (max-width: 900px) {
+  .tp-pulse {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 720px) {
   .status-tabs {
     flex-wrap: nowrap;
@@ -1825,8 +2305,21 @@ onMounted(async () => {
     flex: 0 0 auto;
   }
 
-  .task-card__status {
-    margin-left: 0;
+  .tp-pulse__rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tp-pulse__item {
+    padding: 14px 12px 16px;
+  }
+
+  .task-card:hover {
+    transform: none;
+  }
+
+  .task-card .action-btns {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -1835,8 +2328,20 @@ onMounted(async () => {
   .status-tab,
   .space-back,
   .task-card,
-  .task-panel__add {
+  .task-panel__add,
+  .tp-pulse__item,
+  .meta-chip--files {
     transition: none;
+    animation: none;
+  }
+
+  .status-tab.is-active .status-tab__dot {
+    animation: none;
+  }
+
+  .task-card:hover {
+    transform: none;
   }
 }
 </style>
+
