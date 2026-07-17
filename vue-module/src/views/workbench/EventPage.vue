@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import {
@@ -21,8 +21,7 @@ const WEEKDAY_OPTIONS = [
   { value: '7', label: '日' },
 ]
 
-const WEEKDAY_HEADERS = ['一', '二', '三', '四', '五', '六', '日']
-const MONTH_EVENT_LIMIT = 3
+const CELL_EVENT_LIMIT = 3
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -31,9 +30,7 @@ const isEdit = ref(false)
 const events = ref([])
 const tasks = ref([])
 const searchQuery = ref('')
-const viewMode = ref('month')
-const cursorDate = ref(dayjs())
-const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
+const calendarValue = ref(dayjs())
 
 const form = reactive({
   eventId: null,
@@ -79,58 +76,9 @@ const eventsByDate = computed(() => {
   return map
 })
 
-const periodLabel = computed(() => {
-  const d = cursorDate.value
-  if (viewMode.value === 'week') {
-    const start = d.startOf('week')
-    const end = d.endOf('week')
-    if (start.month() === end.month()) {
-      return `${start.format('YYYY年M月D日')} – ${end.format('D日')}`
-    }
-    return `${start.format('YYYY年M月D日')} – ${end.format('M月D日')}`
-  }
-  return d.format('YYYY年M月')
-})
-
-const calendarDays = computed(() => {
-  const cursor = cursorDate.value
-  let start
-  let end
-  if (viewMode.value === 'week') {
-    start = cursor.startOf('week')
-    end = cursor.endOf('week')
-  } else {
-    start = cursor.startOf('month').startOf('week')
-    end = cursor.startOf('month').endOf('month').endOf('week')
-  }
-
-  const todayKey = dayjs().format('YYYY-MM-DD')
-  const monthKey = cursor.format('YYYY-MM')
-  const days = []
-  let cur = start
-  while (cur.isBefore(end) || cur.isSame(end, 'day')) {
-    const key = cur.format('YYYY-MM-DD')
-    const dayEvents = eventsByDate.value.get(key) || []
-    days.push({
-      key,
-      date: cur,
-      dayNum: cur.date(),
-      weekdayLabel: WEEKDAY_HEADERS[(cur.day() + 6) % 7],
-      isToday: key === todayKey,
-      isSelected: key === selectedDate.value,
-      isOutside: viewMode.value === 'month' && cur.format('YYYY-MM') !== monthKey,
-      isWeekend: cur.day() === 0 || cur.day() === 6,
-      events: dayEvents,
-      overflow: Math.max(0, dayEvents.length - MONTH_EVENT_LIMIT),
-    })
-    cur = cur.add(1, 'day')
-  }
-  return days
-})
-
-const selectedDayEvents = computed(() => eventsByDate.value.get(selectedDate.value) || [])
-
-const selectedDayLabel = computed(() => formatDayLabel(selectedDate.value))
+const selectedDateKey = computed(() => calendarValue.value.format('YYYY-MM-DD'))
+const selectedDayEvents = computed(() => eventsByDate.value.get(selectedDateKey.value) || [])
+const selectedDayLabel = computed(() => formatDayLabel(selectedDateKey.value))
 
 const stats = computed(() => {
   const all = events.value
@@ -141,10 +89,14 @@ const stats = computed(() => {
   return { total: all.length, today, upcoming, repeating }
 })
 
-watch(viewMode, () => {
-  const selected = dayjs(selectedDate.value)
-  if (selected.isValid()) cursorDate.value = selected
-})
+function eventsOf(date) {
+  return eventsByDate.value.get(date.format('YYYY-MM-DD')) || []
+}
+
+function eventsInMonth(date) {
+  const key = date.format('YYYY-MM')
+  return filteredEvents.value.filter((ev) => dayjs(ev.startTime).format('YYYY-MM') === key)
+}
 
 function formatDayLabel(dateStr) {
   const d = dayjs(dateStr)
@@ -192,22 +144,8 @@ function taskTitleOf(taskId) {
   return taskMap.value.get(Number(taskId)) || ''
 }
 
-function shiftPeriod(delta) {
-  const unit = viewMode.value === 'week' ? 'week' : 'month'
-  cursorDate.value = cursorDate.value.add(delta, unit)
-}
-
-function goToday() {
-  const today = dayjs()
-  cursorDate.value = today
-  selectedDate.value = today.format('YYYY-MM-DD')
-}
-
-function selectDay(day) {
-  selectedDate.value = day.key
-  if (viewMode.value === 'month' && day.isOutside) {
-    cursorDate.value = day.date
-  }
+function onCalendarSelect(value) {
+  calendarValue.value = value
 }
 
 function resetForm(dateStr) {
@@ -254,7 +192,7 @@ async function refreshAll() {
 
 function openCreate(dateStr) {
   isEdit.value = false
-  resetForm(dateStr || selectedDate.value)
+  resetForm(dateStr || selectedDateKey.value)
   dialogVisible.value = true
 }
 
@@ -282,7 +220,7 @@ function openEdit(row) {
 
 function onEventChipClick(ev, e) {
   e.stopPropagation()
-  selectedDate.value = dayjs(ev.startTime).format('YYYY-MM-DD')
+  calendarValue.value = dayjs(ev.startTime)
   openEdit(ev)
 }
 
@@ -327,8 +265,7 @@ async function submitForm() {
     message.success('操作成功')
     dialogVisible.value = false
     if (payload.startTime) {
-      selectedDate.value = dayjs(payload.startTime).format('YYYY-MM-DD')
-      cursorDate.value = dayjs(payload.startTime)
+      calendarValue.value = dayjs(payload.startTime)
     }
     await loadEvents()
   } catch (error) {
@@ -360,7 +297,7 @@ onMounted(refreshAll)
       <header class="wb-header">
         <div class="wb-header__text">
           <h1 class="wb-header__title">日程管理</h1>
-          <p class="wb-header__desc">按周或按月查看个人日程，支持全天与每周重复。</p>
+          <p class="wb-header__desc">按月查看个人日程，支持全天与每周重复。</p>
         </div>
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="refreshAll">刷新</button>
@@ -401,108 +338,42 @@ onMounted(refreshAll)
           placeholder="搜索标题、地点..."
           aria-label="搜索日程"
         />
-        <div class="range-tabs" role="tablist" aria-label="日历视图">
-          <button
-            type="button"
-            class="range-tab"
-            :class="{ 'is-active': viewMode === 'week' }"
-            role="tab"
-            :aria-selected="viewMode === 'week'"
-            @click="viewMode = 'week'"
-          >
-            周视图
-          </button>
-          <button
-            type="button"
-            class="range-tab"
-            :class="{ 'is-active': viewMode === 'month' }"
-            role="tab"
-            :aria-selected="viewMode === 'month'"
-            @click="viewMode = 'month'"
-          >
-            月视图
-          </button>
-        </div>
       </div>
 
       <a-spin :spinning="loading">
         <div class="cal-layout">
           <section class="cal-panel" aria-label="日程日历">
-            <div class="cal-nav">
-              <div class="cal-nav__period">
-                <h2 class="cal-nav__title">{{ periodLabel }}</h2>
-                <span class="cal-nav__hint">{{ viewMode === 'week' ? '本周安排' : '本月安排' }}</span>
-              </div>
-              <div class="cal-nav__actions">
-                <button type="button" class="wb-btn wb-btn--ghost cal-nav__btn" aria-label="上一周期" @click="shiftPeriod(-1)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </button>
-                <button type="button" class="wb-btn wb-btn--ghost cal-nav__today" @click="goToday">今天</button>
-                <button type="button" class="wb-btn wb-btn--ghost cal-nav__btn" aria-label="下一周期" @click="shiftPeriod(1)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div class="cal-weekdays" aria-hidden="true">
-              <span v-for="label in WEEKDAY_HEADERS" :key="label" class="cal-weekday">{{ label }}</span>
-            </div>
-
-            <div
-              class="cal-grid"
-              :class="viewMode === 'week' ? 'cal-grid--week' : 'cal-grid--month'"
-              role="grid"
-              :aria-label="periodLabel"
+            <a-calendar
+              v-model:value="calendarValue"
+              @select="onCalendarSelect"
             >
-              <div
-                v-for="day in calendarDays"
-                :key="day.key"
-                class="cal-cell"
-                :class="{
-                  'is-today': day.isToday,
-                  'is-selected': day.isSelected,
-                  'is-outside': day.isOutside,
-                  'is-weekend': day.isWeekend,
-                  'has-events': day.events.length > 0,
-                }"
-                role="gridcell"
-                tabindex="0"
-                :aria-selected="day.isSelected"
-                :aria-label="`${day.key}，${day.events.length} 项日程`"
-                @click="selectDay(day)"
-                @dblclick="openCreate(day.key)"
-                @keydown.enter.prevent="selectDay(day)"
-                @keydown.space.prevent="selectDay(day)"
-              >
-                <div class="cal-cell__head">
-                  <span class="cal-cell__day">{{ day.dayNum }}</span>
-                  <span v-if="viewMode === 'week'" class="cal-cell__wd">周{{ day.weekdayLabel }}</span>
-                  <span v-if="day.events.length" class="cal-cell__count">{{ day.events.length }}</span>
-                </div>
-
-                <div class="cal-cell__events">
-                  <button
-                    v-for="ev in day.events.slice(0, viewMode === 'week' ? 6 : MONTH_EVENT_LIMIT)"
+              <template #dateCellRender="{ current }">
+                <ul class="cal-events" @dblclick.stop="openCreate(current.format('YYYY-MM-DD'))">
+                  <li
+                    v-for="ev in eventsOf(current).slice(0, CELL_EVENT_LIMIT)"
                     :key="ev.eventId"
-                    type="button"
                     class="cal-chip"
                     :class="{ 'is-allday': Number(ev.isAllDay) === 1 }"
                     :title="ev.title"
-                    @click="onEventChipClick(ev, $event)"
+                    @click.stop="onEventChipClick(ev, $event)"
                   >
                     <em class="cal-chip__time">{{ formatChipTime(ev) }}</em>
                     <span class="cal-chip__title">{{ ev.title }}</span>
-                  </button>
-                  <span v-if="viewMode === 'month' && day.overflow > 0" class="cal-more">
-                    +{{ day.overflow }} 更多
-                  </span>
+                  </li>
+                  <li
+                    v-if="eventsOf(current).length > CELL_EVENT_LIMIT"
+                    class="cal-more"
+                  >
+                    +{{ eventsOf(current).length - CELL_EVENT_LIMIT }} 更多
+                  </li>
+                </ul>
+              </template>
+              <template #monthCellRender="{ current }">
+                <div v-if="eventsInMonth(current).length" class="cal-month-count">
+                  {{ eventsInMonth(current).length }} 项
                 </div>
-              </div>
-            </div>
+              </template>
+            </a-calendar>
           </section>
 
           <aside class="day-panel" aria-label="当日日程">
@@ -515,7 +386,7 @@ onMounted(refreshAll)
                 v-permission="'event:add'"
                 type="button"
                 class="wb-btn wb-btn--ghost day-panel__add"
-                @click="openCreate(selectedDate)"
+                @click="openCreate(selectedDateKey)"
               >
                 + 添加
               </button>
@@ -524,7 +395,7 @@ onMounted(refreshAll)
             <div v-if="!selectedDayEvents.length" class="day-panel__empty">
               <p class="day-panel__empty-title">这天还没有安排</p>
               <p class="day-panel__empty-desc">双击日历格子，或点下方按钮快速新建。</p>
-              <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate(selectedDate)">
+              <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate(selectedDateKey)">
                 新建日程
               </button>
             </div>
@@ -642,40 +513,6 @@ onMounted(refreshAll)
 </template>
 
 <style scoped>
-.range-tabs {
-  display: inline-flex;
-  padding: 3px;
-  border-radius: var(--radius-control);
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--color-border-light);
-}
-
-.range-tab {
-  height: 30px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
-}
-
-.range-tab:hover {
-  color: var(--color-text-primary);
-}
-
-.range-tab:active {
-  transform: scale(0.98);
-}
-
-.range-tab.is-active {
-  color: var(--color-accent-deep);
-  background: var(--color-accent-soft);
-}
-
 .cal-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
@@ -692,179 +529,35 @@ onMounted(refreshAll)
 }
 
 .cal-panel {
-  padding: var(--space-4);
+  padding: var(--space-3);
   overflow: hidden;
 }
 
-.cal-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: var(--space-4);
+.cal-panel :deep(.ant-picker-calendar) {
+  background: transparent;
 }
 
-.cal-nav__title {
+.cal-panel :deep(.ant-picker-calendar-header) {
+  padding: 8px 4px 12px;
+}
+
+.cal-panel :deep(.ant-picker-panel) {
+  background: transparent;
+  border-top: none;
+}
+
+.cal-panel :deep(.ant-picker-calendar-date-content) {
+  height: 86px;
+  overflow-y: auto;
+}
+
+.cal-events {
+  list-style: none;
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.cal-nav__hint {
-  display: block;
-  margin-top: 2px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-dim);
-}
-
-.cal-nav__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cal-nav__btn {
-  width: 36px;
   padding: 0;
-}
-
-.cal-nav__today {
-  min-width: 56px;
-}
-
-.cal-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 6px;
-  padding: 0 2px;
-}
-
-.cal-weekday {
-  text-align: center;
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  color: var(--color-text-dim);
-}
-
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-}
-
-.cal-grid--month .cal-cell {
-  min-height: 104px;
-}
-
-.cal-grid--week .cal-cell {
-  min-height: 220px;
-}
-
-.cal-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: rgba(238, 248, 252, 0.55);
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
-}
-
-.cal-cell:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: var(--color-border);
-}
-
-.cal-cell:active {
-  transform: scale(0.99);
-}
-
-.cal-cell:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-  border-color: var(--color-accent);
-}
-
-.cal-cell.is-weekend {
-  background: rgba(8, 145, 178, 0.04);
-}
-
-.cal-cell.is-outside {
-  opacity: 0.45;
-}
-
-.cal-cell.is-today {
-  background: linear-gradient(160deg, rgba(8, 145, 178, 0.12) 0%, rgba(255, 255, 255, 0.92) 70%);
-  border-color: rgba(8, 145, 178, 0.22);
-}
-
-.cal-cell.is-selected {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-soft), var(--shadow-sm);
-  background: #fff;
-}
-
-.cal-cell__head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 22px;
-}
-
-.cal-cell__day {
-  font-size: 0.875rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--color-text-primary);
-  line-height: 1;
-}
-
-.cal-cell.is-today .cal-cell__day {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-deep) 100%);
-}
-
-.cal-cell__wd {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--color-text-dim);
-}
-
-.cal-cell__count {
-  margin-left: auto;
-  font-size: 0.68rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-accent-deep);
-  background: var(--color-accent-soft);
-  border-radius: 6px;
-  padding: 1px 6px;
-}
-
-.cal-cell__events {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-height: 0;
-  flex: 1;
 }
 
 .cal-chip {
@@ -872,24 +565,19 @@ onMounted(refreshAll)
   align-items: center;
   gap: 4px;
   min-width: 0;
-  padding: 3px 6px;
+  padding: 2px 6px;
   border-radius: 6px;
-  border: none;
   background: rgba(8, 145, 178, 0.12);
   color: var(--color-accent-deep);
   font-size: 0.7rem;
   font-weight: 650;
   line-height: 1.2;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .cal-chip:hover {
   background: rgba(8, 145, 178, 0.2);
-}
-
-.cal-chip:active {
-  transform: scale(0.98);
 }
 
 .cal-chip.is-allday {
@@ -916,6 +604,12 @@ onMounted(refreshAll)
   font-weight: 650;
   color: var(--color-text-secondary);
   padding: 1px 4px;
+}
+
+.cal-month-count {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--color-accent-deep);
 }
 
 .day-panel {
@@ -1073,10 +767,6 @@ onMounted(refreshAll)
     max-height: none;
     min-height: 0;
   }
-
-  .cal-grid--week .cal-cell {
-    min-height: 160px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -1089,32 +779,17 @@ onMounted(refreshAll)
     max-width: none;
   }
 
-  .cal-grid--month .cal-cell {
-    min-height: 72px;
-    padding: 6px;
+  .cal-panel :deep(.ant-picker-calendar-date-content) {
+    height: 56px;
   }
 
   .cal-chip__time {
     display: none;
   }
-
-  .cal-grid--week {
-    grid-template-columns: 1fr;
-  }
-
-  .cal-weekdays {
-    display: none;
-  }
-
-  .cal-grid--week .cal-cell {
-    min-height: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cal-cell,
   .cal-chip,
-  .range-tab,
   .day-item {
     transition: none;
   }
