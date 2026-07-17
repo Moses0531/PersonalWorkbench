@@ -20,6 +20,7 @@ import {
 } from '@/apis/workbench/ProjectApi'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
+import EditorView from '@/components/EditorView.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -299,8 +300,6 @@ function isTaskAttachmentsReadonly(projectId) {
 
 /* ---------- 任务附件 ---------- */
 const taskAttachments = ref([])
-const attachmentUploading = ref(false)
-const attachmentInputRef = ref(null)
 
 const taskFormAttachmentsReadonly = computed(() =>
   isTaskAttachmentsReadonly(taskForm.projectId),
@@ -338,28 +337,18 @@ function openAttachmentUrl(url) {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-function triggerAttachmentPick() {
-  if (!taskIsEdit.value || taskFormAttachmentsReadonly.value) return
-  attachmentInputRef.value?.click()
-}
-
-async function onAttachmentFileChange(e) {
-  const file = e.target.files?.[0]
-  e.target.value = ''
-  if (!file || !taskForm.taskId) return
-  attachmentUploading.value = true
-  try {
-    await uploadTaskAttachmentApi(taskForm.taskId, file)
-    message.success('附件已上传')
-    await loadTasks()
-    const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
-    taskAttachments.value = parseAttachments(row?.attachments)
-    if (inProjectSpace.value) await loadProjectAttachments()
-  } catch (error) {
-    message.error(error.message || '上传失败')
-  } finally {
-    attachmentUploading.value = false
+/** 交给 EditorView 的 uploadHandler，仍走任务附件接口 */
+async function handleAttachmentUpload(file) {
+  if (!file || !taskForm.taskId) {
+    throw new Error('未选择有效文件')
   }
+  await uploadTaskAttachmentApi(taskForm.taskId, file)
+  message.success('附件已上传')
+  await loadTasks()
+  const row = tasks.value.find((t) => Number(t.taskId) === Number(taskForm.taskId))
+  taskAttachments.value = parseAttachments(row?.attachments)
+  if (inProjectSpace.value) await loadProjectAttachments()
+  return { url: '' }
 }
 
 async function removeAttachment(attachmentId) {
@@ -1117,22 +1106,16 @@ onMounted(async () => {
                   </li>
                 </ul>
                 <p v-else class="task-attach__hint">暂无附件</p>
-                <div v-if="!taskFormAttachmentsReadonly" class="task-attach__actions">
-                  <input
-                    ref="attachmentInputRef"
-                    type="file"
-                    class="task-attach__input"
-                    @change="onAttachmentFileChange"
+                <div
+                  v-if="!taskFormAttachmentsReadonly"
+                  v-permission="'task:modify'"
+                  class="task-attach__actions"
+                >
+                  <EditorView
+                    upload-only
+                    upload-text="上传附件"
+                    :upload-handler="handleAttachmentUpload"
                   />
-                  <button
-                    v-permission="'task:modify'"
-                    type="button"
-                    class="wb-btn wb-btn--ghost"
-                    :disabled="attachmentUploading"
-                    @click="triggerAttachmentPick"
-                  >
-                    {{ attachmentUploading ? '上传中…' : '上传附件' }}
-                  </button>
                 </div>
               </template>
             </div>
@@ -1654,10 +1637,6 @@ onMounted(async () => {
 
 .task-attach__del {
   color: var(--color-red);
-}
-
-.task-attach__input {
-  display: none;
 }
 
 .task-card__due.is-overdue {

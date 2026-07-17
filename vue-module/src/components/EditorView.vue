@@ -1,26 +1,59 @@
 <template>
-  <div class="rich-editor" :class="{ 'rich-editor--readonly': readOnly }" :style="containerStyle">
-    <div v-if="!readOnly" class="rich-editor__toolbar">
-      <a-upload
-          class="rich-editor__upload"
-          :show-upload-list="false"
-          :multiple="true"
-          :disabled="uploading || !editorReady"
-          :before-upload="beforeUpload"
-          :custom-request="handleCustomUpload"
-      >
-        <button
-            type="button"
-            class="toolbar-btn toolbar-btn--primary"
-            :disabled="uploading || !editorReady"
-        >
+  <!-- 仅上传：任务附件 / 头像等场景复用 a-upload，不渲染编辑器 -->
+  <div v-if="uploadOnly" class="rich-editor rich-editor--upload-only">
+    <a-upload
+        v-if="!readOnly"
+        class="rich-editor__upload"
+        :show-upload-list="false"
+        :multiple="multiple"
+        :accept="accept"
+        :disabled="uploading"
+        :before-upload="beforeUpload"
+        :custom-request="handleCustomUpload"
+    >
+      <slot>
+        <button type="button" class="toolbar-btn toolbar-btn--primary" :disabled="uploading">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          {{ uploading ? '上传中...' : '上传文件' }}
+          {{ uploading ? '上传中...' : uploadText }}
         </button>
+      </slot>
+    </a-upload>
+  </div>
+
+  <div
+      v-else
+      class="rich-editor"
+      :class="{ 'rich-editor--readonly': readOnly }"
+      :style="containerStyle"
+  >
+    <div v-if="!readOnly" class="rich-editor__toolbar">
+      <a-upload
+          class="rich-editor__upload"
+          :show-upload-list="false"
+          :multiple="multiple"
+          :accept="accept"
+          :disabled="uploading || !editorReady"
+          :before-upload="beforeUpload"
+          :custom-request="handleCustomUpload"
+      >
+        <slot>
+          <button
+              type="button"
+              class="toolbar-btn toolbar-btn--primary"
+              :disabled="uploading || !editorReady"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {{ uploading ? '上传中...' : uploadText }}
+          </button>
+        </slot>
       </a-upload>
       <div class="toolbar-divider"></div>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleUndo">
@@ -39,6 +72,7 @@
       </button>
     </div>
     <WangEditor
+        v-if="!uploadOnly"
         class="rich-editor__body"
         :style="bodyStyle"
         :defaultConfig="editorConfig"
@@ -50,12 +84,16 @@
 </template>
 
 <script setup>
-/** 富文本编辑器（wangEditor），支持文件上传插入与只读模式 */
-import '@wangeditor/editor/dist/css/style.css'
-import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import { Editor as WangEditor } from '@wangeditor/editor-for-vue'
+/** 富文本编辑器（wangEditor），支持文件上传插入与只读模式；亦可 uploadOnly 仅作上传 */
+import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { uploadFileApi } from '@/apis/common/UploadApi'
+
+/** 仅完整编辑模式才加载；uploadOnly 时不解析未安装/未使用的 wangEditor */
+const WangEditor = defineAsyncComponent(async () => {
+  await import('@wangeditor/editor/dist/css/style.css')
+  const mod = await import('@wangeditor/editor-for-vue')
+  return mod.Editor
+})
 
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']
 const VIDEO_EXT = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']
@@ -85,13 +123,31 @@ const props = defineProps({
     type: String,
     default: '请输入内容',
   },
+  /** 业务侧上传实现，必传（如任务附件 uploadTaskAttachmentApi） */
   uploadHandler: {
     type: Function,
-    default: null,
+    required: true,
   },
   resolveUrl: {
     type: Function,
     default: null,
+  },
+  /** 仅上传按钮（不渲染富文本），供任务附件等复用 */
+  uploadOnly: {
+    type: Boolean,
+    default: false,
+  },
+  uploadText: {
+    type: String,
+    default: '上传文件',
+  },
+  accept: {
+    type: String,
+    default: '',
+  },
+  multiple: {
+    type: Boolean,
+    default: true,
   },
 })
 
@@ -156,6 +212,10 @@ function escapeHtml(text) {
 }
 
 function validateFile(file) {
+  if (props.accept?.includes('image/') && !isImageFile(file)) {
+    message.error('只能上传图片文件')
+    return false
+  }
   if (props.fileSize != null && props.fileSize > 0 && file.size / 1024 / 1024 > props.fileSize) {
     message.error(`文件大小不能超过 ${props.fileSize} MB`)
     return false
@@ -164,13 +224,11 @@ function validateFile(file) {
 }
 
 async function doUpload(file) {
-  const upload = props.uploadHandler || (async (f) => {
-    const res = await uploadFileApi(f)
-    const url = res?.data
-    if (!url) throw new Error('上传成功但未返回文件地址')
-    return { url: resolveMediaUrl(url) }
-  })
-  return upload(file)
+  const result = await props.uploadHandler(file)
+  if (result?.url) {
+    return { ...result, url: resolveMediaUrl(result.url) }
+  }
+  return result || { url: '' }
 }
 
 /** 按 MIME/扩展名插入 img、video 或下载链接 */
@@ -197,27 +255,30 @@ function insertFileNode(editor, file, url) {
 async function handleFileUpload(file) {
   if (!validateFile(file)) return false
 
-  const editor = editorRef.value
-  if (!editor) {
-    message.warning('编辑器尚未就绪，请稍后再试')
-    return false
-  }
+  const result = await doUpload(file)
+  const url = result?.url || ''
 
-  const { url } = await doUpload(file)
-  insertFileNode(editor, file, url)
+  if (!props.uploadOnly) {
+    const editor = editorRef.value
+    if (!editor) {
+      message.warning('编辑器尚未就绪，请稍后再试')
+      return false
+    }
+    if (url) insertFileNode(editor, file, url)
+  }
   return true
 }
 
 /** a-upload：校验失败则拦截，避免进入 custom-request */
 function beforeUpload(file) {
-  if (!editorReady.value) {
+  if (!props.uploadOnly && !editorReady.value) {
     message.warning('编辑器尚未就绪，请稍后再试')
     return false
   }
   return validateFile(file)
 }
 
-/** a-upload custom-request，对齐 ProfilePage / TaskPage 用法 */
+/** a-upload custom-request */
 async function handleCustomUpload(opts) {
   const file = opts?.file
   if (!file) {
@@ -424,6 +485,24 @@ onBeforeUnmount(() => {
 
 .rich-editor__upload :deep(.ant-upload) {
   display: inline-block;
+}
+
+.rich-editor--upload-only {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+  animation: none;
+}
+
+.rich-editor--upload-only::before {
+  display: none;
+}
+
+.rich-editor--upload-only:hover,
+.rich-editor--upload-only:focus-within {
+  border: none;
+  box-shadow: none;
 }
 
 .toolbar-btn {

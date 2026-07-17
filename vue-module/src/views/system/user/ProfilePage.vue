@@ -18,6 +18,7 @@ import {
 } from '@/apis/system/user/UserProfileApi'
 import { hasPermission } from '@/utils/menu'
 import { useUserStore } from '@/stores/userStore'
+import EditorView from '@/components/EditorView.vue'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -231,25 +232,15 @@ async function confirmFieldEdit() {
   }
 }
 
-async function handleAvatarUpload(opts) {
-  const f = opts?.file
-  if (!f) { message.error('未选择有效文件'); return }
-  try {
-    const r = await uploadAvatarApi(f)
-    userInfo.avatar = r?.data ?? r
-    syncStoredUser()
-    message.success('头像更新成功')
-    await loadUserInfo()
-    opts?.onSuccess?.(r)
-  } catch (e) {
-    message.error(e.message || '头像上传失败')
-    opts?.onError?.(e)
-  }
-}
-
-function beforeUpload(f) {
-  if (!f.type.startsWith('image/')) { message.error('只能上传图片文件'); return false }
-  return true
+/** 交给 EditorView 的 uploadHandler，仍走头像接口 */
+async function handleAvatarUpload(file) {
+  if (!file) throw new Error('未选择有效文件')
+  const r = await uploadAvatarApi(file)
+  userInfo.avatar = r?.data ?? r
+  syncStoredUser()
+  message.success('头像更新成功')
+  await loadUserInfo()
+  return { url: r?.data ?? '' }
 }
 
 function openPasswordDialog() {
@@ -297,12 +288,13 @@ onMounted(loadUserInfo)
       <h2 id="basic-info-title" class="profile-section__title">基本信息</h2>
       <div class="basic-card">
         <div class="basic-card__avatar">
-          <a-upload
+          <EditorView
             v-if="canModify"
             class="avatar-upload"
-            :show-upload-list="false"
-            :before-upload="beforeUpload"
-            :custom-request="handleAvatarUpload"
+            upload-only
+            accept="image/*"
+            :multiple="false"
+            :upload-handler="handleAvatarUpload"
           >
             <div class="avatar-upload__ring">
               <img
@@ -320,7 +312,7 @@ onMounted(loadUserInfo)
               </div>
               <span class="avatar-upload__hint">更换头像</span>
             </div>
-          </a-upload>
+          </EditorView>
           <div v-else class="avatar-upload avatar-upload--readonly">
             <div class="avatar-upload__ring">
               <img
@@ -726,7 +718,8 @@ onMounted(loadUserInfo)
   flex-shrink: 0;
 }
 
-.avatar-upload :deep(.ant-upload) {
+.avatar-upload :deep(.ant-upload),
+.avatar-upload :deep(.rich-editor__upload .ant-upload) {
   display: block;
 }
 
