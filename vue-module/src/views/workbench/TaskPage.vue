@@ -10,7 +10,6 @@ import {
   pageTasksApi,
   planApplyApi,
   planPreviewApi,
-  planRevokeApi,
   removeTaskAttachmentApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
@@ -167,6 +166,8 @@ const tasks = ref([])
 const projects = ref([])
 const taskSearchQuery = ref('')
 const filterPriority = ref(null)
+/** null=全部 | independent=独立任务 | bound=绑定项目 */
+const filterBinding = ref(null)
 
 const taskForm = reactive({
   taskId: null,
@@ -201,6 +202,13 @@ const filteredTasks = computed(() => {
   const q = taskSearchQuery.value.trim().toLowerCase()
   return projectScopedTasks.value.filter((t) => {
     if (filterPriority.value != null && Number(t.priority) !== Number(filterPriority.value)) return false
+    if (!inProjectSpace.value) {
+      if (filterBinding.value === 'independent') {
+        if (t.projectId != null && t.projectId !== '') return false
+      } else if (filterBinding.value === 'bound') {
+        if (t.projectId == null || t.projectId === '') return false
+      }
+    }
     if (!q) return true
     return (
       (t.title || '').toLowerCase().includes(q) ||
@@ -467,12 +475,9 @@ async function refreshTasks() {
   await Promise.all([loadTasks(), loadProjectsForSelect()])
 }
 
-const PLAN_BATCH_KEY = 'wb_ai_plan_batch'
-
 const planDialogVisible = ref(false)
 const planPreviewing = ref(false)
 const planApplying = ref(false)
-const planRevoking = ref(false)
 const planForm = reactive({
   goal: '',
   deadline: null,
@@ -488,49 +493,6 @@ const planDeadlineHint = computed(() => {
   return `剩 ${days} 天 · 按较长周期细分阶段`
 })
 const planPreview = ref(null)
-const lastPlanBatchId = ref('')
-
-function planBatchStorageKey(projectId) {
-  return `${PLAN_BATCH_KEY}:${projectId}`
-}
-
-function loadLastPlanBatchId() {
-  if (!inProjectSpace.value) {
-    lastPlanBatchId.value = ''
-    return
-  }
-  try {
-    lastPlanBatchId.value = localStorage.getItem(planBatchStorageKey(filterProjectId.value)) || ''
-  } catch {
-    lastPlanBatchId.value = ''
-  }
-}
-
-function rememberPlanBatchId(batchId) {
-  lastPlanBatchId.value = batchId || ''
-  if (!inProjectSpace.value || !batchId) return
-  try {
-    localStorage.setItem(planBatchStorageKey(filterProjectId.value), batchId)
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearRememberedPlanBatchId() {
-  lastPlanBatchId.value = ''
-  if (!inProjectSpace.value) return
-  try {
-    localStorage.removeItem(planBatchStorageKey(filterProjectId.value))
-  } catch {
-    /* ignore */
-  }
-}
-
-watch(
-  () => filterProjectId.value,
-  () => loadLastPlanBatchId(),
-  { immediate: true },
-)
 
 function openPlanDialog() {
   if (!inProjectSpace.value || projectAttachmentsReadonly.value) return
@@ -582,7 +544,6 @@ async function applyPlanPreview() {
       phases: planPreview.value.phases,
     })
     const created = result?.data?.created ?? 0
-    rememberPlanBatchId(planPreview.value.planBatchId)
     message.success(`已落板 ${created} 条任务`)
     planDialogVisible.value = false
     planPreview.value = null
@@ -592,22 +553,6 @@ async function applyPlanPreview() {
     return Promise.reject(error)
   } finally {
     planApplying.value = false
-  }
-}
-
-async function revokeLastPlan() {
-  if (!lastPlanBatchId.value) return
-  planRevoking.value = true
-  try {
-    const result = await planRevokeApi(lastPlanBatchId.value)
-    const removed = result?.data?.removed ?? 0
-    clearRememberedPlanBatchId()
-    message.success(removed > 0 ? `已撤销 ${removed} 条规划任务` : '没有可撤销的任务')
-    await refreshTasks()
-  } catch (error) {
-    message.error(error.message || '撤销失败')
-  } finally {
-    planRevoking.value = false
   }
 }
 
@@ -954,16 +899,16 @@ onMounted(async () => {
             class="task-view__prio"
             :precision="0"
           />
-          <button
-            v-if="inProjectSpace && lastPlanBatchId"
-            v-permission="'task:remove'"
-            type="button"
-            class="wb-btn wb-btn--ghost"
-            :disabled="planRevoking || projectAttachmentsReadonly"
-            @click="revokeLastPlan"
+          <a-select
+            v-if="!inProjectSpace"
+            v-model:value="filterBinding"
+            allow-clear
+            placeholder="任务归属"
+            class="task-view__binding"
           >
-            撤销上次规划
-          </button>
+            <a-select-option value="independent">独立任务</a-select-option>
+            <a-select-option value="bound">绑定项目</a-select-option>
+          </a-select>
           <button
             v-if="inProjectSpace"
             v-permission="'task:add'"
@@ -1705,6 +1650,10 @@ onMounted(async () => {
 
 .task-view__prio {
   width: 120px;
+}
+
+.task-view__binding {
+  width: 132px;
 }
 
 .affair-tabs {

@@ -59,8 +59,3 @@ export function planApplyApi(body) {
   return request.post('/ai/plan/apply', body)
 }
 
-/** 按批次撤销 AI 规划 */
-export function planRevokeApi(planBatchId) {
-  return request.post('/ai/plan/revoke', { planBatchId })
-}
-
