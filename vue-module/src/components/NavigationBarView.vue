@@ -1,57 +1,77 @@
 ﻿<template>
   <div class="layout">
-    <!-- 左侧图标轨道 -->
-    <nav class="rail" role="navigation" aria-label="主导航">
-      <div class="rail-brand" title="ChassisElevate">
-        <BrandMarkView :size="24" />
-        <span class="rail-version">v1.0.0</span>
-      </div>
+    <!-- 悬浮胶囊 Dock：图标直达，目录展开飞层 -->
+    <nav class="dock" role="navigation" aria-label="主导航">
+      <button
+        type="button"
+        class="dock-brand"
+        title="Workbench · 打开命令面板"
+        aria-label="打开命令面板"
+        @click="openCmd"
+      >
+        <BrandMarkView :size="22" />
+      </button>
 
-      <div class="rail-icons">
+      <div class="dock-icons">
         <template v-for="(item, index) in railItems" :key="item.id">
           <div
             v-if="index > 0 && isRailTypeBoundary(railItems[index - 1], item)"
-            class="rail-type-divider"
+            class="dock-divider"
             aria-hidden="true"
           />
           <button
-            class="rail-btn"
+            type="button"
+            class="dock-btn"
             :class="{
               active: isRailActive(item),
               'is-directory': isDirectoryRailItem(item),
               'is-menu': isMenuRailItem(item),
-              'is-flyout-open': flyoutId === item.id
+              'is-flyout-open': flyoutId === item.id,
             }"
             :title="railItemTitle(item)"
+            :aria-label="railItemTitle(item)"
             :aria-expanded="hasFlyoutChildren(item) ? flyoutId === item.id : undefined"
             @click="handleRailClick(item, $event)"
           >
-            <span class="rail-icon-wrap">
-              <component :is="item.icon" class="rail-icon" />
+            <span class="dock-icon-wrap">
+              <component :is="item.icon" class="dock-icon" />
               <span
                 v-if="hasFlyoutChildren(item)"
-                class="rail-expand-badge"
+                class="dock-chevron"
                 aria-hidden="true"
-              >
-                <RightOutlined />
-              </span>
+              />
             </span>
-            <span class="rail-label">{{ item.label }}</span>
+            <span class="dock-label">{{ item.label }}</span>
           </button>
         </template>
       </div>
 
-      <div class="rail-bottom">
-        <button class="rail-btn" @click="handleLogout" title="退出登录">
-          <LogoutOutlined class="rail-icon" />
+      <div class="dock-bottom">
+        <button
+          type="button"
+          class="dock-btn dock-btn--quiet"
+          title="退出登录"
+          aria-label="退出登录"
+          @click="handleLogout"
+        >
+          <span class="dock-icon-wrap">
+            <LogoutOutlined class="dock-icon" />
+          </span>
+          <span class="dock-label">退出</span>
         </button>
-        <div class="rail-avatar" @click="goToProfile" :title="displayName">
-          <img :src="userAvatar" class="rail-avatar-img" alt="" @error="onAvatarError" />
-        </div>
+        <button
+          type="button"
+          class="dock-avatar"
+          :title="displayName"
+          :aria-label="`个人中心 · ${displayName}`"
+          @click="goToProfile"
+        >
+          <img :src="userAvatar" class="dock-avatar-img" alt="" @error="onAvatarError" />
+        </button>
       </div>
     </nav>
 
-    <!-- 子菜单弹出面板 -->
+    <!-- 子菜单飞层 -->
     <Transition name="flyout">
       <div
         v-if="flyoutId && flyoutChildren.length"
@@ -63,34 +83,35 @@
         <button
           v-for="child in flyoutChildren"
           :key="child.menuId"
+          type="button"
           class="flyout-child"
           :class="{ active: isFlyoutChildActive(child) }"
           @click="selectFlyoutChild(child)"
         >
-          <span class="flyout-child-icon" aria-hidden="true">
-            <FileOutlined />
-          </span>
           <span class="flyout-child-name">{{ child.menuName }}</span>
+          <kbd v-if="isFlyoutChildActive(child)" class="flyout-here">当前</kbd>
         </button>
       </div>
     </Transition>
 
     <!-- 主区域 -->
     <div class="main-area">
-      <header class="search-bar">
-        <div class="search-bar-left">
-          <span class="search-brand">ChassisElevate</span>
-          <span v-if="currentPageTitle" class="search-page">{{ currentPageTitle }}</span>
+      <header class="topbar">
+        <div class="topbar-crumb" v-if="currentPageTitle">
+          <span class="topbar-crumb-label">{{ currentPageTitle }}</span>
         </div>
+        <div v-else class="topbar-crumb topbar-crumb--empty" aria-hidden="true" />
 
-        <button class="search-pill" @click="openCmd">
-          <SearchOutlined />
-          <span class="search-placeholder">搜索菜单...</span>
-          <kbd class="search-kbd">Ctrl K</kbd>
+        <button type="button" class="cmd-trigger" @click="openCmd">
+          <SearchOutlined class="cmd-trigger-icon" />
+          <span class="cmd-trigger-text">跳转菜单、搜索…</span>
+          <kbd class="cmd-trigger-kbd">
+            <span class="cmd-trigger-mod">{{ modKey }}</span>K
+          </kbd>
         </button>
 
-        <div class="search-right">
-          <button class="icon-btn" title="通知">
+        <div class="topbar-right">
+          <button type="button" class="topbar-icon" title="通知" aria-label="通知">
             <BellOutlined />
           </button>
         </div>
@@ -103,17 +124,17 @@
       </main>
     </div>
 
-    <!-- 命令面板 (Ctrl+K) -->
+    <!-- 命令面板 -->
     <Teleport to="body">
       <div v-if="cmdOpen" class="cmd-overlay" @click.self="closeCmd">
-        <div class="cmd-palette" role="dialog" aria-label="命令面板">
+        <div class="cmd-palette" role="dialog" aria-label="命令面板" aria-modal="true">
           <div class="cmd-input-wrap">
             <SearchOutlined />
             <input
               ref="cmdInputRef"
               v-model="cmdQuery"
               class="cmd-input"
-              placeholder="输入菜单名称搜索..."
+              placeholder="输入菜单名称，Enter 跳转"
               @keydown.down.prevent="moveCmd(1)"
               @keydown.up.prevent="moveCmd(-1)"
               @keydown.enter.prevent="selectCmd"
@@ -121,10 +142,29 @@
             />
             <kbd class="cmd-esc">ESC</kbd>
           </div>
+          <div v-if="!cmdQuery && recentMenus.length" class="cmd-section">
+            <div class="cmd-section-label">最近</div>
+            <div class="cmd-list">
+              <button
+                v-for="(item, i) in recentMenus"
+                :key="'r-' + item.menuId"
+                type="button"
+                class="cmd-item"
+                :class="{ selected: i === cmdIndex && !cmdResults.length }"
+                @click="goToMenu(item)"
+                @mouseenter="cmdIndex = i"
+              >
+                <component :is="getMenuIcon(item.menuName)" class="cmd-item-icon" />
+                <span class="cmd-item-label">{{ item.menuName }}</span>
+                <span class="cmd-item-path">{{ item.path }}</span>
+              </button>
+            </div>
+          </div>
           <div v-if="cmdResults.length" class="cmd-list">
             <button
               v-for="(item, i) in cmdResults"
               :key="item.menuId"
+              type="button"
               class="cmd-item"
               :class="{ selected: i === cmdIndex }"
               @click="goToMenu(item)"
@@ -135,8 +175,10 @@
               <span class="cmd-item-path">{{ item.path }}</span>
             </button>
           </div>
-          <div v-else-if="cmdQuery" class="cmd-empty">没有找到匹配的菜单</div>
-          <div v-else class="cmd-hint">输入关键词搜索所有菜单，按 Enter 跳转</div>
+          <div v-else-if="cmdQuery" class="cmd-empty">没有匹配的菜单</div>
+          <div v-else-if="!recentMenus.length" class="cmd-hint">
+            输入关键词搜索，或点左侧图标直达
+          </div>
         </div>
       </div>
     </Teleport>
@@ -144,14 +186,12 @@
 </template>
 
 <script setup>
-/** 主布局导航：左侧轨道菜单、子菜单飞层、Ctrl+K 命令面板 */
+/** 主布局：悬浮胶囊 Dock + 命令优先顶栏 + Ctrl+K 面板 */
 import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter, isNavigationFailure, NavigationFailureType } from 'vue-router'
 import BrandMarkView from './BrandMarkView.vue'
 import {
-  RightOutlined,
   LogoutOutlined,
-  FileOutlined,
   SearchOutlined,
   BellOutlined,
 } from '@ant-design/icons-vue'
@@ -165,6 +205,9 @@ import {
 import { getMenuIcon } from '@/utils/menuIcons'
 import { resetDynamicRoutes } from '@/router/dynamicRoutes'
 import router from '@/router'
+
+const RECENT_KEY = 'wb_nav_recent'
+const RECENT_MAX = 5
 
 const route = useRoute()
 const vueRouter = useRouter()
@@ -181,6 +224,10 @@ const activePath = computed(() => route.path)
 
 const displayName = computed(
   () => userStore.user?.username || userStore.user?.account || '用户',
+)
+
+const modKey = computed(() =>
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl',
 )
 
 const DEFAULT_AVATAR = 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png'
@@ -312,7 +359,11 @@ function handleRailClick(item, evt) {
   } else {
     const btn = evt?.currentTarget
     if (btn) {
-      flyoutTop.value = btn.getBoundingClientRect().top
+      const rect = btn.getBoundingClientRect()
+      flyoutTop.value = Math.min(
+        rect.top,
+        window.innerHeight - 280,
+      )
     }
     flyoutId.value = item.id
   }
@@ -340,6 +391,28 @@ const cmdOpen = ref(false)
 const cmdQuery = ref('')
 const cmdIndex = ref(0)
 const cmdInputRef = ref(null)
+const recentIds = ref([])
+
+function loadRecent() {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    recentIds.value = raw ? JSON.parse(raw) : []
+  } catch {
+    recentIds.value = []
+  }
+}
+
+function pushRecent(menu) {
+  if (!menu?.menuId) return
+  const id = String(menu.menuId)
+  const next = [id, ...recentIds.value.filter((x) => x !== id)].slice(0, RECENT_MAX)
+  recentIds.value = next
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+  } catch {
+    /* ignore quota */
+  }
+}
 
 const flatMenuList = computed(() => {
   const result = []
@@ -351,6 +424,11 @@ const flatMenuList = computed(() => {
   }
   walk(menuTree.value)
   return result
+})
+
+const recentMenus = computed(() => {
+  const byId = new Map(flatMenuList.value.map((m) => [String(m.menuId), m]))
+  return recentIds.value.map((id) => byId.get(id)).filter(Boolean)
 })
 
 const cmdResults = computed(() => {
@@ -374,13 +452,15 @@ function closeCmd() {
 }
 
 function moveCmd(delta) {
-  const len = cmdResults.value.length
+  const list = cmdQuery.value ? cmdResults.value : recentMenus.value
+  const len = list.length
   if (!len) return
   cmdIndex.value = (cmdIndex.value + delta + len) % len
 }
 
 function selectCmd() {
-  const item = cmdResults.value[cmdIndex.value]
+  const list = cmdQuery.value ? cmdResults.value : recentMenus.value
+  const item = list[cmdIndex.value]
   if (item) goToMenu(item)
 }
 
@@ -417,6 +497,7 @@ function handleMenuSelect(menu) {
   const name = String(menu.menuId)
   const targetPath = resolveRoutePath(menu)
   const label = menu.menuName || '该菜单'
+  pushRecent(menu)
 
   function pushPath() {
     if (!targetPath) return
@@ -458,13 +539,14 @@ watch(
 function handleDocClick(e) {
   if (!flyoutId.value) return
   const flyout = flyoutRef.value
-  const rail = document.querySelector('.rail')
+  const dock = document.querySelector('.dock')
   if (flyout?.contains(e.target)) return
-  if (rail?.contains(e.target)) return
+  if (dock?.contains(e.target)) return
   closeFlyout()
 }
 
 onMounted(() => {
+  loadRecent()
   window.addEventListener('keydown', handleGlobalKey)
   document.addEventListener('mousedown', handleDocClick)
 })
@@ -482,49 +564,70 @@ onBeforeUnmount(() => {
   overflow: hidden;
   font-family: var(--font-family-sans);
   background: var(--color-bg);
+  position: relative;
 }
 
 /* ═══════════════════════════════
- *  图标轨道
+ *  悬浮胶囊 Dock
  * ═══════════════════════════════ */
-.rail {
-  width: var(--rail-width);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: var(--color-zone-sidebar);
-  border-right: 1px solid var(--color-zone-sidebar-border);
-  padding: 10px 0 12px;
+.dock {
+  position: fixed;
+  left: var(--dock-inset);
+  top: var(--dock-inset);
+  bottom: var(--dock-inset);
+  width: var(--dock-width);
   z-index: var(--z-sticky);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.55);
-}
-
-.rail-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px 0 12px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--color-zone-sidebar-border);
-  width: calc(100% - 16px);
+  padding: 10px 0;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(236, 246, 252, 0.88) 100%);
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 12px 32px rgba(8, 116, 146, 0.12),
+    0 2px 8px rgba(12, 42, 66, 0.06);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+}
+
+.dock-brand {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 14px;
+  background: rgba(8, 145, 178, 0.1);
   color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.rail-version {
-  font-family: var(--font-family-mono);
-  font-size: 9px;
-  font-weight: var(--font-medium);
-  color: var(--color-text-secondary);
-  letter-spacing: 0.06em;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  background: rgba(8, 145, 178, 0.08);
-  border: 1px solid rgba(8, 145, 178, 0.14);
+.dock-brand:hover {
+  background: rgba(8, 145, 178, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(8, 116, 146, 0.16);
 }
 
-.rail-icons {
+.dock-brand:active {
+  transform: scale(0.96);
+}
+
+.dock-brand:focus-visible {
+  outline: 2px solid var(--color-accent-glow);
+  outline-offset: 2px;
+}
+
+.dock-icons {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -534,32 +637,34 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
   scrollbar-width: none;
   width: 100%;
-  padding: 0 8px;
+  padding: 4px 0;
+  min-height: 0;
 }
 
-.rail-icons::-webkit-scrollbar {
+.dock-icons::-webkit-scrollbar {
   display: none;
 }
 
-.rail-type-divider {
-  width: calc(100% - 12px);
+.dock-divider {
+  width: 20px;
   height: 1px;
-  margin: 6px 0 4px;
+  margin: 4px 0;
   background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgba(8, 145, 178, 0.22) 18%,
-    rgba(8, 145, 178, 0.22) 82%,
-    transparent 100%
+    transparent,
+    rgba(8, 145, 178, 0.28),
+    transparent
   );
   flex-shrink: 0;
 }
 
-.rail-btn {
+.dock-btn {
+  position: relative;
   width: 60px;
   min-height: 52px;
-  border-radius: var(--radius-control, 10px);
+  padding: 6px 4px;
   border: none;
+  border-radius: 14px;
   background: transparent;
   color: var(--color-text-dim);
   display: flex;
@@ -567,200 +672,163 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 6px 4px;
   cursor: pointer;
+  flex-shrink: 0;
   transition:
-    background var(--transition-normal),
-    color var(--transition-normal),
-    box-shadow var(--transition-normal),
-    transform var(--transition-fast);
-  position: relative;
-  flex-shrink: 0;
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
-.rail-icon-wrap {
+.dock-icon-wrap {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
-.rail-icon {
+.dock-icon {
+  font-size: 18px;
   display: block;
-  font-size: 20px;
 }
 
-.rail-expand-badge :deep(.anticon) {
-  font-size: 8px;
+.dock-label {
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: var(--font-medium);
+  text-align: center;
+  max-width: 56px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.rail-btn.is-directory .rail-icon-wrap {
-  border: 1px dashed rgba(8, 145, 178, 0.34);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-}
-
-.rail-btn.is-menu .rail-icon-wrap {
-  border-radius: 8px;
-}
-
-.rail-expand-badge {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--color-zone-sidebar-elevated);
-  border: 1px solid rgba(8, 145, 178, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-accent);
-  box-shadow: 0 1px 2px rgba(8, 116, 146, 0.12);
-  transition: transform var(--transition-normal), background var(--transition-fast);
-}
-
-.rail-btn.is-directory.is-flyout-open .rail-expand-badge {
-  transform: rotate(90deg);
-  background: var(--color-accent-soft);
-  border-color: rgba(8, 145, 178, 0.42);
-}
-
-.rail-btn:hover {
-  background: var(--color-accent-soft);
+.dock-btn:hover {
+  background: rgba(8, 145, 178, 0.1);
   color: var(--color-accent);
 }
 
-.rail-btn.is-directory:hover .rail-icon-wrap {
-  border-color: rgba(8, 145, 178, 0.52);
-  background: rgba(255, 255, 255, 0.58);
+.dock-btn:active {
+  transform: scale(0.94);
 }
 
-.rail-btn.is-menu:hover .rail-icon-wrap {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.rail-btn:active {
-  transform: scale(0.97);
-}
-
-.rail-btn.active {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-deep);
-}
-
-.rail-btn.is-directory.active .rail-icon-wrap {
-  border-style: solid;
-  border-color: rgba(8, 145, 178, 0.48);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.rail-btn.is-menu.active .rail-icon-wrap {
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(8, 145, 178, 0.16);
-}
-
-.rail-btn.is-menu.active::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background: var(--color-accent);
-  border-radius: 0 0 3px 3px;
-}
-
-.rail-btn.is-directory.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 22px;
-  background: var(--color-accent);
-  border-radius: 0 3px 3px 0;
-}
-
-.rail-btn.is-directory.is-flyout-open {
-  background: rgba(34, 184, 207, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(8, 145, 178, 0.14);
-}
-
-.rail-btn:focus-visible {
+.dock-btn:focus-visible {
   outline: 2px solid var(--color-accent-glow);
   outline-offset: 2px;
 }
 
-.rail-label {
-  font-size: 10px;
-  line-height: 1.15;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 58px;
-  text-align: center;
-  font-weight: var(--font-medium);
+.dock-btn.active {
+  background: rgba(8, 145, 178, 0.16);
+  color: var(--color-accent-deep);
+  box-shadow: 0 0 0 1px rgba(8, 145, 178, 0.2);
 }
 
-.rail-bottom {
+.dock-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-accent);
+}
+
+.dock-btn.is-flyout-open {
+  background: rgba(34, 184, 207, 0.2);
+  color: var(--color-accent-deep);
+}
+
+.dock-btn--quiet {
+  color: var(--color-text-muted);
+}
+
+.dock-chevron {
+  position: absolute;
+  right: -2px;
+  bottom: -1px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 3px 0 3px 4px;
+  border-color: transparent transparent transparent var(--color-accent);
+  opacity: 0.7;
+}
+
+.dock-btn.is-flyout-open .dock-chevron {
+  transform: rotate(90deg);
+  opacity: 1;
+}
+
+.dock-bottom {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-zone-sidebar-border);
-  margin-top: 8px;
-  width: 100%;
+  gap: 6px;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(8, 145, 178, 0.14);
+  width: calc(100% - 16px);
+  flex-shrink: 0;
 }
 
-.rail-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
+.dock-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
   overflow: hidden;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  border: 2px solid var(--color-accent-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: var(--color-accent-soft);
-  transition: border-color var(--transition-fast);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.2);
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.rail-avatar:hover {
-  border-color: var(--color-accent);
+.dock-avatar:hover {
+  box-shadow: 0 0 0 2px var(--color-accent);
+  transform: translateY(-1px);
 }
 
-.rail-avatar-img {
+.dock-avatar:focus-visible {
+  outline: 2px solid var(--color-accent-glow);
+  outline-offset: 2px;
+}
+
+.dock-avatar-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 /* ═══════════════════════════════
- *  子菜单弹出面板
+ *  子菜单飞层
  * ═══════════════════════════════ */
 .flyout-panel {
   position: fixed;
-  left: var(--rail-width);
+  left: calc(var(--dock-inset) + var(--dock-width) + 10px);
   z-index: var(--z-dropdown);
-  min-width: 180px;
-  max-width: 240px;
+  min-width: 168px;
+  max-width: 220px;
   max-height: 70vh;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 8px 6px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(8, 145, 178, 0.16);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 16px 40px rgba(8, 116, 146, 0.14);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -768,13 +836,11 @@ onBeforeUnmount(() => {
 }
 
 .flyout-title {
-  font-size: var(--text-xs);
+  font-size: 11px;
   font-weight: var(--font-semibold);
-  color: var(--color-text-primary);
-  padding: 6px 12px 8px;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 4px;
-  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+  padding: 4px 10px 8px;
+  letter-spacing: 0.04em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -783,77 +849,66 @@ onBeforeUnmount(() => {
 .flyout-child {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 9px 12px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   cursor: pointer;
   color: var(--color-text-body);
   font-size: var(--text-sm);
   font-family: inherit;
   text-align: left;
   width: 100%;
-  transition: all var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .flyout-child:hover {
   background: var(--color-accent-soft);
-  color: var(--color-accent);
+  color: var(--color-accent-deep);
 }
 
 .flyout-child.active {
-  background: var(--color-accent-soft);
+  background: rgba(8, 145, 178, 0.12);
   color: var(--color-accent-deep);
   font-weight: var(--font-medium);
 }
 
-.flyout-child-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(8, 145, 178, 0.12);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-dim);
-  flex-shrink: 0;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-.flyout-child:hover .flyout-child-icon,
-.flyout-child.active .flyout-child-icon {
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--color-accent);
-  border-color: rgba(8, 145, 178, 0.24);
-}
-
 .flyout-child-name {
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.flyout-here {
+  font-size: 9px;
+  font-family: var(--font-family-mono);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(8, 145, 178, 0.28);
+  color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .flyout-enter-active {
-  transition: all 0.18s ease-out;
+  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
 }
 
 .flyout-leave-active {
-  transition: all 0.12s ease-in;
+  transition: opacity 0.1s ease-in, transform 0.1s ease-in;
 }
 
 .flyout-enter-from,
 .flyout-leave-to {
   opacity: 0;
-  transform: translateX(-8px);
+  transform: translateX(-6px) scale(0.98);
 }
 
 /* ═══════════════════════════════
- *  主区域
+ *  主区域 · 命令优先顶栏
  * ═══════════════════════════════ */
 .main-area {
   flex: 1;
@@ -861,111 +916,141 @@ onBeforeUnmount(() => {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  margin-left: var(--dock-gutter);
 }
 
-.search-bar {
-  display: flex;
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 420px) minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-4);
-  padding: 8px 20px;
+  gap: var(--space-3);
+  height: var(--topbar-height);
+  padding: 0 20px 0 8px;
   flex-shrink: 0;
-  background: var(--color-zone-content);
-  border-bottom: 1px solid var(--color-border-light);
+  background: transparent;
 }
 
-.search-bar-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.topbar-crumb {
   min-width: 0;
-  flex-shrink: 0;
+  justify-self: start;
 }
 
-.search-brand {
-  font-size: var(--text-lg);
-  font-weight: var(--font-bold);
-  color: var(--color-text-primary);
-  white-space: nowrap;
-}
-
-.search-page {
+.topbar-crumb-label {
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-secondary);
-  padding-left: var(--space-2);
-  border-left: 1px solid var(--color-border);
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
 }
 
-.search-pill {
+.topbar-crumb--empty {
+  min-height: 1px;
+}
+
+.cmd-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   height: 36px;
-  padding: 0 14px;
-  border-radius: var(--radius-control, 10px);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  padding: 0 12px 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(8, 145, 178, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
   cursor: pointer;
-  transition: all var(--transition-normal);
-  flex: 1;
-  max-width: 360px;
   color: var(--color-text-dim);
+  transition:
+    border-color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+  width: 100%;
+  justify-self: center;
+  font-family: inherit;
 }
 
-.search-pill:hover {
-  border-color: var(--color-accent-glow);
+.cmd-trigger:hover {
+  border-color: rgba(8, 145, 178, 0.32);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 0 0 3px var(--color-accent-muted);
+  color: var(--color-accent-deep);
 }
 
-.search-placeholder {
-  font-size: var(--text-sm);
-  color: var(--color-text-dim);
-  flex: 1;
-  text-align: left;
+.cmd-trigger:active {
+  transform: scale(0.99);
 }
 
-.search-kbd {
-  font-size: 10px;
-  padding: 2px 6px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text-dim);
-  font-family: var(--font-family-mono);
-  background: var(--color-bg);
+.cmd-trigger:focus-visible {
+  outline: 2px solid var(--color-accent-glow);
+  outline-offset: 2px;
 }
 
-.search-right {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-left: auto;
+.cmd-trigger-icon {
+  font-size: 14px;
   flex-shrink: 0;
 }
 
-.icon-btn {
+.cmd-trigger-text {
+  flex: 1;
+  text-align: left;
+  font-size: var(--text-sm);
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmd-trigger-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(8, 145, 178, 0.16);
+  background: rgba(240, 247, 251, 0.9);
+  color: var(--color-text-dim);
+  font-family: var(--font-family-mono);
+  flex-shrink: 0;
+}
+
+.cmd-trigger-mod {
+  opacity: 0.75;
+}
+
+.topbar-right {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-self: end;
+}
+
+.topbar-icon {
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-control, 10px);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-radius: 11px;
+  border: 1px solid rgba(8, 145, 178, 0.12);
+  background: rgba(255, 255, 255, 0.55);
   color: var(--color-text-dim);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
-.icon-btn:hover {
+.topbar-icon:hover {
   color: var(--color-accent);
-  border-color: var(--color-accent-glow);
+  border-color: rgba(8, 145, 178, 0.28);
   background: var(--color-accent-soft);
 }
 
-.icon-btn:focus-visible {
+.topbar-icon:focus-visible {
   outline: 2px solid var(--color-accent-glow);
   outline-offset: 2px;
 }
@@ -1025,16 +1110,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 15vh;
+  padding-top: 14vh;
 }
 
 .cmd-palette {
   width: 520px;
-  max-height: 420px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  max-height: 440px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(8, 145, 178, 0.16);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 24px 64px rgba(8, 116, 146, 0.18);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1057,7 +1144,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(8, 145, 178, 0.1);
   color: var(--color-text-dim);
 }
 
@@ -1084,6 +1171,18 @@ onBeforeUnmount(() => {
   font-family: var(--font-family-mono);
 }
 
+.cmd-section {
+  padding-top: 4px;
+}
+
+.cmd-section-label {
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding: 8px 16px 4px;
+}
+
 .cmd-list {
   overflow-y: auto;
   padding: 6px;
@@ -1097,7 +1196,7 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
   border: none;
   background: transparent;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   cursor: pointer;
   transition: background var(--transition-fast);
   text-align: left;
@@ -1137,15 +1236,26 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .search-bar-left {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    padding-right: 12px;
+  }
+
+  .topbar-crumb {
     display: none;
   }
 
-  .search-pill {
+  .cmd-trigger {
+    grid-column: 1;
+    justify-self: stretch;
     max-width: none;
   }
 
-  .search-kbd {
+  .topbar-right {
+    grid-column: 2;
+  }
+
+  .cmd-trigger-kbd {
     display: none;
   }
 
@@ -1153,19 +1263,18 @@ onBeforeUnmount(() => {
     width: calc(100vw - 32px);
   }
 
-  .rail-label {
-    display: none;
-  }
-
-  .rail-btn {
-    min-height: 44px;
+  .dock {
+    border-radius: 18px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .flyout-enter-active,
   .flyout-leave-active,
-  .cmd-palette {
+  .cmd-palette,
+  .dock-btn,
+  .dock-brand,
+  .cmd-trigger {
     animation: none;
     transition: none;
   }
