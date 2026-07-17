@@ -1,19 +1,27 @@
 <template>
   <div class="rich-editor" :class="{ 'rich-editor--readonly': readOnly }" :style="containerStyle">
     <div v-if="!readOnly" class="rich-editor__toolbar">
-      <button
-          type="button"
-          class="toolbar-btn toolbar-btn--primary"
+      <a-upload
+          class="rich-editor__upload"
+          :show-upload-list="false"
+          :multiple="true"
           :disabled="uploading || !editorReady"
-          @click="triggerFileSelect"
+          :before-upload="beforeUpload"
+          :custom-request="handleCustomUpload"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        {{ uploading ? '上传中...' : '上传文件' }}
-      </button>
+        <button
+            type="button"
+            class="toolbar-btn toolbar-btn--primary"
+            :disabled="uploading || !editorReady"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          {{ uploading ? '上传中...' : '上传文件' }}
+        </button>
+      </a-upload>
       <div class="toolbar-divider"></div>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleUndo">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -29,13 +37,6 @@
         </svg>
         重做
       </button>
-      <input
-          ref="fileInputRef"
-          type="file"
-          multiple
-          class="rich-editor__file-input"
-          @change="onFilesSelected"
-      />
     </div>
     <WangEditor
         class="rich-editor__body"
@@ -54,7 +55,7 @@ import '@wangeditor/editor/dist/css/style.css'
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { Editor as WangEditor } from '@wangeditor/editor-for-vue'
 import { message } from 'ant-design-vue'
-import { uploadFileApi } from '../api/common/upload'
+import { uploadFileApi } from '@/apis/common/UploadApi'
 
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']
 const VIDEO_EXT = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']
@@ -97,7 +98,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const editorRef = shallowRef()   // wangEditor 实例，需 shallowRef 避免深度响应
-const fileInputRef = ref()
 const html = ref('')
 const uploading = ref(false)
 const editorReady = ref(false)
@@ -195,38 +195,45 @@ function insertFileNode(editor, file, url) {
 }
 
 async function handleFileUpload(file) {
-  if (!validateFile(file)) return
+  if (!validateFile(file)) return false
 
   const editor = editorRef.value
   if (!editor) {
     message.warning('编辑器尚未就绪，请稍后再试')
+    return false
+  }
+
+  const { url } = await doUpload(file)
+  insertFileNode(editor, file, url)
+  return true
+}
+
+/** a-upload：校验失败则拦截，避免进入 custom-request */
+function beforeUpload(file) {
+  if (!editorReady.value) {
+    message.warning('编辑器尚未就绪，请稍后再试')
+    return false
+  }
+  return validateFile(file)
+}
+
+/** a-upload custom-request，对齐 ProfilePage / TaskPage 用法 */
+async function handleCustomUpload(opts) {
+  const file = opts?.file
+  if (!file) {
+    opts?.onError?.(new Error('未选择文件'))
     return
   }
 
-  try {
-    const { url } = await doUpload(file)
-    insertFileNode(editor, file, url)
-  } catch (err) {
-    message.error(err.message || '文件上传失败')
-  }
-}
-
-function triggerFileSelect() {
-  fileInputRef.value?.click()
-}
-
-async function onFilesSelected(event) {
-  const files = Array.from(event.target.files || [])
-  if (!files.length) return
-
   uploading.value = true
   try {
-    for (const file of files) {
-      await handleFileUpload(file)
-    }
+    await handleFileUpload(file)
+    opts?.onSuccess?.({})
+  } catch (err) {
+    message.error(err.message || '文件上传失败')
+    opts?.onError?.(err)
   } finally {
     uploading.value = false
-    event.target.value = ''
   }
 }
 
@@ -305,6 +312,8 @@ async function handlePaste(event) {
         uploading.value = true
         try {
           await handleFileUpload(file)
+        } catch (err) {
+          message.error(err.message || '文件上传失败')
         } finally {
           uploading.value = false
         }
@@ -413,8 +422,8 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-.rich-editor__file-input {
-  display: none;
+.rich-editor__upload :deep(.ant-upload) {
+  display: inline-block;
 }
 
 .toolbar-btn {
