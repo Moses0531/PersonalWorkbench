@@ -1,6 +1,13 @@
 <script setup>
 /** 树形层级管理列表：展开折叠、搜索过滤后扁平化渲染 */
 import { computed, ref, useSlots, watch, TransitionGroup } from 'vue'
+import {
+  SearchOutlined,
+  ReloadOutlined,
+  FolderOutlined,
+  FileOutlined,
+  RightOutlined,
+} from '@ant-design/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -254,11 +261,7 @@ function isTreeCell(column) {
               {{ allExpanded ? '全部折叠' : '全部展开' }}
             </button>
             <div v-if="showSearch" class="management-list-view__search">
-              <svg class="management-list-view__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <SearchOutlined class="management-list-view__search-icon" />
               <input
                 :value="searchQuery"
                 type="text"
@@ -275,12 +278,7 @@ function isTreeCell(column) {
               :disabled="loading"
               @click="emit('refresh')"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                   :class="{ 'mlv-spin': loading }">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
+              <ReloadOutlined :class="{ 'mlv-spin': loading }" />
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -314,10 +312,7 @@ function isTreeCell(column) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
-                           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                      </svg>
+                      <FolderOutlined style="font-size: 40px" />
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>
@@ -363,9 +358,7 @@ function isTreeCell(column) {
                       :title="item.expanded ? '折叠' : '展开'"
                       @click="toggleExpand(item.row)"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
+                      <RightOutlined />
                     </button>
                     <span v-else class="hierarchical-table__toggle-placeholder" />
 
@@ -373,13 +366,8 @@ function isTreeCell(column) {
                       class="hierarchical-table__node-icon"
                       :class="item.hasChildren ? 'hierarchical-table__node-icon--folder' : 'hierarchical-table__node-icon--leaf'"
                     >
-                      <svg v-if="item.hasChildren" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                      </svg>
-                      <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                      </svg>
+                      <FolderOutlined v-if="item.hasChildren" />
+                      <FileOutlined v-else />
                     </span>
 
                     <slot

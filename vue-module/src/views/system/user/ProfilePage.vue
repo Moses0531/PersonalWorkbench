@@ -9,6 +9,7 @@ import {
   MailOutlined,
   MobileOutlined,
   PhoneOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue'
 import {
   getCurrentUserProfileApi,
@@ -305,10 +306,7 @@ onMounted(loadUserInfo)
                 @error="avatarError = true"
               />
               <div v-else class="avatar-upload__placeholder" aria-hidden="true">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="32" cy="24" r="10" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M14 52c3-10 10-15 18-15s15 5 18 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
+                <UserOutlined style="font-size: 52px" />
               </div>
               <span class="avatar-upload__hint">更换头像</span>
             </div>
@@ -323,10 +321,7 @@ onMounted(loadUserInfo)
                 @error="avatarError = true"
               />
               <div v-else class="avatar-upload__placeholder" aria-hidden="true">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="32" cy="24" r="10" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M14 52c3-10 10-15 18-15s15 5 18 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
+                <UserOutlined style="font-size: 52px" />
               </div>
             </div>
           </div>
@@ -754,9 +749,8 @@ onMounted(loadUserInfo)
   color: var(--color-text-dim);
 }
 
-.avatar-upload__placeholder svg {
-  width: 52px;
-  height: 52px;
+.avatar-upload__placeholder .anticon {
+  font-size: 52px;
 }
 
 .avatar-upload__hint {

@@ -1,6 +1,7 @@
 <script setup>
 /** 扁平数据管理列表通用布局：工具栏、KPI、表格与行操作插槽 */
 import { computed, useSlots } from 'vue'
+import { SearchOutlined, ReloadOutlined, UserOutlined } from '@ant-design/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -105,11 +106,7 @@ function onSearchInput(event) {
           </div>
           <div class="management-list-view__toolbar-right">
             <div v-if="showSearch" class="management-list-view__search">
-              <svg class="management-list-view__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
+              <SearchOutlined class="management-list-view__search-icon" />
               <input
                 :value="searchQuery"
                 type="text"
@@ -125,11 +122,7 @@ function onSearchInput(event) {
               title="刷新"
               @click="emit('refresh')"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
+              <ReloadOutlined />
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -160,11 +153,7 @@ function onSearchInput(event) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
-                           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                      </svg>
+                      <UserOutlined style="font-size: 40px" />
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>

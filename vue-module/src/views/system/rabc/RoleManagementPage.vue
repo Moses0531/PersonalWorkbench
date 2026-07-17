@@ -14,6 +14,14 @@ import { listPermissionsApi } from '@/apis/system/rabc/PermissionApi'
 import { buildPermissionTree, filterCheckedLeafIds, permissionTypeOf } from '@/utils/menu'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
+import {
+  PlusOutlined,
+  LockOutlined,
+  EditOutlined,
+  SafetyOutlined,
+  DeleteOutlined,
+  RightOutlined,
+} from '@ant-design/icons-vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -276,9 +284,7 @@ onMounted(refreshAll)
       >
         <template #toolbar-actions>
           <button v-permission="'role:add'" type="button" class="mlv-btn-primary" @click="openCreate">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <PlusOutlined />
             新增角色
           </button>
         </template>
@@ -303,9 +309,7 @@ onMounted(refreshAll)
 
         <template #cell-status="{ row }">
           <span v-if="isRoleProtected(row)" class="status-tag status-tag--protected">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+            <LockOutlined />
             受保护
           </span>
           <span v-else class="status-tag status-tag--normal">
@@ -328,10 +332,7 @@ onMounted(refreshAll)
               title="编辑"
               @click="openEdit(row)"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
+              <EditOutlined />
             </button>
             <button
               v-permission="'role:modify'"
@@ -341,9 +342,7 @@ onMounted(refreshAll)
               title="权限"
               @click="openPermissionAssign(row)"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+              <SafetyOutlined />
             </button>
             <a-popconfirm
               v-permission="'role:remove'"
@@ -352,10 +351,7 @@ onMounted(refreshAll)
               @confirm="removeRole(row.roleId)"
             >
               <button type="button" class="btn-action btn-action--delete" :disabled="!canDeleteRole(row)" title="删除">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
+                <DeleteOutlined />
               </button>
             </a-popconfirm>
           </div>
@@ -442,9 +438,7 @@ onMounted(refreshAll)
                 :class="{ 'perm-tree-chevron--open': expanded }"
                 aria-hidden="true"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
+                <RightOutlined />
               </span>
             </template>
             <template #title="node">

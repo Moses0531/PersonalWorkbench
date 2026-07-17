@@ -7,6 +7,7 @@ import {
   getAiHistoryApi,
   listAiConversationsApi
 } from '@/apis/ai/AiApi'
+import { PlusOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons-vue'
 
 const loading = ref(false)
 const clearLoading = ref(false)
@@ -182,11 +183,7 @@ onMounted(async () => {
         <div class="sidebar-header">
           <h3 class="sidebar-title">对话列表</h3>
           <button class="btn-new" @click="createConversation" title="新建会话">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <PlusOutlined />
           </button>
         </div>
 
@@ -227,11 +224,7 @@ onMounted(async () => {
                 @click="clearHistory"
                 title="删除当前会话"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
+              <DeleteOutlined />
             </button>
           </div>
         </div>
@@ -288,11 +281,7 @@ onMounted(async () => {
                   :disabled="!message.trim() || loading"
                   @click="sendMessage"
               >
-                <svg v-if="!loading" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
+                <SendOutlined v-if="!loading" />
                 <span v-if="loading" class="send-spinner"></span>
               </button>
             </div>

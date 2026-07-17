@@ -13,11 +13,7 @@
     >
       <slot>
         <button type="button" class="toolbar-btn toolbar-btn--primary" :disabled="uploading">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
+          <UploadOutlined />
           {{ uploading ? '上传中...' : uploadText }}
         </button>
       </slot>
@@ -46,28 +42,18 @@
               class="toolbar-btn toolbar-btn--primary"
               :disabled="uploading || !editorReady"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
+            <UploadOutlined />
             {{ uploading ? '上传中...' : uploadText }}
           </button>
         </slot>
       </a-upload>
       <div class="toolbar-divider"></div>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleUndo">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="1 4 1 10 7 10" />
-          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-        </svg>
+        <UndoOutlined />
         撤销
       </button>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleRedo">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10" />
-          <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
-        </svg>
+        <RedoOutlined />
         重做
       </button>
     </div>
@@ -87,6 +73,7 @@
 /** 富文本编辑器（wangEditor），支持文件上传插入与只读模式；亦可 uploadOnly 仅作上传 */
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import { UploadOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons-vue'
 
 /** 仅完整编辑模式才加载；uploadOnly 时不解析未安装/未使用的 wangEditor */
 const WangEditor = defineAsyncComponent(async () => {

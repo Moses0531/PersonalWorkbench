@@ -27,26 +27,13 @@
             @click="handleRailClick(item, $event)"
           >
             <span class="rail-icon-wrap">
-              <svg
-                class="rail-icon"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                v-html="item.svg"
-              />
+              <component :is="item.icon" class="rail-icon" />
               <span
                 v-if="hasFlyoutChildren(item)"
                 class="rail-expand-badge"
                 aria-hidden="true"
               >
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
+                <RightOutlined />
               </span>
             </span>
             <span class="rail-label">{{ item.label }}</span>
@@ -56,9 +43,7 @@
 
       <div class="rail-bottom">
         <button class="rail-btn" @click="handleLogout" title="退出登录">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
+          <LogoutOutlined class="rail-icon" />
         </button>
         <div class="rail-avatar" @click="goToProfile" :title="displayName">
           <img :src="userAvatar" class="rail-avatar-img" alt="" @error="onAvatarError" />
@@ -83,10 +68,7 @@
           @click="selectFlyoutChild(child)"
         >
           <span class="flyout-child-icon" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
+            <FileOutlined />
           </span>
           <span class="flyout-child-name">{{ child.menuName }}</span>
         </button>
@@ -102,18 +84,14 @@
         </div>
 
         <button class="search-pill" @click="openCmd">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <SearchOutlined />
           <span class="search-placeholder">搜索菜单...</span>
           <kbd class="search-kbd">Ctrl K</kbd>
         </button>
 
         <div class="search-right">
           <button class="icon-btn" title="通知">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
+            <BellOutlined />
           </button>
         </div>
       </header>
@@ -130,9 +108,7 @@
       <div v-if="cmdOpen" class="cmd-overlay" @click.self="closeCmd">
         <div class="cmd-palette" role="dialog" aria-label="命令面板">
           <div class="cmd-input-wrap">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            <SearchOutlined />
             <input
               ref="cmdInputRef"
               v-model="cmdQuery"
@@ -154,7 +130,7 @@
               @click="goToMenu(item)"
               @mouseenter="cmdIndex = i"
             >
-              <span class="cmd-item-icon" v-html="getMenuIconSvg(item.menuName)" />
+              <component :is="getMenuIcon(item.menuName)" class="cmd-item-icon" />
               <span class="cmd-item-label">{{ item.menuName }}</span>
               <span class="cmd-item-path">{{ item.path }}</span>
             </button>
@@ -172,6 +148,13 @@
 import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter, isNavigationFailure, NavigationFailureType } from 'vue-router'
 import BrandMarkView from './BrandMarkView.vue'
+import {
+  RightOutlined,
+  LogoutOutlined,
+  FileOutlined,
+  SearchOutlined,
+  BellOutlined,
+} from '@ant-design/icons-vue'
 import { useUserStore } from '@/stores/userStore'
 import {
   MENU_TYPE,
@@ -179,7 +162,7 @@ import {
   isFunctionType,
   isMenuType,
 } from '@/utils/menu'
-import { getMenuIconSvg } from '@/utils/menuIcons'
+import { getMenuIcon } from '@/utils/menuIcons'
 import { resetDynamicRoutes } from '@/router/dynamicRoutes'
 import router from '@/router'
 
@@ -273,7 +256,7 @@ const railItems = computed(() =>
       type: m.menuType,
       children: collectNavigableChildren(m),
       menu: m,
-      svg: getMenuIconSvg(m.menuName),
+      icon: getMenuIcon(m.menuName),
     })),
 )
 
@@ -607,6 +590,11 @@ onBeforeUnmount(() => {
 
 .rail-icon {
   display: block;
+  font-size: 20px;
+}
+
+.rail-expand-badge :deep(.anticon) {
+  font-size: 8px;
 }
 
 .rail-btn.is-directory .rail-icon-wrap {
@@ -1123,16 +1111,9 @@ onBeforeUnmount(() => {
 }
 
 .cmd-item-icon {
-  width: 16px;
-  height: 16px;
+  font-size: 16px;
   color: var(--color-text-dim);
   flex-shrink: 0;
-  display: flex;
-}
-
-.cmd-item-icon :deep(svg) {
-  width: 16px;
-  height: 16px;
 }
 
 .cmd-item-label {

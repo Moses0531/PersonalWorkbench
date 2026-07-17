@@ -10,6 +10,7 @@ import {
 } from '@/apis/workbench/EventApi'
 import { pageTasksApi } from '@/apis/workbench/TaskApi'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
 
 const WEEKDAY_OPTIONS = [
   { value: '1', label: '一' },
@@ -302,9 +303,7 @@ onMounted(refreshAll)
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="refreshAll">刷新</button>
           <button v-permission="'event:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreate()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <PlusOutlined />
             新建日程
           </button>
         </div>
