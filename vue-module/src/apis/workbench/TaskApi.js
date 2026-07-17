@@ -48,3 +48,19 @@ export function listProjectAttachmentsApi(projectId) {
     params: { projectId },
   })
 }
+
+/** AI 规划预览（不写库） */
+export function planPreviewApi(body) {
+  return request.post('/ai/plan/preview', body)
+}
+
+/** AI 规划确认落板 */
+export function planApplyApi(body) {
+  return request.post('/ai/plan/apply', body)
+}
+
+/** 按批次撤销 AI 规划 */
+export function planRevokeApi(planBatchId) {
+  return request.post('/ai/plan/revoke', { planBatchId })
+}
+

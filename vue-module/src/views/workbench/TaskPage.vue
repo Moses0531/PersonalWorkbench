@@ -8,6 +8,9 @@ import {
   deleteTasksApi,
   listProjectAttachmentsApi,
   pageTasksApi,
+  planApplyApi,
+  planPreviewApi,
+  planRevokeApi,
   removeTaskAttachmentApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
@@ -32,6 +35,7 @@ import {
   ClockCircleOutlined,
   CheckSquareOutlined,
   InboxOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons-vue'
 
 const route = useRoute()
@@ -463,6 +467,150 @@ async function refreshTasks() {
   await Promise.all([loadTasks(), loadProjectsForSelect()])
 }
 
+const PLAN_BATCH_KEY = 'wb_ai_plan_batch'
+
+const planDialogVisible = ref(false)
+const planPreviewing = ref(false)
+const planApplying = ref(false)
+const planRevoking = ref(false)
+const planForm = reactive({
+  goal: '',
+  deadline: null,
+  constraints: '',
+})
+
+const planDeadlineHint = computed(() => {
+  if (!planForm.deadline) return ''
+  const days = dayjs(planForm.deadline).startOf('day').diff(dayjs().startOf('day'), 'day')
+  if (days < 0) return '截止日已过'
+  if (days <= 14) return `剩 ${days} 天 · 按两周冲刺极简拆解`
+  if (days <= 45) return `剩 ${days} 天 · 按一到一个半月均衡拆解`
+  return `剩 ${days} 天 · 按较长周期细分阶段`
+})
+const planPreview = ref(null)
+const lastPlanBatchId = ref('')
+
+function planBatchStorageKey(projectId) {
+  return `${PLAN_BATCH_KEY}:${projectId}`
+}
+
+function loadLastPlanBatchId() {
+  if (!inProjectSpace.value) {
+    lastPlanBatchId.value = ''
+    return
+  }
+  try {
+    lastPlanBatchId.value = localStorage.getItem(planBatchStorageKey(filterProjectId.value)) || ''
+  } catch {
+    lastPlanBatchId.value = ''
+  }
+}
+
+function rememberPlanBatchId(batchId) {
+  lastPlanBatchId.value = batchId || ''
+  if (!inProjectSpace.value || !batchId) return
+  try {
+    localStorage.setItem(planBatchStorageKey(filterProjectId.value), batchId)
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearRememberedPlanBatchId() {
+  lastPlanBatchId.value = ''
+  if (!inProjectSpace.value) return
+  try {
+    localStorage.removeItem(planBatchStorageKey(filterProjectId.value))
+  } catch {
+    /* ignore */
+  }
+}
+
+watch(
+  () => filterProjectId.value,
+  () => loadLastPlanBatchId(),
+  { immediate: true },
+)
+
+function openPlanDialog() {
+  if (!inProjectSpace.value || projectAttachmentsReadonly.value) return
+  planForm.goal = (currentProject.value?.description || '').trim()
+  planForm.deadline = dayjs().add(14, 'day')
+  planForm.constraints = ''
+  planPreview.value = null
+  planDialogVisible.value = true
+}
+
+async function runPlanPreview() {
+  if (!filterProjectId.value) return
+  if (!planForm.deadline) {
+    message.warning('请先选择项目截止时间')
+    return
+  }
+  if (dayjs(planForm.deadline).isBefore(dayjs(), 'day')) {
+    message.warning('项目截止时间不能早于今天')
+    return
+  }
+  planPreviewing.value = true
+  try {
+    const result = await planPreviewApi({
+      projectId: Number(filterProjectId.value),
+      goal: planForm.goal?.trim() || undefined,
+      deadline: dayjs(planForm.deadline).format('YYYY-MM-DD'),
+      constraints: planForm.constraints?.trim() || undefined,
+    })
+    planPreview.value = result?.data || null
+    if (!planPreview.value?.phases?.length) {
+      message.warning('未生成有效阶段，请补充目标后重试')
+    }
+  } catch (error) {
+    message.error(error.message || 'AI 规划失败')
+  } finally {
+    planPreviewing.value = false
+  }
+}
+
+async function applyPlanPreview() {
+  if (!planPreview.value?.planBatchId || !planPreview.value?.phases?.length) {
+    return Promise.reject(new Error('请先生成预览'))
+  }
+  planApplying.value = true
+  try {
+    const result = await planApplyApi({
+      projectId: Number(filterProjectId.value),
+      planBatchId: planPreview.value.planBatchId,
+      phases: planPreview.value.phases,
+    })
+    const created = result?.data?.created ?? 0
+    rememberPlanBatchId(planPreview.value.planBatchId)
+    message.success(`已落板 ${created} 条任务`)
+    planDialogVisible.value = false
+    planPreview.value = null
+    await refreshTasks()
+  } catch (error) {
+    message.error(error.message || '落板失败')
+    return Promise.reject(error)
+  } finally {
+    planApplying.value = false
+  }
+}
+
+async function revokeLastPlan() {
+  if (!lastPlanBatchId.value) return
+  planRevoking.value = true
+  try {
+    const result = await planRevokeApi(lastPlanBatchId.value)
+    const removed = result?.data?.removed ?? 0
+    clearRememberedPlanBatchId()
+    message.success(removed > 0 ? `已撤销 ${removed} 条规划任务` : '没有可撤销的任务')
+    await refreshTasks()
+  } catch (error) {
+    message.error(error.message || '撤销失败')
+  } finally {
+    planRevoking.value = false
+  }
+}
+
 function openCreateTask(status = '0') {
   taskIsEdit.value = false
   taskAttachments.value = []
@@ -806,6 +954,27 @@ onMounted(async () => {
             class="task-view__prio"
             :precision="0"
           />
+          <button
+            v-if="inProjectSpace && lastPlanBatchId"
+            v-permission="'task:remove'"
+            type="button"
+            class="wb-btn wb-btn--ghost"
+            :disabled="planRevoking || projectAttachmentsReadonly"
+            @click="revokeLastPlan"
+          >
+            撤销上次规划
+          </button>
+          <button
+            v-if="inProjectSpace"
+            v-permission="'task:add'"
+            type="button"
+            class="wb-btn wb-btn--ghost"
+            :disabled="projectAttachmentsReadonly"
+            @click="openPlanDialog"
+          >
+            <ThunderboltOutlined />
+            智能规划
+          </button>
           <button
             v-permission="'task:add'"
             type="button"
@@ -1288,6 +1457,90 @@ onMounted(async () => {
         </div>
       </a-form>
     </DataOperationView>
+
+    <a-modal
+      v-model:open="planDialogVisible"
+      title="AI 智能规划"
+      width="640px"
+      :mask-closable="false"
+      :confirm-loading="planApplying"
+      :ok-button-props="{ disabled: !planPreview?.phases?.length || planPreviewing }"
+      ok-text="确认落板"
+      cancel-text="关闭"
+      @ok="applyPlanPreview"
+    >
+      <a-spin :spinning="planPreviewing">
+        <div class="plan-dialog">
+          <p class="plan-dialog__hint">
+            必须指定整项目截止时间：两周与两个月会按不同节奏拆阶段；预览确认后再写入看板。
+          </p>
+          <a-form layout="vertical" class="dialog-form">
+            <a-form-item label="项目截止时间" required>
+              <a-date-picker
+                v-model:value="planForm.deadline"
+                format="YYYY-MM-DD"
+                style="width: 100%"
+                placeholder="整个项目要在哪天完成"
+                :disabled-date="(current) => current && current < dayjs().startOf('day')"
+              />
+              <p v-if="planDeadlineHint" class="plan-dialog__deadline-hint">{{ planDeadlineHint }}</p>
+            </a-form-item>
+            <a-form-item label="规划目标">
+              <a-textarea
+                v-model:value="planForm.goal"
+                :rows="3"
+                :maxlength="2000"
+                show-count
+                placeholder="要达成什么？默认使用项目描述"
+              />
+            </a-form-item>
+            <a-form-item label="其它约束（可选）">
+              <a-textarea
+                v-model:value="planForm.constraints"
+                :rows="2"
+                :maxlength="1000"
+                show-count
+                placeholder="如人数、技术栈、必须包含的交付物等"
+              />
+            </a-form-item>
+          </a-form>
+          <div class="plan-dialog__actions">
+            <button
+              type="button"
+              class="wb-btn wb-btn--primary"
+              :disabled="planPreviewing || !planForm.deadline"
+              @click="runPlanPreview"
+            >
+              <ThunderboltOutlined />
+              {{ planPreview ? '重新生成' : '生成预览' }}
+            </button>
+          </div>
+
+          <div v-if="planPreview" class="plan-preview">
+            <p v-if="planPreview.daysLeft != null" class="plan-preview__meta">
+              截止 {{ planPreview.deadline }} · 剩 {{ planPreview.daysLeft }} 天
+            </p>
+            <p v-if="planPreview.summary" class="plan-preview__summary">{{ planPreview.summary }}</p>
+            <ol class="plan-preview__phases">
+              <li v-for="(phase, pi) in planPreview.phases" :key="`${pi}-${phase.title}`" class="plan-preview__phase">
+                <div class="plan-preview__phase-title">
+                  {{ phase.title }}
+                  <span v-if="phase.dueTime" class="plan-preview__due">{{ phase.dueTime }}</span>
+                </div>
+                <p v-if="phase.description" class="plan-preview__phase-desc">{{ phase.description }}</p>
+                <ul v-if="phase.steps?.length" class="plan-preview__steps">
+                  <li v-for="(step, si) in phase.steps" :key="`${pi}-${si}-${step.title}`">
+                    <span class="plan-preview__step-title">{{ step.title }}</span>
+                    <span v-if="step.dueTime" class="plan-preview__due"> {{ step.dueTime }}</span>
+                    <span v-if="step.description" class="plan-preview__step-desc"> — {{ step.description }}</span>
+                  </li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </a-spin>
+    </a-modal>
   </div>
 </template>
 
@@ -2321,6 +2574,86 @@ onMounted(async () => {
     opacity: 1;
     transform: none;
   }
+}
+
+.plan-dialog__hint {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-dialog__deadline-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.plan-preview {
+  border-top: 1px solid rgba(6, 36, 64, 0.08);
+  padding-top: 14px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.plan-preview__meta {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-preview__summary {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tp-ink);
+}
+
+.plan-preview__phases {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-preview__phase-title {
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.plan-preview__due {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-preview__phase-desc {
+  margin: 4px 0 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-preview__steps {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #5a6a7a);
+}
+
+.plan-preview__step-title {
+  color: var(--tp-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
