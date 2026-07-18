@@ -6,6 +6,7 @@ import com.moses.config.ResultConfig;
 import com.moses.model.AIConversationMeta;
 import com.moses.service.AIChatService;
 import com.moses.service.AIConversationRedisService;
+import com.moses.service.AiMeetingSummaryService;
 import com.moses.service.AiPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
