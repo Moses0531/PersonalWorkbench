@@ -100,6 +100,26 @@ function attachmentCount(row) {
   return parseAttachments(row?.attachments).length
 }
 
+/** 列表卡片用：去掉 Markdown 标记，压成可读摘要 */
+function summaryPreview(raw) {
+  if (!raw) return ''
+  return String(raw)
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/^>\s?/gm, '')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/\|/g, ' ')
+    .replace(/[-*_]{3,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function isAiSummaryFile(file) {
   return String(file?.kind || '') === 'ai-summary'
 }
@@ -426,7 +446,9 @@ onMounted(loadMeetings)
                 <span v-if="row.location && row.participants"> · </span>
                 <span v-if="row.participants">{{ row.participants }}</span>
               </p>
-              <p v-if="row.aiSummary" class="meeting-card__summary">{{ row.aiSummary }}</p>
+              <p v-if="summaryPreview(row.aiSummary)" class="meeting-card__summary">
+                {{ summaryPreview(row.aiSummary) }}
+              </p>
             </div>
             <div class="meeting-card__actions">
               <button
@@ -683,24 +705,28 @@ onMounted(loadMeetings)
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.35;
 }
 
 .meeting-card__sub {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 0.82rem;
+  line-height: 1.45;
   color: var(--color-text-secondary);
 }
 
 .meeting-card__summary {
   margin: 10px 0 0;
-  max-height: 4.8em;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(238, 248, 252, 0.55);
+  border: 1px solid var(--color-border-light);
   overflow: hidden;
-  font-size: 0.84rem;
-  line-height: 1.55;
-  color: var(--color-text-body);
-  white-space: pre-wrap;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
