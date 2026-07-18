@@ -23,6 +23,13 @@ import {
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import EditorView from '@/components/EditorView.vue'
+import {
+  calcCompletion,
+  countTaskStatus,
+  completionGaugeOption,
+  statusDoughnutOption,
+  miniProgressOption,
+} from '@/utils/wbCharts'
 import { openKkFileViewPreview } from '@/utils/kkFileView'
 import {
   LeftOutlined,
@@ -247,6 +254,50 @@ const taskStats = computed(() => {
   }).length
   return { total: all.length, todo, doing, overdue }
 })
+
+const projectCompletion = computed(() => calcCompletion(projectScopedTasks.value))
+
+const projectGaugeOption = computed(() =>
+  completionGaugeOption(projectCompletion.value.rate, { subtitle: '完成率' }),
+)
+
+const projectStatusChartOption = computed(() =>
+  statusDoughnutOption(countTaskStatus(projectScopedTasks.value), { title: 'STATUS' }),
+)
+
+/** 各项目完成率：done / (total − cancelled) */
+const projectProgressMap = computed(() => {
+  const map = new Map()
+  for (const t of tasks.value) {
+    const pid = t.projectId
+    if (pid == null || pid === '') continue
+    const id = Number(pid)
+    if (!map.has(id)) map.set(id, [])
+    map.get(id).push(t)
+  }
+  const result = new Map()
+  for (const [id, list] of map) {
+    const stats = calcCompletion(list)
+    result.set(id, {
+      ...stats,
+      option: miniProgressOption(stats.rate),
+    })
+  }
+  return result
+})
+
+const emptyProjectProgress = {
+  done: 0,
+  cancelled: 0,
+  eligible: 0,
+  total: 0,
+  rate: 0,
+  option: miniProgressOption(0),
+}
+
+function projectProgressOf(projectId) {
+  return projectProgressMap.value.get(Number(projectId)) || emptyProjectProgress
+}
 
 function resetTaskForm(defaults = {}) {
   Object.assign(taskForm, {
@@ -707,6 +758,7 @@ const projectForm = reactive({
 
 const projectColumns = [
   { prop: 'name', label: '项目名称', cellClass: 'cell-name' },
+  { prop: 'progress', label: '进度', headerClass: 'th-progress', width: '120px' },
   { prop: 'status', label: '状态', headerClass: 'th-status' },
   { prop: 'description', label: '描述' },
   { prop: 'displayOrder', label: '排序', headerClass: 'th-id', cellClass: 'cell-id' },
@@ -907,6 +959,26 @@ onMounted(async () => {
 
       <!-- 任务列表 -->
       <div v-show="activeTab === 'tasks'" class="task-view">
+        <section
+          v-if="inProjectSpace"
+          class="tp-charts"
+          aria-label="项目进度"
+        >
+          <article class="tp-chart-card tp-chart-card--gauge">
+            <v-chart class="tp-chart" :option="projectGaugeOption" autoresize />
+            <p class="tp-chart-meta">
+              <span>{{ projectCompletion.done }} / {{ projectCompletion.eligible }} 已完成</span>
+              <span v-if="projectCompletion.cancelled">· 已取消 {{ projectCompletion.cancelled }}</span>
+            </p>
+          </article>
+          <article class="tp-chart-card">
+            <v-chart class="tp-chart" :option="projectStatusChartOption" autoresize />
+            <p class="tp-chart-meta">
+              <span>本项目 {{ taskStats.total }} 项任务</span>
+            </p>
+          </article>
+        </section>
+
         <div class="tp-pulse" aria-label="任务概览">
           <div class="tp-pulse__hero">
             <span class="tp-pulse__value">{{ taskStats.total }}</span>
@@ -1220,6 +1292,20 @@ onMounted(async () => {
               <button type="button" class="proj-name-link" @click="viewProjectTasks(row.projectId)">
                 {{ row.name || '-' }}
               </button>
+            </div>
+          </template>
+
+          <template #cell-progress="{ row }">
+            <div
+              class="proj-progress"
+              :title="`${projectProgressOf(row.projectId).rate}% · ${projectProgressOf(row.projectId).done}/${projectProgressOf(row.projectId).eligible}`"
+            >
+              <v-chart
+                class="proj-progress__chart"
+                :option="projectProgressOf(row.projectId).option"
+                autoresize
+              />
+              <span class="proj-progress__pct">{{ projectProgressOf(row.projectId).rate }}%</span>
             </div>
           </template>
 
@@ -1624,6 +1710,68 @@ onMounted(async () => {
 }
 
 /* —— Asymmetric pulse metrics (anti 4-card row) —— */
+.tp-charts {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  margin-bottom: var(--space-4);
+}
+
+.tp-chart-card {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 14px 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.tp-chart-card--gauge {
+  background: linear-gradient(145deg, rgba(8, 145, 178, 0.12) 0%, rgba(255, 255, 255, 0.9) 68%);
+  border-color: rgba(8, 145, 178, 0.2);
+}
+
+.tp-chart {
+  width: 100%;
+  height: 168px;
+}
+
+.tp-chart-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0 4px 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(8, 145, 178, 0.08);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.proj-progress__chart {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.proj-progress__pct {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-deep);
+}
+
 .tp-pulse {
   display: grid;
   grid-template-columns: minmax(140px, 0.85fr) minmax(0, 2.15fr);
@@ -2667,6 +2815,10 @@ onMounted(async () => {
 
 @media (max-width: 900px) {
   .tp-pulse {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-charts {
     grid-template-columns: 1fr;
   }
 }

@@ -11,6 +11,13 @@ import { pageTasksApi } from '@/apis/workbench/TaskApi'
 import { pageEventsApi } from '@/apis/workbench/EventApi'
 import { useUserStore } from '@/stores/userStore'
 import BrandMarkView from '@/components/BrandMarkView.vue'
+import {
+  countTaskStatus,
+  statusDoughnutOption,
+  dueBarOption,
+  completionTrendSeries,
+  trendLineOption,
+} from '@/utils/wbCharts'
 
 const TASK_LIMIT = 6
 const EVENT_LIMIT = 6
@@ -185,6 +192,20 @@ const coreMeters = computed(() => [
     tone: todayEvents.value.length > 0 ? 'accent' : 'idle',
   },
 ])
+
+const statusChartOption = computed(() =>
+  statusDoughnutOption(countTaskStatus(tasks.value), { title: 'TASK MIX' }),
+)
+
+const dueChartOption = computed(() => dueBarOption(dayMarks.value))
+
+const weekTrend = computed(() => completionTrendSeries(tasks.value, today.value, 7))
+
+const trendChartOption = computed(() =>
+  trendLineOption(weekTrend.value.labels, weekTrend.value.values, { title: 'WEEK DONE' }),
+)
+
+const weekDoneTotal = computed(() => weekTrend.value.values.reduce((a, b) => a + b, 0))
 
 function eventOccursOn(ev, day, dayKey, weekday) {
   const start = dayjs(ev.startTime)
@@ -480,6 +501,30 @@ function goEvents() {
           </div>
         </aside>
       </header>
+
+      <section class="insights" aria-label="进度洞察" :aria-busy="loading">
+        <article class="insight insight--mix" style="--i: 0">
+          <v-chart class="insight-chart" :option="statusChartOption" autoresize />
+          <p class="insight-foot">
+            <span class="insight-foot__label">全部任务</span>
+            <span class="insight-foot__val">{{ loading ? '—' : tasks.length }}</span>
+          </p>
+        </article>
+        <article class="insight insight--due" style="--i: 1">
+          <v-chart class="insight-chart" :option="dueChartOption" autoresize />
+          <p class="insight-foot">
+            <span class="insight-foot__label">三日内压力</span>
+            <span class="insight-foot__val">{{ loading ? '—' : focusTasks.length }}</span>
+          </p>
+        </article>
+        <article class="insight insight--trend" style="--i: 2">
+          <v-chart class="insight-chart" :option="trendChartOption" autoresize />
+          <p class="insight-foot">
+            <span class="insight-foot__label">本周完成</span>
+            <span class="insight-foot__val">{{ loading ? '—' : weekDoneTotal }}</span>
+          </p>
+        </article>
+      </section>
 
       <div class="boards" :aria-busy="loading">
         <section class="pane pane--tasks" aria-labelledby="pane-tasks">
@@ -1444,6 +1489,76 @@ function goEvents() {
   background: linear-gradient(90deg, var(--accent), rgba(8, 145, 178, 0.25));
 }
 
+/* ── Insights (ECharts band) ── */
+.insights {
+  display: grid;
+  grid-template-columns: 0.92fr 0.92fr 1.16fr;
+  gap: 18px;
+  margin-bottom: 22px;
+  animation: rise 0.7s var(--ease) 0.08s both;
+}
+
+.insight {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 16px 12px;
+  border-radius: var(--radius-panel, 20px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.94), rgba(246, 251, 253, 0.88));
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
+  animation: rise 0.65s var(--ease) calc(0.12s + var(--i, 0) * 0.06s) both;
+}
+
+.insight::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--light), var(--accent) 50%, var(--deep));
+  opacity: 0.85;
+}
+
+.insight--trend::before {
+  background: linear-gradient(180deg, var(--light), var(--deep));
+}
+
+.insight-chart {
+  width: 100%;
+  height: 210px;
+}
+
+.insight-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 4px 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(8, 145, 178, 0.08);
+}
+
+.insight-foot__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-family: var(--font-brand);
+}
+
+.insight-foot__val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--deep);
+  font-family: var(--font-brand);
+}
+
 /* ── Boards ── */
 .boards {
   display: grid;
@@ -2079,6 +2194,14 @@ function goEvents() {
   .boards {
     grid-template-columns: 1fr;
   }
+
+  .insights {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .insight--trend {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2105,6 +2228,14 @@ function goEvents() {
     grid-template-columns: 1fr;
   }
 
+  .insights {
+    grid-template-columns: 1fr;
+  }
+
+  .insight--trend {
+    grid-column: auto;
+  }
+
   .pane {
     min-height: 0;
   }
@@ -2126,6 +2257,8 @@ function goEvents() {
   .hero,
   .timecard,
   .boards,
+  .insights,
+  .insight,
   .card,
   .meter,
   .atm-glow,
