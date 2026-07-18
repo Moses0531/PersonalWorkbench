@@ -3,9 +3,9 @@ package com.moses.utils;
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.google.code.kaptcha.util.Config;
 import com.moses.config.ResultConfig;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,10 +23,11 @@ import java.util.Properties;
 @Component
 @RestController
 @RequestMapping("/captchas")
+@Tag(name = "验证码", description = "无状态图形验证码生成与校验")
 public class CaptchaUtil {
 
     private DefaultKaptcha kaptcha;
-    
+
     // 验证码加密密钥（实际项目应该从配置文件读取）
     private static final String CAPTCHA_SECRET = "CAPTCHA_SECRET_KEY_2026";
 
@@ -48,36 +49,9 @@ public class CaptchaUtil {
         kaptcha.setConfig(config);
     }
 
-    @GetMapping("/getCharacter")
-    public void getCharacter(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws Exception {
-        String code = kaptcha.createText();
-        BufferedImage image = kaptcha.createImage(code);
-
-        // 无状态设计：不再使用Session存储验证码
-        // TODO: 如需启用，请配合无状态token验证机制
-
-        servletResponse.setContentType("image/png");
-        javax.imageio.ImageIO.write(image, "png", servletResponse.getOutputStream());
-    }
-
-    @GetMapping("/arithmetic")
-    public void getArithmetic(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws Exception {
-        int num1 = (int) (Math.random() * 10) + 1;
-        int num2 = (int) (Math.random() * 10) + 1;
-        int answer = num1 + num2;
-        String code = num1 + "+" + num2 + "=?";
-
-        BufferedImage image = kaptcha.createImage(code);
-
-        // 无状态设计：不再使用Session存储验证码
-        // TODO: 如需启用，请配合无状态token验证机制
-
-        servletResponse.setContentType("image/png");
-        javax.imageio.ImageIO.write(image, "png", servletResponse.getOutputStream());
-    }
-
     @GetMapping("/getCaptchaBase64")
-    public ResultConfig getCaptchaBase64(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    @Operation(summary = "获取图形验证码", description = "返回 Base64 图片、校验 token 与时间戳；登录/注册时回传明文验证码 + token + timestamp 完成校验")
+    public ResultConfig getCaptchaBase64() {
         try {
             String code = kaptcha.createText();
             BufferedImage image = kaptcha.createImage(code);
@@ -92,8 +66,8 @@ public class CaptchaUtil {
 
             Map<String, Object> data = new HashMap<>();
             data.put("img", "data:image/png;base64," + imgBase64);
-            data.put("token", token); // 返回加密token给前端
-            data.put("timestamp", timestamp); // 返回时间戳
+            data.put("token", token);
+            data.put("timestamp", timestamp);
 
             return ResultConfig.success(data);
         } catch (Exception e) {
@@ -102,26 +76,6 @@ public class CaptchaUtil {
         }
     }
 
-    public ResultConfig generateCaptcha() {
-        try {
-            String code = kaptcha.createText();
-            BufferedImage image = kaptcha.createImage(code);
-
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            javax.imageio.ImageIO.write(image, "png", os);
-            String imgBase64 = Base64.getEncoder().encodeToString(os.toByteArray());
-
-            Map<String, String> data = new HashMap<>();
-            data.put("img", imgBase64);
-
-            return ResultConfig.success(data);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResultConfig.error("验证码生成失败: " + e.getMessage());
-        }
-    }
-    
     /**
      * 生成验证码token（无状态设计）
      * 格式：MD5(验证码明文 + 时间戳 + 密钥)
@@ -136,7 +90,7 @@ public class CaptchaUtil {
             throw new RuntimeException("生成验证码token失败", e);
         }
     }
-    
+
     /**
      * 验证验证码（无状态设计）
      * @param captchaCode 用户输入的验证码明文
@@ -148,13 +102,13 @@ public class CaptchaUtil {
         if (captchaCode == null || token == null || timestamp == null) {
             return false;
         }
-        
+
         // 检查时间戳是否过期（5分钟有效期）
         long currentTime = System.currentTimeMillis();
         if (currentTime - timestamp > 5 * 60 * 1000) {
             return false;
         }
-        
+
         // 重新计算token并比对
         String expectedToken = generateCaptchaToken(captchaCode.toUpperCase(), timestamp);
         return expectedToken.equals(token);

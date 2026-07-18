@@ -167,18 +167,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteAvatar(Long userId) {
-        SysUser sysUser = getById(userId);
-        if (sysUser == null) {
-            throw new RuntimeException("用户不存在");
-        }
-        sysUser.setAvatar("");
-        sysUser.setUpdateTime(new Date());
-        updateById(sysUser);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public void createManagedUser(SysUser user) {
         if (user == null) {
             throw new RuntimeException("用户信息不能为空");

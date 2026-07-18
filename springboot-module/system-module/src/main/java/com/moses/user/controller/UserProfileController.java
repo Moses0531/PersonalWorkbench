@@ -60,13 +60,4 @@ public class UserProfileController {
         String avatarUrl = sysUserService.updateAvatar(StpUtil.getLoginIdAsLong(), file);
         return ResultConfig.success(avatarUrl);
     }
-
-    @Operation(summary = "删除用户头像")
-    @SaCheckLogin
-    @SaCheckPermission("profile:modify")
-    @DeleteMapping("/deleteAvatar")
-    public ResultConfig deleteAvatar() {
-        sysUserService.deleteAvatar(StpUtil.getLoginIdAsLong());
-        return ResultConfig.success("头像删除成功");
-    }
 }
