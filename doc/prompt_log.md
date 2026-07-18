@@ -1,9 +1,4 @@
 # Prompt 日志 · PersonalWorkbench
-
-> 对应评分项 **C(1) Prompt 日志（10%）**  
-> 约定：每条含 **原始 Prompt**、**AI 原始回复（代码块）**、**对应功能 / 文件**。  
-> 工具：Cursor Agent · 来源：本机历史对话 · 时间：2026-07-16 ～ 2026-07-19
-
 ---
 
 ## 目录
@@ -41,6 +36,7 @@
 | 29 | 每周重复日程不显示 Bug |
 | 30 | 后端模块体检与清理 |
 | 31 | 根 README 编写 |
+| 32 | 全库 AI Code Review 报告 |
 
 ---
 
@@ -1090,9 +1086,42 @@ P0：
 
 ---
 
+## 32. 全库 AI Code Review 报告
+
+| 项 | 内容 |
+|---|---|
+| 日期 | 2026-07-19 |
+| 对应功能 | 课程交付 · AI Code Review（优化建议报告） |
+| 对应文件 | `doc/code_review_report.md` |
+
+### Prompt（原始）
+
+```text
+对 PersonalWorkbench 全库做一次正式 Code Review：
+范围覆盖 springboot-module（common / system / workbench / ai / start）
+与 vue-module（apis / views / stores / router / utils）。
+按 Critical / High / Medium / Low 分级，给出文件位置、问题说明与修复建议，
+并输出可提交的书面报告（不修改业务代码）。
+```
+
+### AI 返回（原始）
+
+```text
+全库只读审查完成。工作台 CRUD 的 userId 隔离总体正确；
+最紧迫问题为：AI 对话记忆未按用户隔离 + getHistory IDOR、
+配置明文密钥、前端登录开放重定向、附件上传缺少白名单、
+前端无全局 401 / 改密未清 Token。
+另有 CORS 过宽、Swagger 匿名、Chat Tool 可写任务、列表 1000 行静默截断等。
+完整分级清单与修复优先级见 doc/code_review_report.md
+（Critical 4 / High 14 / Medium 28 / Low·Suggestion 24，合计约 70 项）。
+```
+
+---
+
 ## 附：提交说明
 
 1. 本文件路径：`doc/prompt_log.md`
 2. 每条均满足：Prompt + AI 原始输出（代码块）+ 功能/文件标注
-3. 若老师要求截屏：可对 Cursor 历史会话补充截图，与本文一并提交
+3. 若老师要求截屏：可对 Cursor 历史会话或 `doc/code_review_report.md` 补充截图，与本文一并提交
 4. 未收录的对话多为「任务卡住 / skill 安装 / 重复微调」等，不影响功能对照审查；需要可再续编
+5. AI Code Review 正式报告：`doc/code_review_report.md`
