@@ -103,3 +103,8 @@ export function planPreviewApi(body) {
 export function planApplyApi(body) {
   return request.post('/ai/plan/apply', body)
 }
+
+/** AI 会议整理（根据材料生成概要并写回） */
+export function meetingSummaryApi(meetingId) {
+  return request.post('/ai/meeting/summary', { meetingId }, { timeout: 120000 })
+}
