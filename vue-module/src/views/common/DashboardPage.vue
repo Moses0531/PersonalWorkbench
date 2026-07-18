@@ -28,7 +28,7 @@ let clockTimer = null
 onMounted(() => {
   clockTimer = window.setInterval(() => {
     now.value = new Date()
-  }, 1000)
+  }, 250)
   refreshFocus()
 })
 
@@ -49,11 +49,14 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
+
 const dateLabel = computed(() => {
   const d = dayjs(now.value)
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-  return `${d.format('YYYY.MM.DD')} · 周${weekdays[d.day()]}`
+  return `${d.format('YYYY.MM.DD')} · 周${WEEKDAYS[d.day()]}`
 })
+
+const weekdayLabel = computed(() => `周${WEEKDAYS[dayjs(now.value).day()]}`)
 
 const timeLabel = computed(() => dayjs(now.value).format('HH:mm'))
 const timeDigits = computed(() => {
@@ -69,10 +72,14 @@ const clockHands = computed(() => {
   const s = d.getSeconds() + d.getMilliseconds() / 1000
   const m = d.getMinutes() + s / 60
   const h = (d.getHours() % 12) + m / 60
+  const circ = 2 * Math.PI * 82
   return {
     hour: h * 30,
     minute: m * 6,
     second: s * 6,
+    // 秒针进度弧：已走过的周长
+    arcLen: (s / 60) * circ,
+    arcCirc: circ,
   }
 })
 const dayNum = computed(() => dayjs(now.value).date())
@@ -289,19 +296,22 @@ function goEvents() {
     <div class="shell">
       <header class="hero">
         <div class="hero-copy">
-          <div class="hero-brand">
-            <span class="hero-brand__mark"><BrandMarkView :size="28" /></span>
-            <div class="hero-brand__text">
-              <span class="hero-brand__name">Personal Workbench</span>
-              <span class="hero-brand__tag">今日工作台</span>
+          <div class="hero-mast">
+            <div class="hero-brand">
+              <span class="hero-brand__mark"><BrandMarkView :size="26" /></span>
+              <div class="hero-brand__text">
+                <span class="hero-brand__name">Personal Workbench</span>
+                <span class="hero-brand__tag">今日工作台</span>
+              </div>
             </div>
+            <p class="hero-kicker">
+              <span class="hero-kicker__chip">
+                <span class="hero-kicker__date">{{ dateLabel }}</span>
+                <span class="hero-kicker__sep" aria-hidden="true" />
+                <span class="hero-kicker__time">{{ timeLabel }}</span>
+              </span>
+            </p>
           </div>
-
-          <p class="hero-kicker">
-            <span class="hero-kicker__date">{{ dateLabel }}</span>
-            <span class="hero-kicker__sep" aria-hidden="true" />
-            <span class="hero-kicker__time">{{ timeLabel }}</span>
-          </p>
 
           <h1 class="hero-title">
             <span class="hero-greet">{{ greeting }}，</span>
@@ -355,115 +365,117 @@ function goEvents() {
         </div>
 
         <aside class="timecard" :aria-label="`现在 ${timeDigits.h}:${timeDigits.m}:${timeDigits.s}，${monthLabel}${dayNum}日`">
-          <div class="timecard-shell">
-            <div class="timecard-plate">
-              <div class="timecard-top">
-                <div class="timecard-clock" role="timer" aria-hidden="true">
-                  <svg class="timecard-face" viewBox="0 0 200 200">
-                    <defs>
-                      <linearGradient id="clockRing" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="rgba(34,211,238,0.45)" />
-                        <stop offset="100%" stop-color="rgba(8,145,178,0.12)" />
-                      </linearGradient>
-                      <radialGradient id="clockPad" cx="50%" cy="40%" r="60%">
-                        <stop offset="0%" stop-color="rgba(34,211,238,0.22)" />
-                        <stop offset="100%" stop-color="rgba(255,255,255,0)" />
-                      </radialGradient>
-                    </defs>
-                    <circle cx="100" cy="100" r="88" fill="url(#clockPad)" stroke="url(#clockRing)" stroke-width="1.6" />
-                    <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" stroke-width="1" opacity="0.22" />
-                    <g class="timecard-ticks" stroke="currentColor">
-                      <line
-                        v-for="i in 12"
-                        :key="i"
-                        x1="100"
-                        y1="22"
-                        x2="100"
-                        :y2="(i - 1) % 3 === 0 ? 34 : 28"
-                        :stroke-width="(i - 1) % 3 === 0 ? 2.2 : 1.2"
-                        :opacity="(i - 1) % 3 === 0 ? 0.75 : 0.35"
-                        :transform="`rotate(${(i - 1) * 30} 100 100)`"
-                      />
-                    </g>
-                    <g>
-                      <line
-                        class="timecard-hand timecard-hand--h"
-                        x1="100" y1="100" x2="100" y2="58"
-                        stroke="currentColor" stroke-width="3.2" stroke-linecap="round"
-                        :transform="`rotate(${clockHands.hour} 100 100)`"
-                      />
-                      <line
-                        class="timecard-hand timecard-hand--m"
-                        x1="100" y1="100" x2="100" y2="42"
-                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                        :transform="`rotate(${clockHands.minute} 100 100)`"
-                      />
-                      <line
-                        class="timecard-hand timecard-hand--s"
-                        x1="100" y1="112" x2="100" y2="34"
-                        stroke-width="1.4" stroke-linecap="round"
-                        :transform="`rotate(${clockHands.second} 100 100)`"
-                      />
-                      <circle class="timecard-hub" cx="100" cy="100" r="4.5" />
-                      <circle cx="100" cy="100" r="2" fill="#fff" />
-                    </g>
-                  </svg>
-                </div>
+          <div class="timecard-plate">
+            <div class="timecard-aura" aria-hidden="true" />
+            <div class="timecard-grain" aria-hidden="true" />
 
-                <div class="timecard-date" aria-hidden="true">
-                  <svg class="timecard-iso" viewBox="0 0 200 180" fill="none">
-                    <defs>
-                      <linearGradient id="dcPad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="rgba(34,211,238,0.35)" />
-                        <stop offset="100%" stop-color="rgba(8,145,178,0.06)" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d="M100 28 L156 58 V118 L100 148 L44 118 V58 Z"
-                      fill="url(#dcPad)"
-                      stroke="currentColor"
-                      stroke-width="1.6"
-                      stroke-linejoin="round"
+            <header class="timecard-meta">
+              <span class="timecard-meta__now">此刻</span>
+              <span class="timecard-meta__dot" aria-hidden="true" />
+              <span class="timecard-meta__week">{{ weekdayLabel }}</span>
+            </header>
+
+            <div class="timecard-stage">
+              <div class="timecard-clock" role="timer" aria-hidden="true">
+                <svg class="timecard-face" viewBox="0 0 200 200">
+                  <defs>
+                    <linearGradient id="clockRing" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="rgba(34,211,238,0.55)" />
+                      <stop offset="100%" stop-color="rgba(8,145,178,0.08)" />
+                    </linearGradient>
+                    <linearGradient id="clockArc" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="rgba(34,211,238,0.95)" />
+                      <stop offset="100%" stop-color="rgba(8,145,178,0.55)" />
+                    </linearGradient>
+                    <radialGradient id="clockPad" cx="42%" cy="32%" r="68%">
+                      <stop offset="0%" stop-color="rgba(34,211,238,0.3)" />
+                      <stop offset="55%" stop-color="rgba(34,211,238,0.06)" />
+                      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="100" cy="100" r="92" fill="url(#clockPad)" />
+                  <circle cx="100" cy="100" r="88" fill="none" stroke="url(#clockRing)" stroke-width="1.25" opacity="0.85" />
+                  <circle cx="100" cy="100" r="74" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.12" />
+                  <circle
+                    class="timecard-arc"
+                    cx="100" cy="100" r="82"
+                    fill="none"
+                    stroke="url(#clockArc)"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    :stroke-dasharray="`${clockHands.arcLen} ${clockHands.arcCirc}`"
+                    transform="rotate(-90 100 100)"
+                  />
+                  <g class="timecard-ticks" stroke="currentColor">
+                    <line
+                      v-for="i in 60"
+                      :key="`t${i}`"
+                      x1="100"
+                      y1="18"
+                      x2="100"
+                      :y2="(i - 1) % 5 === 0 ? 30 : 24"
+                      :stroke-width="(i - 1) % 5 === 0 ? 1.8 : 0.9"
+                      :opacity="(i - 1) % 5 === 0 ? 0.7 : 0.18"
+                      :transform="`rotate(${(i - 1) * 6} 100 100)`"
                     />
-                    <path
-                      d="M100 28 V148 M44 58 L156 58 M44 118 L156 118 M44 58 L100 88 L156 58 M44 118 L100 88 L156 118"
-                      stroke="currentColor"
-                      stroke-width="1.1"
-                      opacity="0.5"
+                  </g>
+                  <g>
+                    <line
+                      class="timecard-hand timecard-hand--h"
+                      x1="100" y1="100" x2="100" y2="56"
+                      stroke="currentColor" stroke-width="3.4" stroke-linecap="round"
+                      :transform="`rotate(${clockHands.hour} 100 100)`"
                     />
-                    <circle cx="100" cy="88" r="4" fill="currentColor" opacity="0.7" />
-                    <circle class="timecard-pulse" cx="100" cy="88" r="14" stroke="currentColor" stroke-width="1" opacity="0.25" />
-                  </svg>
-                  <div class="timecard-num">
-                    <span class="timecard-month">{{ monthLabel }}</span>
-                    <span class="timecard-day">{{ dayNum }}</span>
-                  </div>
-                </div>
+                    <line
+                      class="timecard-hand timecard-hand--m"
+                      x1="100" y1="100" x2="100" y2="38"
+                      stroke="currentColor" stroke-width="2.1" stroke-linecap="round"
+                      :transform="`rotate(${clockHands.minute} 100 100)`"
+                    />
+                    <line
+                      class="timecard-hand timecard-hand--s"
+                      x1="100" y1="118" x2="100" y2="28"
+                      stroke-width="1.25" stroke-linecap="round"
+                      :transform="`rotate(${clockHands.second} 100 100)`"
+                    />
+                    <circle class="timecard-hub" cx="100" cy="100" r="5" />
+                    <circle cx="100" cy="100" r="2.2" fill="#fff" />
+                  </g>
+                </svg>
               </div>
 
-              <div class="timecard-readout">
-                <span class="timecard-readout__label">Local time</span>
-                <p class="timecard-readout__digits" aria-hidden="true">
-                  <span>{{ timeDigits.h }}</span>
-                  <span class="timecard-colon">:</span>
-                  <span>{{ timeDigits.m }}</span>
-                  <span class="timecard-colon timecard-colon--soft">:</span>
-                  <span class="timecard-sec">{{ timeDigits.s }}</span>
-                </p>
+              <div class="timecard-cal" aria-hidden="true">
+                <span class="timecard-month">{{ monthLabel }}</span>
+                <span class="timecard-day">{{ dayNum }}</span>
+                <span class="timecard-cal__rule" />
+                <span class="timecard-cal__hint">日签</span>
               </div>
+            </div>
 
-              <div class="timecard-marks" aria-hidden="true">
+            <p class="timecard-digits" aria-hidden="true">
+              <span class="timecard-unit">{{ timeDigits.h }}</span>
+              <span class="timecard-colon">:</span>
+              <span class="timecard-unit">{{ timeDigits.m }}</span>
+              <span class="timecard-colon timecard-colon--soft">:</span>
+              <span class="timecard-unit timecard-unit--sec">{{ timeDigits.s }}</span>
+            </p>
+
+            <div class="timecard-rail" aria-hidden="true">
+              <template v-for="(m, idx) in dayMarks" :key="m.key">
                 <span
-                  v-for="m in dayMarks"
-                  :key="m.key"
-                  class="timecard-mark"
+                  class="timecard-rail__item"
                   :class="{ 'is-lit': m.lit }"
                   :title="m.lit ? `${m.count} 项` : undefined"
                 >
-                  {{ m.label }}
-                  <i v-if="m.lit" class="timecard-mark__dot" />
+                  <span class="timecard-rail__node" />
+                  <span class="timecard-rail__label">{{ m.label }}</span>
                 </span>
-              </div>
+                <span
+                  v-if="idx < dayMarks.length - 1"
+                  class="timecard-rail__seg"
+                  :class="{ 'is-on': m.lit }"
+                />
+              </template>
             </div>
           </div>
         </aside>
@@ -620,7 +632,7 @@ function goEvents() {
   position: relative;
   box-sizing: border-box;
   min-height: 100%;
-  padding: 28px 32px 48px;
+  padding: 22px 22px 44px;
   font-family: var(--font-body);
   color: var(--ink);
   overflow: auto;
@@ -642,11 +654,11 @@ function goEvents() {
 }
 
 .atm-glow--a {
-  width: 420px;
-  height: 420px;
-  top: -120px;
-  right: 4%;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 70%);
+  width: 460px;
+  height: 380px;
+  top: -140px;
+  right: 2%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.3), transparent 70%);
   animation: drift 16s var(--ease) infinite alternate;
 }
 
@@ -710,14 +722,15 @@ function goEvents() {
 
 .atm-wm {
   position: absolute;
-  right: 6%;
-  top: 12%;
+  right: 4%;
+  bottom: 18%;
+  top: auto;
   font-family: var(--font-brand);
-  font-size: clamp(72px, 12vw, 128px);
+  font-size: clamp(64px, 10vw, 110px);
   font-weight: 800;
   letter-spacing: -0.08em;
   line-height: 1;
-  color: rgba(8, 145, 178, 0.06);
+  color: rgba(8, 145, 178, 0.045);
   user-select: none;
 }
 
@@ -746,25 +759,53 @@ function goEvents() {
 .shell {
   position: relative;
   z-index: 1;
-  max-width: 1180px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
-/* ── Hero ── */
+/* ── Hero：左文案 + 右日签合成一块，消除中间空洞 ── */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.62fr);
-  gap: 28px 36px;
-  align-items: center;
-  margin-bottom: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  gap: 0;
+  align-items: stretch;
+  margin-bottom: 24px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse 55% 70% at 8% 0%, rgba(34, 211, 238, 0.14), transparent 55%),
+    radial-gradient(ellipse 40% 50% at 100% 100%, rgba(8, 145, 178, 0.08), transparent 50%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(238, 248, 252, 0.62));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 14px 36px rgba(8, 145, 178, 0.08);
+  backdrop-filter: blur(16px) saturate(1.1);
+  overflow: hidden;
   animation: rise 0.65s var(--ease) both;
+}
+
+.hero-copy {
+  min-width: 0;
+  padding: 24px 28px 26px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px 14px;
+  margin-bottom: 18px;
 }
 
 .hero-brand {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
   color: var(--accent);
 }
 
@@ -774,65 +815,78 @@ function goEvents() {
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(238, 248, 252, 0.85));
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  box-shadow:
+    0 1px 2px rgba(8, 116, 146, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .hero-brand__text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .hero-brand__name {
   font-family: var(--font-brand);
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
   color: var(--ink);
 }
 
 .hero-brand__tag {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: var(--muted);
 }
 
 .hero-kicker {
-  display: flex;
-  flex-wrap: wrap;
+  margin: 0;
+}
+
+.hero-kicker__chip {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 12px;
-  font-size: 13px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--body);
   letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(8, 145, 178, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
 }
 
 .hero-kicker__sep {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: rgba(8, 145, 178, 0.45);
+  background: rgba(8, 145, 178, 0.4);
 }
 
 .hero-kicker__time {
   font-family: var(--font-family-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--muted);
 }
 
 .hero-title {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   font-family: var(--font-display);
-  font-size: clamp(1.9rem, 1.4rem + 1.8vw, 2.65rem);
+  font-size: clamp(1.85rem, 1.35rem + 1.6vw, 2.55rem);
   font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.02em;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
@@ -842,7 +896,7 @@ function goEvents() {
 }
 
 .hero-name {
-  background: linear-gradient(115deg, var(--deep) 8%, var(--accent) 55%, var(--light) 100%);
+  background: linear-gradient(118deg, var(--deep) 6%, var(--accent) 52%, var(--light) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -850,71 +904,82 @@ function goEvents() {
 
 .hero-lead {
   margin: 0;
-  max-width: 36em;
+  max-width: 40em;
   font-size: 15px;
   font-weight: 500;
-  line-height: 1.7;
+  line-height: 1.65;
   color: var(--body);
   text-wrap: pretty;
 }
 
-/* Meters — glass chips */
+/* Meters — 拉满左栏宽度 */
 .meters {
   list-style: none;
-  margin: 24px 0 0;
+  margin: 22px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  max-width: 540px;
+  gap: 10px;
+  max-width: none;
+  flex: 0 0 auto;
 }
 
 .meter {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 14px 14px 13px;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(238, 248, 252, 0.78));
+    linear-gradient(165deg, rgba(255, 255, 255, 0.94), rgba(238, 248, 252, 0.72));
   box-shadow:
-    var(--shadow-sm),
+    0 1px 2px rgba(8, 116, 146, 0.04),
+    0 8px 18px rgba(8, 145, 178, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
   animation: rise 0.55s var(--ease) both;
-  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease);
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease), border-color 220ms ease;
+  overflow: hidden;
 }
 
-.meter--overdue {
-  border-left: 3px solid var(--danger);
-  border-radius: var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-sm);
+.meter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2.5px;
+  border-radius: 0 2px 2px 0;
+  background: rgba(8, 145, 178, 0.22);
 }
 
-.meter--due {
-  border-left: 3px solid var(--accent);
+.meter--overdue::before {
+  background: linear-gradient(180deg, #f07167, var(--danger));
 }
 
-.meter--events {
-  border-radius: 999px 16px 16px 999px;
-  border: 1.5px dashed rgba(8, 145, 178, 0.45);
-  border-left-width: 1.5px;
+.meter--due::before {
+  background: linear-gradient(180deg, var(--light), var(--accent));
+}
+
+.meter--events::before {
+  background: linear-gradient(180deg, var(--accent), var(--deep));
 }
 
 .meter:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 #fff;
+  border-color: rgba(8, 145, 178, 0.22);
+  box-shadow:
+    0 4px 8px rgba(8, 116, 146, 0.06),
+    0 14px 28px rgba(8, 145, 178, 0.1),
+    inset 0 1px 0 #fff;
 }
 
 .meter--danger {
   background:
-    repeating-linear-gradient(
-      -45deg,
-      rgba(255, 255, 255, 0.95),
-      rgba(255, 255, 255, 0.95) 5px,
-      var(--color-red-soft) 5px,
-      var(--color-red-soft) 10px
-    );
+    linear-gradient(165deg, rgba(255, 248, 247, 0.96), rgba(255, 240, 238, 0.82));
+  border-color: rgba(224, 85, 69, 0.18);
 }
 
 .meter--danger .meter-glyph,
@@ -922,20 +987,32 @@ function goEvents() {
   color: var(--danger);
 }
 
+.meter--danger .meter-glyph {
+  background: var(--color-red-soft);
+  border-color: rgba(224, 85, 69, 0.22);
+}
+
 .meter-glyph {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
+  margin-left: 4px;
   color: var(--deep);
-  background: var(--color-accent-soft);
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  background: rgba(8, 145, 178, 0.08);
+  border: 1px solid rgba(8, 145, 178, 0.14);
+  border-radius: 11px;
+  transition: background 200ms ease, border-color 200ms ease;
 }
 
-.meter--overdue .meter-glyph { border-radius: 4px; }
+.meter--overdue .meter-glyph { border-radius: 8px; }
 .meter--events .meter-glyph { border-radius: 50%; }
+
+.meter:hover .meter-glyph {
+  background: rgba(8, 145, 178, 0.12);
+  border-color: rgba(8, 145, 178, 0.24);
+}
 
 .meter-glyph svg {
   width: 16px;
@@ -946,45 +1023,48 @@ function goEvents() {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
 }
 
 .meter-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .meter-value {
   font-family: var(--font-family-mono);
-  font-size: 1.55rem;
+  font-size: 1.6rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
+  letter-spacing: -0.05em;
+  line-height: 1.12;
   color: var(--deep);
 }
 
 .meter-hint {
   font-size: 12px;
   color: var(--muted);
+  opacity: 0.92;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  margin-top: 24px;
+  gap: 6px 16px;
+  margin-top: auto;
+  padding-top: 22px;
 }
 
 .btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
-  padding: 0 8px 0 18px;
+  height: 42px;
+  padding: 0 7px 0 18px;
   border: none;
   border-radius: 999px;
   font-size: 14px;
@@ -992,7 +1072,9 @@ function goEvents() {
   letter-spacing: 0.02em;
   color: #f0f9ff;
   background: linear-gradient(135deg, var(--light), var(--accent) 48%, var(--deep));
-  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.36);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 6px 18px rgba(8, 145, 178, 0.32);
   cursor: pointer;
   transition:
     transform 180ms var(--ease),
@@ -1062,59 +1144,115 @@ function goEvents() {
   outline-offset: 2px;
 }
 
-/* ── Timecard — clock + date in one glass panel ── */
+/* ── Timecard — 贴合 hero 右栏，铺满高度 ── */
 .timecard {
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
+  align-items: stretch;
   color: var(--accent);
-  animation: rise 0.7s var(--ease) 0.1s both;
-}
-
-.timecard-shell {
-  padding: 8px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
+  min-height: 100%;
+  border-left: 1px solid rgba(8, 145, 178, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(232, 246, 251, 0.35));
+  animation: rise 0.7s var(--ease) 0.12s both;
 }
 
 .timecard-plate {
   position: relative;
-  width: min(100%, 280px);
-  padding: 16px 16px 14px;
-  border-radius: 22px;
-  border: 1px solid rgba(8, 145, 178, 0.28);
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  padding: 18px 18px 16px;
+  border-radius: 0;
+  border: none;
   background:
-    radial-gradient(ellipse 70% 45% at 30% 22%, rgba(34, 211, 238, 0.26), transparent 58%),
-    radial-gradient(ellipse 60% 40% at 78% 30%, rgba(8, 145, 178, 0.12), transparent 55%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(232, 246, 251, 0.88));
-  box-shadow:
-    var(--shadow-md),
-    0 16px 36px rgba(8, 145, 178, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    radial-gradient(ellipse 80% 55% at 22% 18%, rgba(34, 211, 238, 0.2), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 92% 88%, rgba(8, 145, 178, 0.08), transparent 60%),
+    transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
-  transition: transform 480ms var(--ease);
+  transition: background 480ms var(--ease);
 }
 
 .hero:hover .timecard-plate {
-  transform: translateY(-4px);
+  transform: none;
+  background:
+    radial-gradient(ellipse 80% 55% at 22% 18%, rgba(34, 211, 238, 0.26), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 92% 88%, rgba(8, 145, 178, 0.1), transparent 60%),
+    transparent;
 }
 
-.timecard-top {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.timecard-aura {
+  pointer-events: none;
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  top: 42px;
+  left: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 68%);
+  filter: blur(18px);
+  z-index: 0;
+}
+
+.timecard-grain {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.timecard-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
   align-items: center;
-  min-height: 132px;
+  gap: 8px;
+  font-family: var(--font-brand);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.timecard-meta__now {
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--deep);
+}
+
+.timecard-meta__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(8, 145, 178, 0.4);
+}
+
+.timecard-meta__week {
+  margin-left: auto;
+  letter-spacing: 0.08em;
+}
+
+.timecard-stage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 4px 10px;
+  align-items: center;
+  min-height: 148px;
+  flex: 1 1 auto;
 }
 
 .timecard-clock {
   position: relative;
-  z-index: 1;
 }
 
 .timecard-face {
@@ -1122,6 +1260,19 @@ function goEvents() {
   aspect-ratio: 1;
   color: var(--deep);
   display: block;
+  filter: drop-shadow(0 6px 14px rgba(8, 145, 178, 0.14));
+}
+
+.timecard-arc {
+  transition: none;
+}
+
+.timecard-hand--h {
+  opacity: 0.92;
+}
+
+.timecard-hand--m {
+  opacity: 0.78;
 }
 
 .timecard-hand--s {
@@ -1132,148 +1283,165 @@ function goEvents() {
   fill: var(--accent);
 }
 
-.timecard-date {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-}
-
-.timecard-iso {
-  position: absolute;
-  inset: 4% 0 auto;
-  width: 100%;
-  opacity: 0.78;
-  color: var(--accent);
-}
-
-.timecard-pulse {
-  transform-origin: 100px 88px;
-  animation: pulse-node 4s var(--ease) infinite;
-}
-
-.timecard-num {
-  position: relative;
-  z-index: 1;
+.timecard-cal {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  padding-top: 6px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4px 0 4px 4px;
+  min-width: 0;
 }
 
 .timecard-month {
   font-family: var(--font-brand);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   color: var(--deep);
+  opacity: 0.75;
 }
 
 .timecard-day {
   font-family: var(--font-family-mono);
-  font-size: clamp(44px, 5.5vw, 56px);
+  font-size: clamp(52px, 6.2vw, 64px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.06em;
-  line-height: 0.9;
-  background: linear-gradient(180deg, var(--ink) 20%, var(--deep));
+  letter-spacing: -0.08em;
+  line-height: 0.86;
+  margin: 2px 0 8px;
+  background: linear-gradient(185deg, var(--ink) 10%, var(--deep) 78%, var(--accent) 120%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.timecard-readout {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  padding: 2px 0 0;
-}
-
-.timecard-readout__label {
+.timecard-cal__rule {
   display: block;
-  font-family: var(--font-brand);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 2px;
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), rgba(8, 145, 178, 0.1));
+  margin-bottom: 6px;
 }
 
-.timecard-readout__digits {
-  margin: 0;
-  font-family: var(--font-family-mono);
-  font-size: 1.45rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  color: var(--deep);
-}
-
-.timecard-colon {
-  opacity: 0.55;
-  animation: colon-blink 1s steps(1) infinite;
-}
-
-.timecard-colon--soft {
-  opacity: 0.35;
-  animation: none;
-}
-
-.timecard-sec {
-  font-size: 0.82em;
+.timecard-cal__hint {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
+  color: var(--muted);
 }
 
-@keyframes colon-blink {
-  0%, 49% { opacity: 0.55; }
-  50%, 100% { opacity: 0.18; }
-}
-
-.timecard-marks {
+.timecard-digits {
   position: relative;
   z-index: 1;
   display: flex;
+  align-items: baseline;
   justify-content: center;
-  gap: 8px;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 0 0;
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
-.timecard-mark {
+.timecard-unit {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--deep);
+}
+
+.timecard-unit--sec {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  min-width: 1.6em;
+}
+
+.timecard-colon {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: rgba(8, 145, 178, 0.45);
+  animation: colon-blink 1s steps(1) infinite;
+  padding: 0 1px;
+}
+
+.timecard-colon--soft {
+  opacity: 0.55;
+  animation: none;
+  font-size: 1.05rem;
+  color: rgba(8, 145, 178, 0.35);
+}
+
+@keyframes colon-blink {
+  0%, 49% { opacity: 0.7; }
+  50%, 100% { opacity: 0.22; }
+}
+
+.timecard-rail {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 32px;
-  border-radius: 10px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(8, 145, 178, 0.1);
+}
+
+.timecard-rail__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 36px;
+}
+
+.timecard-rail__node {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(8, 145, 178, 0.28);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.04);
+  transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease, transform 220ms var(--ease);
+}
+
+.timecard-rail__label {
   font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid var(--line-strong);
-  transition: color 200ms ease, background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  letter-spacing: 0.06em;
+  transition: color 220ms ease;
 }
 
-.timecard-mark.is-lit {
-  color: var(--deep);
-  background: var(--color-accent-soft);
-  border-color: rgba(8, 145, 178, 0.4);
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
-}
-
-.timecard-mark__dot {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+.timecard-rail__item.is-lit .timecard-rail__node {
   background: var(--accent);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.3);
+  border-color: var(--deep);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.18);
+  transform: scale(1.08);
+}
+
+.timecard-rail__item.is-lit .timecard-rail__label {
+  color: var(--deep);
+}
+
+.timecard-rail__seg {
+  flex: 1;
+  height: 2px;
+  min-width: 28px;
+  max-width: 48px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: rgba(8, 145, 178, 0.12);
+  transition: background 220ms ease;
+}
+
+.timecard-rail__seg.is-on {
+  background: linear-gradient(90deg, var(--accent), rgba(8, 145, 178, 0.25));
 }
 
 /* ── Boards ── */
@@ -1890,14 +2058,22 @@ function goEvents() {
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
+    margin-bottom: 22px;
+  }
+
+  .hero-copy {
+    padding: 22px 20px 20px;
   }
 
   .timecard {
-    justify-content: flex-start;
+    border-left: none;
+    border-top: 1px solid rgba(8, 145, 178, 0.12);
   }
 
   .timecard-plate {
-    width: 260px;
+    width: 100%;
+    min-height: 0;
+    padding: 18px 20px 20px;
   }
 
   .boards {
@@ -1907,12 +2083,26 @@ function goEvents() {
 
 @media (max-width: 560px) {
   .home {
-    padding: 20px 14px 36px;
+    padding: 16px 12px 36px;
+  }
+
+  .hero {
+    border-radius: 22px;
+    margin-bottom: 18px;
+  }
+
+  .hero-copy {
+    padding: 18px 16px 16px;
+  }
+
+  .hero-mast {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .meters {
     grid-template-columns: 1fr;
-    max-width: none;
   }
 
   .pane {
@@ -1941,7 +2131,7 @@ function goEvents() {
   .atm-glow,
   .atm-flow__path,
   .atm-flow__node,
-  .timecard-pulse,
+  .timecard-arc,
   .skel-row,
   .btn-primary,
   .card-btn,
@@ -1949,6 +2139,10 @@ function goEvents() {
   .timecard-colon {
     animation: none !important;
     transition: none !important;
+  }
+
+  .hero:hover .timecard-plate {
+    transform: none;
   }
 }
 </style>
