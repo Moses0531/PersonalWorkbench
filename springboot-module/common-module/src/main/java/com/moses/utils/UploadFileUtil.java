@@ -13,7 +13,7 @@ import java.util.UUID;
 public class UploadFileUtil {
 
     @Autowired
-    private AliCouldUtil aliyunOSSOperator;
+    private AliCloudUtil aliyunOSSOperator;
 
     /**
      * 上传文件 - 阿里云

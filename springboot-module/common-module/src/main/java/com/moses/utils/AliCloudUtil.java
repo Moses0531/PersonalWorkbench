@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Component
-public class AliCouldUtil {
+public class AliCloudUtil {
 
 
     @Value("${aliyun.oss.endpoint}")
