@@ -18,6 +18,12 @@ public interface WbTaskService extends IService<WbTask> {
 
     void removeAttachment(Long userId, Long taskId, String attachmentId);
 
+    /**
+     * 更新附件处理状态（与任务看板 status 无关）
+     * status: 0-未处理，1-已处理，2-处理完成
+     */
+    Map<String, Object> updateAttachmentStatus(Long userId, Long taskId, String attachmentId, String status);
+
     List<Map<String, Object>> listProjectAttachments(Long userId, Long projectId);
 
     Map<String, Object> getProjectBoardSnapshot(Long userId, Long projectId);

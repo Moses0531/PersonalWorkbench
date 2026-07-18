@@ -81,6 +81,7 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
             item.put("size", file.getSize());
             item.put("mime", file.getContentType() != null ? file.getContentType() : "");
             item.put("createTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+            item.put("status", "0");
 
             list.add(item);
             task.setAttachments(writeAttachments(list));
@@ -114,6 +115,35 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> updateAttachmentStatus(Long userId, Long taskId, String attachmentId, String status) {
+        if (!StringUtils.hasText(attachmentId)) {
+            throw new RuntimeException("附件 ID 不能为空");
+        }
+        String normalized = normalizeAttachmentStatus(status);
+        WbTask task = requireOwnedTask(userId, taskId);
+        assertAttachmentsWritable(userId, task);
+
+        List<Map<String, Object>> list = parseAttachments(task.getAttachments());
+        Map<String, Object> target = null;
+        for (Map<String, Object> item : list) {
+            if (attachmentId.equals(String.valueOf(item.get("id")))) {
+                target = item;
+                break;
+            }
+        }
+        if (target == null) {
+            throw new RuntimeException("附件不存在");
+        }
+        target.put("status", normalized);
+        target.remove("handled");
+        task.setAttachments(writeAttachments(list));
+        task.setUpdateTime(new Date());
+        updateById(task);
+        return target;
+    }
+
+    @Override
     public List<Map<String, Object>> listProjectAttachments(Long userId, Long projectId) {
         if (projectId == null) {
             throw new RuntimeException("项目 ID 不能为空");
@@ -139,6 +169,8 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         for (WbTask task : tasks) {
             for (Map<String, Object> item : parseAttachments(task.getAttachments())) {
                 Map<String, Object> row = new HashMap<>(item);
+                row.put("status", resolveAttachmentStatus(item));
+                row.remove("handled");
                 row.put("taskId", task.getTaskId());
                 row.put("taskTitle", task.getTitle());
                 result.add(row);
@@ -341,6 +373,41 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         } catch (Exception e) {
             return new ArrayList<>();
         }
+    }
+
+    private static String normalizeAttachmentStatus(String status) {
+        String raw = status == null ? "" : status.trim();
+        if ("0".equals(raw) || "1".equals(raw) || "2".equals(raw)) {
+            return raw;
+        }
+        throw new RuntimeException("附件状态无效，仅支持 0-未处理 / 1-已处理 / 2-处理完成");
+    }
+
+    /**
+     * 兼容旧字段 handled：true → 1（已处理），缺省 → 0（未处理）
+     */
+    private static String resolveAttachmentStatus(Map<String, Object> item) {
+        if (item == null) {
+            return "0";
+        }
+        Object status = item.get("status");
+        if (status != null) {
+            String raw = String.valueOf(status).trim();
+            if ("0".equals(raw) || "1".equals(raw) || "2".equals(raw)) {
+                return raw;
+            }
+        }
+        Object handled = item.get("handled");
+        if (handled instanceof Boolean b) {
+            return b ? "1" : "0";
+        }
+        if (handled != null) {
+            String raw = String.valueOf(handled).trim();
+            if ("true".equalsIgnoreCase(raw) || "1".equals(raw)) {
+                return "1";
+            }
+        }
+        return "0";
     }
 
     private String writeAttachments(List<Map<String, Object>> list) {

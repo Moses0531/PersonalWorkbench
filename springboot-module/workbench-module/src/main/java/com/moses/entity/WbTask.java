@@ -81,7 +81,7 @@ public class WbTask {
     private String remark;
 
     /**
-     * 附件列表（JSON 数组字符串，挂本任务；元素含 id/name/url/size/mime/createTime）
+     * 附件列表（JSON 数组字符串，挂本任务；元素含 id/name/url/size/mime/createTime/status；status：0-未处理，1-已处理，2-处理完成）
      */
     private String attachments;
 

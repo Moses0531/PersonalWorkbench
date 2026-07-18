@@ -9,6 +9,7 @@ import {
   listProjectAttachmentsApi,
   pageTasksApi,
   removeTaskAttachmentApi,
+  updateAttachmentStatusApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
 } from '@/apis/workbench/TaskApi'
@@ -289,22 +290,51 @@ function tagList(tags) {
     .slice(0, 4)
 }
 
+const ATTACH_STATUS = [
+  { key: '0', label: '未处理' },
+  { key: '1', label: '已处理' },
+  { key: '2', label: '处理完成' },
+]
+
+function resolveAttachmentStatus(file) {
+  if (!file) return '0'
+  const s = file.status != null ? String(file.status).trim() : ''
+  if (s === '0' || s === '1' || s === '2') return s
+  // 兼容旧字段 handled
+  const v = file.handled
+  if (v === true || v === 1 || v === '1' || v === 'true') return '1'
+  return '0'
+}
+
 function parseAttachments(raw) {
-  if (!raw) return []
-  if (Array.isArray(raw)) return raw
-  if (typeof raw === 'string') {
+  let list = []
+  if (!raw) list = []
+  else if (Array.isArray(raw)) list = raw
+  else if (typeof raw === 'string') {
     try {
-      const list = JSON.parse(raw)
-      return Array.isArray(list) ? list : []
+      const parsed = JSON.parse(raw)
+      list = Array.isArray(parsed) ? parsed : []
     } catch {
-      return []
+      list = []
     }
   }
-  return []
+  return list.map((f) => ({ ...f, status: resolveAttachmentStatus(f) }))
 }
 
 function attachmentCount(task) {
   return parseAttachments(task?.attachments).length
+}
+
+function attachmentStatusLabel(file) {
+  const key = resolveAttachmentStatus(file)
+  return ATTACH_STATUS.find((x) => x.key === key)?.label || '未处理'
+}
+
+function attachmentStatusClass(file) {
+  const key = resolveAttachmentStatus(file)
+  if (key === '2') return 'attach-badge--done'
+  if (key === '1') return 'attach-badge--doing'
+  return 'attach-badge--todo'
 }
 
 function formatFileSize(size) {
@@ -331,6 +361,15 @@ const taskFormAttachmentsReadonly = computed(() =>
 const projectAttachmentList = ref([])
 const projectAttachmentLoading = ref(false)
 
+const projectAttachmentStatusCounts = computed(() => {
+  const counts = { '0': 0, '1': 0, '2': 0 }
+  for (const f of projectAttachmentList.value) {
+    const key = resolveAttachmentStatus(f)
+    counts[key] = (counts[key] || 0) + 1
+  }
+  return counts
+})
+
 async function loadProjectAttachments() {
   if (!inProjectSpace.value) {
     projectAttachmentList.value = []
@@ -339,7 +378,8 @@ async function loadProjectAttachments() {
   projectAttachmentLoading.value = true
   try {
     const result = await listProjectAttachmentsApi(filterProjectId.value)
-    projectAttachmentList.value = result?.data || []
+    const list = result?.data || []
+    projectAttachmentList.value = list.map((f) => ({ ...f, status: resolveAttachmentStatus(f) }))
   } catch {
     projectAttachmentList.value = []
   } finally {
@@ -446,6 +486,25 @@ async function removeAttachment(attachmentId, ctx = {}) {
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
     message.error(error.message || '删除失败')
+  }
+}
+
+async function setAttachmentStatus(file, status, ctx = {}) {
+  const taskId = ctx.taskId ?? file?.taskId ?? taskForm.taskId
+  const projectId = ctx.projectId ?? taskForm.projectId
+  const attachmentId = file?.id
+  const next = String(status)
+  if (!taskId || !attachmentId || isTaskAttachmentsReadonly(projectId)) return
+  if (resolveAttachmentStatus(file) === next) return
+  try {
+    await updateAttachmentStatusApi(taskId, attachmentId, next)
+    const label = ATTACH_STATUS.find((x) => x.key === next)?.label || next
+    message.success(`已标记为${label}`)
+    await loadTasks()
+    syncAttachmentViews(taskId)
+    if (inProjectSpace.value) await loadProjectAttachments()
+  } catch (error) {
+    message.error(error.message || '更新失败')
   }
 }
 
@@ -935,16 +994,31 @@ onMounted(async () => {
             <h2 class="attach-review__title">附件审查</h2>
             <span class="attach-review__meta">
               {{ projectAttachmentList.length }} 个文件
+              <template v-if="projectAttachmentList.length">
+                · {{ projectAttachmentStatusCounts['0'] }} 未处理
+                · {{ projectAttachmentStatusCounts['1'] }} 已处理
+                · {{ projectAttachmentStatusCounts['2'] }} 处理完成
+              </template>
               <template v-if="projectAttachmentsReadonly"> · 已归档只读</template>
             </span>
           </div>
           <a-spin :spinning="projectAttachmentLoading">
             <ul v-if="projectAttachmentList.length" class="attach-review__list">
-              <li v-for="file in projectAttachmentList" :key="`${file.taskId}-${file.id}`" class="attach-review__item">
+              <li
+                v-for="file in projectAttachmentList"
+                :key="`${file.taskId}-${file.id}`"
+                class="attach-review__item"
+                :class="`is-status-${resolveAttachmentStatus(file)}`"
+              >
                 <div class="attach-review__info">
-                  <button type="button" class="attach-review__name" :title="file.name" @click="previewAttachment(file)">
-                    {{ file.name }}
-                  </button>
+                  <div class="attach-review__title-row">
+                    <button type="button" class="attach-review__name" :title="file.name" @click="previewAttachment(file)">
+                      {{ file.name }}
+                    </button>
+                    <span class="attach-badge" :class="attachmentStatusClass(file)">
+                      {{ attachmentStatusLabel(file) }}
+                    </span>
+                  </div>
                   <span class="attach-review__sub">
                     {{ file.taskTitle || `任务 #${file.taskId}` }}
                     <template v-if="formatFileSize(file.size)"> · {{ formatFileSize(file.size) }}</template>
@@ -954,6 +1028,16 @@ onMounted(async () => {
                 <div class="attach-review__actions">
                   <button type="button" class="attach-review__act" @click="previewAttachment(file)">预览</button>
                   <button type="button" class="attach-review__act" @click="downloadAttachment(file)">下载</button>
+                  <select
+                    v-if="!projectAttachmentsReadonly"
+                    v-permission="'task:modify'"
+                    class="attach-status-select"
+                    :value="resolveAttachmentStatus(file)"
+                    :aria-label="`附件状态 · ${file.name || ''}`"
+                    @change="setAttachmentStatus(file, $event.target.value, { taskId: file.taskId, projectId: filterProjectId })"
+                  >
+                    <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+                  </select>
                 </div>
               </li>
             </ul>
@@ -1278,9 +1362,22 @@ onMounted(async () => {
                     <button type="button" class="task-attach__name" :title="file.name" @click="previewAttachment(file)">
                       {{ file.name }}
                     </button>
+                    <span class="attach-badge" :class="attachmentStatusClass(file)">
+                      {{ attachmentStatusLabel(file) }}
+                    </span>
                     <span class="task-attach__size">{{ formatFileSize(file.size) }}</span>
                     <button type="button" class="task-attach__dl" @click="previewAttachment(file)">预览</button>
                     <button type="button" class="task-attach__dl" @click="downloadAttachment(file)">下载</button>
+                    <select
+                      v-if="!taskFormAttachmentsReadonly"
+                      v-permission="'task:modify'"
+                      class="attach-status-select"
+                      :value="resolveAttachmentStatus(file)"
+                      :aria-label="`附件状态 · ${file.name || ''}`"
+                      @change="setAttachmentStatus(file, $event.target.value)"
+                    >
+                      <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+                    </select>
                     <a-popconfirm
                       v-if="!taskFormAttachmentsReadonly"
                       title="确认删除该附件？"
@@ -1326,16 +1423,22 @@ onMounted(async () => {
           v-for="file in filesModalFiles"
           :key="file.id || file.url"
           class="files-modal__item"
+          :class="`is-status-${resolveAttachmentStatus(file)}`"
         >
           <div class="files-modal__info">
-            <button
-              type="button"
-              class="files-modal__name"
-              :title="file.name"
-              @click="previewAttachment(file)"
-            >
-              {{ file.name || '未命名文件' }}
-            </button>
+            <div class="attach-review__title-row">
+              <button
+                type="button"
+                class="files-modal__name"
+                :title="file.name"
+                @click="previewAttachment(file)"
+              >
+                {{ file.name || '未命名文件' }}
+              </button>
+              <span class="attach-badge" :class="attachmentStatusClass(file)">
+                {{ attachmentStatusLabel(file) }}
+              </span>
+            </div>
             <span class="files-modal__meta">
               <template v-if="formatFileSize(file.size)">{{ formatFileSize(file.size) }}</template>
               <template v-if="file.createTime">
@@ -1346,6 +1449,19 @@ onMounted(async () => {
           <div class="files-modal__actions">
             <button type="button" class="files-modal__act" @click="previewAttachment(file)">预览</button>
             <button type="button" class="files-modal__act" @click="downloadAttachment(file)">下载</button>
+            <select
+              v-if="!filesModalReadonly"
+              v-permission="'task:modify'"
+              class="attach-status-select"
+              :value="resolveAttachmentStatus(file)"
+              :aria-label="`附件状态 · ${file.name || ''}`"
+              @change="setAttachmentStatus(file, $event.target.value, {
+                taskId: filesModalTask?.taskId,
+                projectId: filesModalTask?.projectId,
+              })"
+            >
+              <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+            </select>
             <a-popconfirm
               v-if="!filesModalReadonly"
               title="确认移除该附件？"
@@ -2339,6 +2455,66 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.attach-review__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attach-review__item.is-status-2,
+.files-modal__item.is-status-2 {
+  opacity: 0.9;
+}
+
+.attach-badge {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.attach-badge--todo {
+  color: #9a5b16;
+  background: rgba(214, 148, 48, 0.12);
+  border-color: rgba(214, 148, 48, 0.28);
+}
+
+.attach-badge--doing {
+  color: #1f5f8b;
+  background: rgba(47, 128, 186, 0.12);
+  border-color: rgba(47, 128, 186, 0.28);
+}
+
+.attach-badge--done {
+  color: #2f6b45;
+  background: rgba(56, 142, 90, 0.12);
+  border-color: rgba(56, 142, 90, 0.28);
+}
+
+.attach-status-select {
+  max-width: 7.5rem;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attach-status-select:focus {
+  outline: 2px solid rgba(47, 128, 186, 0.28);
+  outline-offset: 1px;
 }
 
 .attach-review__actions {

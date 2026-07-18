@@ -102,6 +102,19 @@ public class WbTaskController {
         return ResultConfig.success();
     }
 
+    @PostMapping("/updateAttachmentStatus")
+    @Operation(summary = "更新任务附件处理状态（0-未处理，1-已处理，2-处理完成）")
+    @SaCheckPermission("task:modify")
+    public ResultConfig updateAttachmentStatus(@RequestBody Map<String, Object> body) {
+        Long taskId = body.get("taskId") != null ? Long.valueOf(String.valueOf(body.get("taskId"))) : null;
+        String attachmentId = body.get("attachmentId") != null ? String.valueOf(body.get("attachmentId")) : null;
+        String status = body.get("status") != null ? String.valueOf(body.get("status")) : null;
+        return ResultConfig.success(
+                wbTaskService.updateAttachmentStatus(
+                        StpUtil.getLoginIdAsLong(), taskId, attachmentId, status)
+        );
+    }
+
     @GetMapping("/listProjectAttachments")
     @Operation(summary = "项目附件审查（汇总下属任务附件）")
     @SaCheckPermission("task:query")

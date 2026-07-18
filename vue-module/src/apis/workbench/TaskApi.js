@@ -42,6 +42,15 @@ export function removeTaskAttachmentApi(taskId, attachmentId) {
   })
 }
 
+/** 更新任务附件处理状态（0-未处理，1-已处理，2-处理完成） */
+export function updateAttachmentStatusApi(taskId, attachmentId, status) {
+  return request.post('/wbTask/updateAttachmentStatus', {
+    taskId,
+    attachmentId,
+    status: String(status),
+  })
+}
+
 /** 项目附件审查（汇总下属任务附件） */
 export function listProjectAttachmentsApi(projectId) {
   return request.get('/wbTask/listProjectAttachments', {
