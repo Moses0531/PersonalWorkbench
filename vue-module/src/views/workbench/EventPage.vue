@@ -71,18 +71,6 @@ const selectedDateKey = computed(() => calendarValue.value.format('YYYY-MM-DD'))
 const selectedDayEvents = computed(() => eventsOf(calendarValue.value))
 const selectedDayLabel = computed(() => formatDayLabel(selectedDateKey.value))
 
-const stats = computed(() => {
-  const all = events.value
-  const today = dayjs().startOf('day')
-  const todayCount = all.filter((e) => eventOccursOn(e, today)).length
-  const upcoming = all.filter((e) => {
-    if (String(e.repeatType) === '1') return true
-    return !dayjs(e.startTime).isBefore(today, 'day')
-  }).length
-  const repeating = all.filter((e) => String(e.repeatType) === '1').length
-  return { total: all.length, today: todayCount, upcoming, repeating }
-})
-
 /** 1=周一 … 7=周日，与后端 repeat_weekdays 一致 */
 function weekdayKey(day) {
   return day.day() === 0 ? '7' : String(day.day())
@@ -338,26 +326,6 @@ onMounted(refreshAll)
           </button>
         </div>
       </header>
-
-      <div class="wb-stats">
-        <div class="wb-stat wb-stat--accent">
-          <span class="wb-stat__label">全部日程</span>
-          <span class="wb-stat__value">{{ stats.total }}</span>
-        </div>
-        <div class="wb-stat">
-          <span class="wb-stat__label">今日</span>
-          <span class="wb-stat__value">{{ stats.today }}</span>
-        </div>
-        <div class="wb-stat">
-          <span class="wb-stat__label">未开始</span>
-          <span class="wb-stat__value">{{ stats.upcoming }}</span>
-          <span class="wb-stat__hint">含今天及之后</span>
-        </div>
-        <div class="wb-stat">
-          <span class="wb-stat__label">每周重复</span>
-          <span class="wb-stat__value">{{ stats.repeating }}</span>
-        </div>
-      </div>
 
       <div class="wb-toolbar">
         <input
