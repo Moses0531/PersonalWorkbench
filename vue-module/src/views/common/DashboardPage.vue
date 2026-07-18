@@ -1,8 +1,8 @@
 ﻿<script setup>
 /**
  * 工作台首页
- * 构图：问候 + 核心指标 + 日签图案；内容：三天内截止 / 今日日程。
- * 氛围图案（流线 / 几何环）服务层次，不抢数据。
+ * 构图对齐登录页：Outfit 品牌 + 衬线问候 + 玻璃面板 + 等距氛围。
+ * 内容：问候 / 时间日签卡 / 核心指标；三天内截止 · 今日日程。
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -28,7 +28,7 @@ let clockTimer = null
 onMounted(() => {
   clockTimer = window.setInterval(() => {
     now.value = new Date()
-  }, 30000)
+  }, 1000)
   refreshFocus()
 })
 
@@ -56,6 +56,25 @@ const dateLabel = computed(() => {
 })
 
 const timeLabel = computed(() => dayjs(now.value).format('HH:mm'))
+const timeDigits = computed(() => {
+  const d = dayjs(now.value)
+  return {
+    h: d.format('HH'),
+    m: d.format('mm'),
+    s: d.format('ss'),
+  }
+})
+const clockHands = computed(() => {
+  const d = now.value
+  const s = d.getSeconds() + d.getMilliseconds() / 1000
+  const m = d.getMinutes() + s / 60
+  const h = (d.getHours() % 12) + m / 60
+  return {
+    hour: h * 30,
+    minute: m * 6,
+    second: s * 6,
+  }
+})
 const dayNum = computed(() => dayjs(now.value).date())
 const monthLabel = computed(() => `${dayjs(now.value).month() + 1}月`)
 
@@ -107,7 +126,6 @@ const todayEvents = computed(() => {
 const visibleEvents = computed(() => todayEvents.value.slice(0, EVENT_LIMIT))
 const moreEventCount = computed(() => Math.max(0, todayEvents.value.length - EVENT_LIMIT))
 
-/** 日签上的三日微标：图案元素，兼提示有无截止 */
 const dayMarks = computed(() => {
   const labels = ['今', '明', '后']
   return [0, 1, 2].map((offset) => {
@@ -137,7 +155,6 @@ const focusSummary = computed(() => {
   return parts.join(' · ')
 })
 
-/** 核心要素条：逾期 / 三日截止 / 今日日程 */
 const coreMeters = computed(() => [
   {
     key: 'overdue',
@@ -230,57 +247,54 @@ function goEvents() {
 
 <template>
   <div class="home">
-    <!-- 氛围层：光晕 · 网格 · 流线 · 几何环 · 颗粒 -->
+    <!-- 氛围：对齐登录页 — 柔光 · 等距网格 · 数据流 · 颗粒 -->
     <div class="atm" aria-hidden="true">
       <div class="atm-glow atm-glow--a" />
       <div class="atm-glow atm-glow--b" />
-      <div class="atm-glow atm-glow--c" />
-      <div class="atm-hatch" />
+      <div class="atm-iso" />
       <svg class="atm-flow" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice" fill="none">
         <path
           class="atm-flow__path"
-          d="M40 520C220 380 320 620 480 460C640 300 760 560 960 380C1080 260 1140 320 1180 280"
+          d="M60 540C240 400 340 600 500 440C660 280 780 540 980 360C1100 240 1160 300 1200 260"
           stroke="url(#homeFlowA)"
-          stroke-width="1.5"
+          stroke-width="1.4"
           stroke-linecap="round"
         />
         <path
           class="atm-flow__path atm-flow__path--b"
-          d="M80 180C260 260 400 80 560 180C720 280 860 100 1040 160"
+          d="M100 200C280 280 420 100 580 200C740 300 880 120 1060 180"
           stroke="url(#homeFlowB)"
-          stroke-width="1.2"
+          stroke-width="1.1"
           stroke-linecap="round"
         />
-        <circle class="atm-flow__node" cx="480" cy="460" r="3.5" fill="rgba(8,145,178,0.4)" />
-        <circle class="atm-flow__node atm-flow__node--b" cx="960" cy="380" r="3" fill="rgba(34,211,238,0.5)" />
-        <circle class="atm-flow__node atm-flow__node--c" cx="560" cy="180" r="2.5" fill="rgba(14,116,144,0.35)" />
+        <circle class="atm-flow__node" cx="500" cy="440" r="3.5" fill="rgba(34,211,238,0.55)" />
+        <circle class="atm-flow__node atm-flow__node--b" cx="980" cy="360" r="3" fill="rgba(8,145,178,0.5)" />
         <defs>
           <linearGradient id="homeFlowA" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="rgba(8,145,178,0.04)" />
-            <stop offset="50%" stop-color="rgba(34,211,238,0.28)" />
-            <stop offset="100%" stop-color="rgba(8,145,178,0.06)" />
+            <stop offset="0%" stop-color="rgba(8,145,178,0.03)" />
+            <stop offset="50%" stop-color="rgba(34,211,238,0.32)" />
+            <stop offset="100%" stop-color="rgba(8,145,178,0.05)" />
           </linearGradient>
           <linearGradient id="homeFlowB" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="rgba(14,116,144,0.05)" />
-            <stop offset="55%" stop-color="rgba(8,145,178,0.18)" />
-            <stop offset="100%" stop-color="rgba(34,211,238,0.06)" />
+            <stop offset="0%" stop-color="rgba(14,116,144,0.04)" />
+            <stop offset="55%" stop-color="rgba(8,145,178,0.2)" />
+            <stop offset="100%" stop-color="rgba(34,211,238,0.05)" />
           </linearGradient>
         </defs>
       </svg>
-      <div class="atm-rings atm-rings--a"><span /><span /><span /></div>
-      <div class="atm-rings atm-rings--b"><span /><span /></div>
-      <div class="atm-hex" />
+      <div class="atm-wm">WB</div>
       <div class="atm-grain" />
     </div>
 
     <div class="shell">
-      <!-- 主视觉：文案 + 日签图案 -->
       <header class="hero">
         <div class="hero-copy">
           <div class="hero-brand">
-            <span class="hero-brand__mark"><BrandMarkView :size="22" /></span>
-            <span class="hero-brand__name">Personal Workbench</span>
-            <span class="hero-brand__tick" />
+            <span class="hero-brand__mark"><BrandMarkView :size="28" /></span>
+            <div class="hero-brand__text">
+              <span class="hero-brand__name">Personal Workbench</span>
+              <span class="hero-brand__tag">今日工作台</span>
+            </div>
           </div>
 
           <p class="hero-kicker">
@@ -288,13 +302,13 @@ function goEvents() {
             <span class="hero-kicker__sep" aria-hidden="true" />
             <span class="hero-kicker__time">{{ timeLabel }}</span>
           </p>
+
           <h1 class="hero-title">
             <span class="hero-greet">{{ greeting }}，</span>
             <span class="hero-name">{{ displayName }}</span>
           </h1>
           <p class="hero-lead">{{ focusSummary }}</p>
 
-          <!-- 核心要素：逾期 / 三日截止 / 今日程 -->
           <ul class="meters" aria-label="今日核心指标">
             <li
               v-for="(m, idx) in coreMeters"
@@ -305,17 +319,17 @@ function goEvents() {
             >
               <span class="meter-glyph" aria-hidden="true">
                 <svg v-if="m.key === 'overdue'" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 3.2L17.5 16H2.5L10 3.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+                  <path d="M10 3.2L17.5 16H2.5L10 3.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
                   <path d="M10 8v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
                   <circle cx="10" cy="14.2" r="1" fill="currentColor" />
                 </svg>
                 <svg v-else-if="m.key === 'due'" viewBox="0 0 20 20" fill="none">
-                  <rect x="3.5" y="3.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.4" />
-                  <path d="M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                  <rect x="3.5" y="3.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5" />
+                  <path d="M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                 </svg>
                 <svg v-else viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4" />
-                  <path d="M10 6V10l3 1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                  <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5" />
+                  <path d="M10 6V10l3 1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                 </svg>
               </span>
               <span class="meter-body">
@@ -327,120 +341,149 @@ function goEvents() {
           </ul>
 
           <div class="hero-actions">
-            <button type="button" class="btn-soft" :disabled="loading" @click="refreshFocus">
-              {{ loading ? '整理中…' : '刷新重点' }}
+            <button type="button" class="btn-primary" :disabled="loading" @click="refreshFocus">
+              <span>{{ loading ? '整理中…' : '刷新重点' }}</span>
+              <span class="btn-primary__ico" aria-hidden="true">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
             </button>
             <button type="button" class="btn-text" @click="goTasks">打开事务</button>
             <button type="button" class="btn-text" @click="goEvents">打开日程</button>
           </div>
         </div>
 
-        <!-- 日签：首页主图案 -->
-        <aside class="daycard" aria-hidden="true">
-          <div class="daycard-orbit-ring" />
-          <div class="daycard-plate">
-            <div class="daycard-corner daycard-corner--tl" />
-            <div class="daycard-corner daycard-corner--br" />
-            <svg class="daycard-motif" viewBox="0 0 220 240" fill="none">
-              <defs>
-                <linearGradient id="dcFill" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="rgba(34,211,238,0.38)" />
-                  <stop offset="100%" stop-color="rgba(8,145,178,0.08)" />
-                </linearGradient>
-                <linearGradient id="dcRing" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="rgba(8,145,178,0.5)" />
-                  <stop offset="100%" stop-color="rgba(8,145,178,0.04)" />
-                </linearGradient>
-              </defs>
-              <circle cx="110" cy="112" r="98" stroke="url(#dcRing)" stroke-width="1" opacity="0.75" />
-              <circle
-                class="daycard-orbit"
-                cx="110"
-                cy="112"
-                r="80"
-                stroke="currentColor"
-                stroke-width="0.8"
-                stroke-dasharray="3 8"
-                opacity="0.3"
-              />
-              <circle
-                class="daycard-orbit daycard-orbit--rev"
-                cx="110"
-                cy="112"
-                r="62"
-                stroke="currentColor"
-                stroke-width="0.6"
-                stroke-dasharray="1 6"
-                opacity="0.2"
-              />
-              <!-- 品牌机匣 -->
-              <path
-                d="M110 48 L150 70 V126 L110 148 L70 126 V70 Z"
-                fill="url(#dcFill)"
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M110 48 V148 M70 70 L150 70 M70 126 L150 126 M70 70 L110 98 L150 70 M70 126 L110 98 L150 126"
-                stroke="currentColor"
-                stroke-width="1.15"
-                stroke-linejoin="round"
-                opacity="0.55"
-              />
-              <circle cx="110" cy="98" r="3.8" fill="currentColor" opacity="0.75" />
-              <!-- 事务 / 日程小印 -->
-              <g opacity="0.55" transform="translate(26 172)">
-                <rect width="18" height="18" rx="3.5" stroke="currentColor" stroke-width="1.3" />
-                <path d="M5 9.2l3 3L13.5 5.5" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" fill="none" />
-              </g>
-              <g opacity="0.55" transform="translate(176 170)">
-                <circle cx="9" cy="9" r="9" stroke="currentColor" stroke-width="1.3" />
-                <path d="M9 4.5V9.2l3.2 2" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" fill="none" />
-              </g>
-            </svg>
+        <aside class="timecard" :aria-label="`现在 ${timeDigits.h}:${timeDigits.m}:${timeDigits.s}，${monthLabel}${dayNum}日`">
+          <div class="timecard-shell">
+            <div class="timecard-plate">
+              <div class="timecard-top">
+                <div class="timecard-clock" role="timer" aria-hidden="true">
+                  <svg class="timecard-face" viewBox="0 0 200 200">
+                    <defs>
+                      <linearGradient id="clockRing" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="rgba(34,211,238,0.45)" />
+                        <stop offset="100%" stop-color="rgba(8,145,178,0.12)" />
+                      </linearGradient>
+                      <radialGradient id="clockPad" cx="50%" cy="40%" r="60%">
+                        <stop offset="0%" stop-color="rgba(34,211,238,0.22)" />
+                        <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                      </radialGradient>
+                    </defs>
+                    <circle cx="100" cy="100" r="88" fill="url(#clockPad)" stroke="url(#clockRing)" stroke-width="1.6" />
+                    <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" stroke-width="1" opacity="0.22" />
+                    <g class="timecard-ticks" stroke="currentColor">
+                      <line
+                        v-for="i in 12"
+                        :key="i"
+                        x1="100"
+                        y1="22"
+                        x2="100"
+                        :y2="(i - 1) % 3 === 0 ? 34 : 28"
+                        :stroke-width="(i - 1) % 3 === 0 ? 2.2 : 1.2"
+                        :opacity="(i - 1) % 3 === 0 ? 0.75 : 0.35"
+                        :transform="`rotate(${(i - 1) * 30} 100 100)`"
+                      />
+                    </g>
+                    <g>
+                      <line
+                        class="timecard-hand timecard-hand--h"
+                        x1="100" y1="100" x2="100" y2="58"
+                        stroke="currentColor" stroke-width="3.2" stroke-linecap="round"
+                        :transform="`rotate(${clockHands.hour} 100 100)`"
+                      />
+                      <line
+                        class="timecard-hand timecard-hand--m"
+                        x1="100" y1="100" x2="100" y2="42"
+                        stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        :transform="`rotate(${clockHands.minute} 100 100)`"
+                      />
+                      <line
+                        class="timecard-hand timecard-hand--s"
+                        x1="100" y1="112" x2="100" y2="34"
+                        stroke-width="1.4" stroke-linecap="round"
+                        :transform="`rotate(${clockHands.second} 100 100)`"
+                      />
+                      <circle class="timecard-hub" cx="100" cy="100" r="4.5" />
+                      <circle cx="100" cy="100" r="2" fill="#fff" />
+                    </g>
+                  </svg>
+                </div>
 
-            <div class="daycard-num">
-              <span class="daycard-month">{{ monthLabel }}</span>
-              <span class="daycard-day">{{ dayNum }}</span>
-            </div>
+                <div class="timecard-date" aria-hidden="true">
+                  <svg class="timecard-iso" viewBox="0 0 200 180" fill="none">
+                    <defs>
+                      <linearGradient id="dcPad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="rgba(34,211,238,0.35)" />
+                        <stop offset="100%" stop-color="rgba(8,145,178,0.06)" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M100 28 L156 58 V118 L100 148 L44 118 V58 Z"
+                      fill="url(#dcPad)"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M100 28 V148 M44 58 L156 58 M44 118 L156 118 M44 58 L100 88 L156 58 M44 118 L100 88 L156 118"
+                      stroke="currentColor"
+                      stroke-width="1.1"
+                      opacity="0.5"
+                    />
+                    <circle cx="100" cy="88" r="4" fill="currentColor" opacity="0.7" />
+                    <circle class="timecard-pulse" cx="100" cy="88" r="14" stroke="currentColor" stroke-width="1" opacity="0.25" />
+                  </svg>
+                  <div class="timecard-num">
+                    <span class="timecard-month">{{ monthLabel }}</span>
+                    <span class="timecard-day">{{ dayNum }}</span>
+                  </div>
+                </div>
+              </div>
 
-            <div class="daycard-marks">
-              <span
-                v-for="m in dayMarks"
-                :key="m.key"
-                class="daycard-mark"
-                :class="{ 'is-lit': m.lit }"
-                :title="m.lit ? `${m.count} 项` : undefined"
-              >
-                {{ m.label }}
-                <i v-if="m.lit" class="daycard-mark__dot" />
-              </span>
+              <div class="timecard-readout">
+                <span class="timecard-readout__label">Local time</span>
+                <p class="timecard-readout__digits" aria-hidden="true">
+                  <span>{{ timeDigits.h }}</span>
+                  <span class="timecard-colon">:</span>
+                  <span>{{ timeDigits.m }}</span>
+                  <span class="timecard-colon timecard-colon--soft">:</span>
+                  <span class="timecard-sec">{{ timeDigits.s }}</span>
+                </p>
+              </div>
+
+              <div class="timecard-marks" aria-hidden="true">
+                <span
+                  v-for="m in dayMarks"
+                  :key="m.key"
+                  class="timecard-mark"
+                  :class="{ 'is-lit': m.lit }"
+                  :title="m.lit ? `${m.count} 项` : undefined"
+                >
+                  {{ m.label }}
+                  <i v-if="m.lit" class="timecard-mark__dot" />
+                </span>
+              </div>
             </div>
           </div>
         </aside>
       </header>
 
-      <!--
-        双栏区分（色觉友好）：不靠色相，靠
-        明度（浅纸 vs 深顶栏）· 形状（方 vs 圆）· 纹理（横线 vs 弧线）· 文字标签
-      -->
       <div class="boards" :aria-busy="loading">
         <section class="pane pane--tasks" aria-labelledby="pane-tasks">
-          <div class="pane-rules" aria-hidden="true" />
-          <div class="pane-spine" aria-hidden="true" />
+          <div class="pane-rail" aria-hidden="true" />
           <header class="pane-head">
             <div class="pane-head__left">
               <span class="pane-ico pane-ico--check" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
-                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.7" />
-                  <path d="M8 12l2.8 2.8L16.5 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M8 12l2.8 2.8L16.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </span>
               <div>
-                <p class="pane-tag pane-tag--square">
-                  <span class="pane-tag__en">TASK</span>
-                  <span class="pane-tag__zh">清单</span>
+                <p class="pane-eyebrow">
+                  <span class="pane-eyebrow__en">Task</span>
+                  <span class="pane-eyebrow__zh">清单</span>
                 </p>
                 <h2 id="pane-tasks" class="pane-title">三天内截止</h2>
               </div>
@@ -495,14 +538,14 @@ function goEvents() {
             <div class="pane-banner__left">
               <span class="pane-ico pane-ico--clock" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7" />
-                  <path d="M12 7.5V12l3.2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M12 7.5V12l3.2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </span>
               <div>
-                <p class="pane-tag pane-tag--round">
-                  <span class="pane-tag__en">TIME</span>
-                  <span class="pane-tag__zh">时刻</span>
+                <p class="pane-eyebrow pane-eyebrow--on-dark">
+                  <span class="pane-eyebrow__en">Time</span>
+                  <span class="pane-eyebrow__zh">时刻</span>
                 </p>
                 <h2 id="pane-events" class="pane-title">日程安排</h2>
               </div>
@@ -511,8 +554,6 @@ function goEvents() {
           </header>
 
           <div class="pane-body">
-            <div class="pane-arcs" aria-hidden="true" />
-
             <div v-if="loading" class="skel skel--agenda" aria-hidden="true">
               <div v-for="n in 3" :key="`e${n}`" class="skel-row skel-row--agenda" />
             </div>
@@ -523,14 +564,10 @@ function goEvents() {
                 <span class="empty-clock__hand empty-clock__hand--h" />
                 <span class="empty-clock__hand empty-clock__hand--m" />
                 <span class="empty-clock__core" />
-                <span class="empty-clock__tick" style="--a: 0deg" />
-                <span class="empty-clock__tick" style="--a: 90deg" />
-                <span class="empty-clock__tick" style="--a: 180deg" />
-                <span class="empty-clock__tick" style="--a: 270deg" />
               </div>
               <p class="empty-title">今天暂无安排</p>
               <p class="empty-desc">可以把时间留给手头的任务。</p>
-              <button type="button" class="btn-ghost btn-ghost--round" @click="goEvents">去日程</button>
+              <button type="button" class="btn-ghost btn-ghost--pill" @click="goEvents">去日程</button>
             </div>
 
             <ul v-else class="list list--agenda" role="list">
@@ -569,23 +606,27 @@ function goEvents() {
   --ink: var(--color-text-primary);
   --body: var(--color-text-body);
   --muted: var(--color-text-secondary);
-  --faint: var(--color-text-dim);
   --line: var(--color-border);
   --line-strong: var(--color-border-strong);
   --accent: var(--color-accent);
   --deep: var(--color-accent-deep);
+  --light: var(--color-accent-light);
   --danger: var(--color-red);
+  --font-brand: 'Outfit', 'Noto Sans SC', var(--font-family-sans);
+  --font-display: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-body: 'Noto Sans SC', 'Outfit', var(--font-family-sans);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   position: relative;
   box-sizing: border-box;
   min-height: 100%;
-  padding: 32px 36px 52px;
-  font-family: var(--font-family-sans);
+  padding: 28px 32px 48px;
+  font-family: var(--font-body);
   color: var(--ink);
   overflow: auto;
 }
 
-/* ── Atmosphere ── */
+/* ── Atmosphere（对齐登录页，克制） ── */
 .atm {
   pointer-events: none;
   position: absolute;
@@ -597,48 +638,48 @@ function goEvents() {
 .atm-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(64px);
+  filter: blur(72px);
 }
 
 .atm-glow--a {
-  width: 460px;
-  height: 460px;
-  top: -140px;
-  right: 2%;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.3), transparent 68%);
-  animation: drift 14s ease-in-out infinite alternate;
+  width: 420px;
+  height: 420px;
+  top: -120px;
+  right: 4%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 70%);
+  animation: drift 16s var(--ease) infinite alternate;
 }
 
 .atm-glow--b {
-  width: 340px;
-  height: 340px;
-  bottom: -50px;
-  left: -70px;
-  background: radial-gradient(circle, rgba(14, 116, 144, 0.2), transparent 70%);
-  animation: drift 18s ease-in-out infinite alternate-reverse;
+  width: 320px;
+  height: 320px;
+  bottom: -40px;
+  left: -60px;
+  background: radial-gradient(circle, rgba(14, 116, 144, 0.18), transparent 72%);
+  animation: drift 20s var(--ease) infinite alternate-reverse;
 }
 
-.atm-glow--c {
-  width: 220px;
-  height: 220px;
-  top: 42%;
-  left: 38%;
-  background: radial-gradient(circle, rgba(8, 145, 178, 0.1), transparent 72%);
-  animation: drift 22s ease-in-out infinite alternate;
-}
-
-.atm-hatch {
+.atm-iso {
   position: absolute;
-  inset: 0;
-  opacity: 0.45;
-  background-image: repeating-linear-gradient(
-    -18deg,
-    transparent,
-    transparent 11px,
-    rgba(8, 145, 178, 0.04) 11px,
-    rgba(8, 145, 178, 0.04) 12px
-  );
-  mask-image: radial-gradient(ellipse 80% 70% at 85% 8%, #000 10%, transparent 68%);
+  inset: -8% -4%;
+  opacity: 0.28;
+  background-image:
+    repeating-linear-gradient(
+      30deg,
+      transparent,
+      transparent 67px,
+      rgba(8, 145, 178, 0.07) 67px,
+      rgba(8, 145, 178, 0.07) 68px
+    ),
+    repeating-linear-gradient(
+      150deg,
+      transparent,
+      transparent 67px,
+      rgba(8, 145, 178, 0.05) 67px,
+      rgba(8, 145, 178, 0.05) 68px
+    );
+  transform: skewY(-4deg);
+  mask-image: radial-gradient(ellipse 75% 65% at 70% 20%, #000 15%, transparent 72%);
 }
 
 .atm-flow {
@@ -646,146 +687,117 @@ function goEvents() {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.85;
+  opacity: 0.75;
 }
 
 .atm-flow__path {
-  stroke-dasharray: 8 14;
-  animation: dash 28s linear infinite;
+  stroke-dasharray: 6 12;
+  animation: dash 32s linear infinite;
 }
 
 .atm-flow__path--b {
-  animation-duration: 36s;
+  animation-duration: 40s;
   animation-direction: reverse;
 }
 
 .atm-flow__node {
-  animation: pulse-node 3.6s ease-in-out infinite;
+  animation: pulse-node 3.8s var(--ease) infinite;
 }
 
 .atm-flow__node--b {
-  animation-delay: 0.8s;
+  animation-delay: 1s;
 }
 
-.atm-flow__node--c {
-  animation-delay: 1.6s;
-}
-
-.atm-rings {
+.atm-wm {
   position: absolute;
-}
-
-.atm-rings span {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(8, 145, 178, 0.14);
-}
-
-.atm-rings span:nth-child(2) {
-  inset: 18%;
-  border-style: dashed;
-  opacity: 0.7;
-}
-
-.atm-rings span:nth-child(3) {
-  inset: 36%;
-  opacity: 0.5;
-}
-
-.atm-rings--a {
-  top: -40px;
-  right: 8%;
-  width: 220px;
-  height: 220px;
-  animation: spin 80s linear infinite;
-}
-
-.atm-rings--b {
-  bottom: 8%;
-  left: 4%;
-  width: 140px;
-  height: 140px;
-  animation: spin 110s linear infinite reverse;
-  opacity: 0.7;
-}
-
-.atm-hex {
-  position: absolute;
-  top: 18%;
-  left: 6%;
-  width: 72px;
-  height: 80px;
-  opacity: 0.35;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 36' fill='none'%3E%3Cpath d='M16 2L28 9v14L16 30 4 23V9z' stroke='%230891b2' stroke-width='1.2'/%3E%3Cpath d='M16 2v28M4 9l12 7 12-7' stroke='%230891b2' stroke-width='1' opacity='.55'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-  animation: drift 16s ease-in-out infinite alternate;
+  right: 6%;
+  top: 12%;
+  font-family: var(--font-brand);
+  font-size: clamp(72px, 12vw, 128px);
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  color: rgba(8, 145, 178, 0.06);
+  user-select: none;
 }
 
 .atm-grain {
   position: absolute;
   inset: 0;
-  opacity: 0.3;
+  opacity: 0.22;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @keyframes drift {
   from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(-18px, 14px) scale(1.06); }
+  to { transform: translate(-14px, 12px) scale(1.05); }
 }
 
 @keyframes dash {
-  to { stroke-dashoffset: -240; }
+  to { stroke-dashoffset: -220; }
 }
 
 @keyframes pulse-node {
-  0%, 100% { opacity: 0.45; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.35); }
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.4); }
 }
 
 .shell {
   position: relative;
   z-index: 1;
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
 /* ── Hero ── */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.7fr);
-  gap: 24px 40px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.62fr);
+  gap: 28px 36px;
   align-items: center;
-  margin-bottom: 32px;
-  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  margin-bottom: 28px;
+  animation: rise 0.65s var(--ease) both;
 }
 
 .hero-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 20px;
   color: var(--accent);
 }
 
 .hero-brand__mark {
   display: grid;
   place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.hero-brand__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .hero-brand__name {
-  font-family: var(--font-family-serif);
+  font-family: var(--font-brand);
   font-size: 15px;
-  font-style: italic;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
-.hero-brand__tick {
-  width: 28px;
-  height: 1px;
-  margin-left: 4px;
-  background: linear-gradient(90deg, rgba(8, 145, 178, 0.55), transparent);
+.hero-brand__tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--muted);
 }
 
 .hero-kicker {
@@ -795,8 +807,8 @@ function goEvents() {
   gap: 10px;
   margin: 0 0 12px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--body);
   letter-spacing: 0.02em;
 }
 
@@ -804,32 +816,33 @@ function goEvents() {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(8, 145, 178, 0.35);
+  background: rgba(8, 145, 178, 0.45);
 }
 
 .hero-kicker__time {
   font-family: var(--font-family-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.1em;
-  color: var(--faint);
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 
 .hero-title {
   margin: 0 0 12px;
-  font-size: clamp(2.05rem, 1.55rem + 2.1vw, 2.9rem);
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 1.4rem + 1.8vw, 2.65rem);
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .hero-greet {
-  font-weight: 500;
-  color: var(--body);
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .hero-name {
-  background: linear-gradient(115deg, var(--deep) 12%, var(--accent) 78%);
+  background: linear-gradient(115deg, var(--deep) 8%, var(--accent) 55%, var(--light) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -837,82 +850,70 @@ function goEvents() {
 
 .hero-lead {
   margin: 0;
-  max-width: 34em;
+  max-width: 36em;
   font-size: 15px;
+  font-weight: 500;
   line-height: 1.7;
   color: var(--body);
   text-wrap: pretty;
 }
 
-/* Core meters */
+/* Meters — glass chips */
 .meters {
   list-style: none;
-  margin: 22px 0 0;
+  margin: 24px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 460px;
+  gap: 12px;
+  max-width: 540px;
 }
 
 .meter {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 12px 11px;
-  border: 1.5px solid var(--line-strong);
-  background: #fff;
-  box-shadow: inset 0 1px 0 #fff;
-  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(0.1s + var(--i, 0) * 0.06s);
-  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  gap: 12px;
+  padding: 14px 14px 13px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(238, 248, 252, 0.78));
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  animation: rise 0.55s var(--ease) both;
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease);
 }
 
-/* 形状区分：三角警示 / 方角清单 / 圆角时刻 —— 不依赖色相 */
 .meter--overdue {
-  border-radius: var(--radius-xs);
-  border-style: solid;
-  border-width: 1.5px 1.5px 1.5px 4px;
-  border-color: var(--line-strong);
-  border-left-color: var(--danger);
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      #fff,
-      #fff 5px,
-      rgba(224, 85, 69, 0.06) 5px,
-      rgba(224, 85, 69, 0.06) 10px
-    );
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm) var(--radius-lg) var(--radius-lg) var(--radius-sm);
 }
 
 .meter--due {
-  border-radius: var(--radius-sm);
-  border-left: 4px solid var(--accent);
-  background: linear-gradient(160deg, #fff, var(--color-surface-muted));
+  border-left: 3px solid var(--accent);
 }
 
 .meter--events {
   border-radius: 999px 16px 16px 999px;
-  border-style: dashed;
-  border-color: var(--accent);
-  padding-left: 14px;
-  background: rgba(238, 248, 252, 0.85);
+  border: 1.5px dashed rgba(8, 145, 178, 0.45);
+  border-left-width: 1.5px;
 }
 
 .meter:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-xs), inset 0 1px 0 #fff;
+  box-shadow: var(--shadow-md), inset 0 1px 0 #fff;
 }
 
 .meter--danger {
-  border-left-color: var(--danger);
   background:
     repeating-linear-gradient(
       -45deg,
-      var(--color-red-soft),
+      rgba(255, 255, 255, 0.95),
+      rgba(255, 255, 255, 0.95) 5px,
       var(--color-red-soft) 5px,
-      rgba(224, 85, 69, 0.08) 5px,
-      rgba(224, 85, 69, 0.08) 10px
+      var(--color-red-soft) 10px
     );
 }
 
@@ -921,33 +922,20 @@ function goEvents() {
   color: var(--danger);
 }
 
-.meter--idle {
-  opacity: 0.85;
-}
-
 .meter-glyph {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  margin-top: 1px;
-  color: var(--accent);
+  width: 32px;
+  height: 32px;
+  color: var(--deep);
   background: var(--color-accent-soft);
-  border: 1.5px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
 }
 
-.meter--overdue .meter-glyph {
-  border-radius: 2px;
-}
-
-.meter--due .meter-glyph {
-  border-radius: 4px;
-}
-
-.meter--events .meter-glyph {
-  border-radius: 50%;
-}
+.meter--overdue .meter-glyph { border-radius: 4px; }
+.meter--events .meter-glyph { border-radius: 50%; }
 
 .meter-glyph svg {
   width: 16px;
@@ -958,29 +946,29 @@ function goEvents() {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 1px;
+  gap: 2px;
 }
 
 .meter-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  letter-spacing: 0.04em;
+  color: var(--body);
 }
 
 .meter-value {
   font-family: var(--font-family-mono);
-  font-size: 1.35rem;
+  font-size: 1.55rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
-  line-height: 1.15;
+  line-height: 1.1;
   color: var(--deep);
 }
 
 .meter-hint {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .hero-actions {
@@ -988,51 +976,74 @@ function goEvents() {
   flex-wrap: wrap;
   align-items: center;
   gap: 14px;
-  margin-top: 22px;
+  margin-top: 24px;
 }
 
-.btn-soft {
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px 12px 12px 12px;
-  background: linear-gradient(180deg, #fff, rgba(238, 248, 252, 0.9));
-  color: var(--deep);
-  font-size: 13px;
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 8px 0 18px;
+  border: none;
+  border-radius: 999px;
+  font-size: 14px;
   font-weight: 600;
-  box-shadow: var(--shadow-xs), inset 0 1px 0 #fff;
+  letter-spacing: 0.02em;
+  color: #f0f9ff;
+  background: linear-gradient(135deg, var(--light), var(--accent) 48%, var(--deep));
+  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.36);
   cursor: pointer;
   transition:
-    transform 200ms ease,
-    box-shadow 200ms ease,
-    border-color 200ms ease;
+    transform 180ms var(--ease),
+    box-shadow 280ms var(--ease),
+    filter 180ms ease;
 }
 
-.btn-soft:hover:not(:disabled) {
+.btn-primary__ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  transition: transform 200ms var(--ease);
+}
+
+.btn-primary__ico svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(8, 145, 178, 0.4);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 26px rgba(8, 145, 178, 0.44);
+  filter: brightness(1.03);
 }
 
-.btn-soft:active:not(:disabled) {
+.btn-primary:hover:not(:disabled) .btn-primary__ico {
+  transform: translateX(2px);
+}
+
+.btn-primary:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.btn-soft:disabled {
-  opacity: 0.6;
+.btn-primary:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
 }
 
 .btn-text {
   border: none;
   background: none;
-  padding: 4px 2px;
-  font-size: 13px;
+  padding: 8px 4px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--deep);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: rgba(8, 145, 178, 0.3);
+  text-decoration-color: rgba(8, 145, 178, 0.35);
   text-underline-offset: 4px;
   transition: color 180ms ease, text-decoration-color 180ms ease;
 }
@@ -1042,7 +1053,7 @@ function goEvents() {
   text-decoration-color: var(--accent);
 }
 
-.btn-soft:focus-visible,
+.btn-primary:focus-visible,
 .btn-text:focus-visible,
 .btn-ghost:focus-visible,
 .pane-link:focus-visible,
@@ -1051,231 +1062,263 @@ function goEvents() {
   outline-offset: 2px;
 }
 
-/* ── Day card motif ── */
-.daycard {
-  position: relative;
+/* ── Timecard — clock + date in one glass panel ── */
+.timecard {
   display: flex;
   justify-content: center;
   color: var(--accent);
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+  animation: rise 0.7s var(--ease) 0.1s both;
 }
 
-.daycard-orbit-ring {
-  position: absolute;
-  width: min(100%, 280px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 1px dashed rgba(8, 145, 178, 0.18);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: spin-centered 60s linear infinite;
+.timecard-shell {
+  padding: 8px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
 }
 
-.daycard-plate {
+.timecard-plate {
   position: relative;
-  width: min(100%, 252px);
-  aspect-ratio: 11 / 12;
-  padding: 18px 16px 16px;
-  border-radius: 2px 28px 8px 28px;
-  border: 1px solid rgba(8, 145, 178, 0.3);
+  width: min(100%, 280px);
+  padding: 16px 16px 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(8, 145, 178, 0.28);
   background:
-    radial-gradient(ellipse 80% 55% at 50% 26%, rgba(34, 211, 238, 0.22), transparent 65%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(232, 246, 251, 0.78));
+    radial-gradient(ellipse 70% 45% at 30% 22%, rgba(34, 211, 238, 0.26), transparent 58%),
+    radial-gradient(ellipse 60% 40% at 78% 30%, rgba(8, 145, 178, 0.12), transparent 55%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(232, 246, 251, 0.88));
   box-shadow:
     var(--shadow-md),
-    0 18px 40px rgba(8, 145, 178, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    0 0 0 1px rgba(255, 255, 255, 0.4);
-  transform: rotate(2.5deg);
-  transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    0 16px 36px rgba(8, 145, 178, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   overflow: hidden;
+  transition: transform 480ms var(--ease);
 }
 
-.hero:hover .daycard-plate {
-  transform: rotate(0deg) translateY(-3px);
+.hero:hover .timecard-plate {
+  transform: translateY(-4px);
 }
 
-.daycard-plate::before {
-  content: '';
+.timecard-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  min-height: 132px;
+}
+
+.timecard-clock {
+  position: relative;
+  z-index: 1;
+}
+
+.timecard-face {
+  width: 100%;
+  aspect-ratio: 1;
+  color: var(--deep);
+  display: block;
+}
+
+.timecard-hand--s {
+  stroke: var(--accent);
+}
+
+.timecard-hub {
+  fill: var(--accent);
+}
+
+.timecard-date {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.timecard-iso {
   position: absolute;
-  inset: 10px;
-  border: 1px dashed rgba(8, 145, 178, 0.24);
-  border-radius: 2px 20px 4px 20px;
-  pointer-events: none;
+  inset: 4% 0 auto;
+  width: 100%;
+  opacity: 0.78;
+  color: var(--accent);
 }
 
-.daycard-corner {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-color: rgba(8, 145, 178, 0.45);
-  border-style: solid;
-  z-index: 2;
+.timecard-pulse {
+  transform-origin: 100px 88px;
+  animation: pulse-node 4s var(--ease) infinite;
 }
 
-.daycard-corner--tl {
-  top: 14px;
-  left: 14px;
-  border-width: 1.5px 0 0 1.5px;
-}
-
-.daycard-corner--br {
-  right: 14px;
-  bottom: 14px;
-  border-width: 0 1.5px 1.5px 0;
-}
-
-.daycard-motif {
-  position: absolute;
-  inset: 6% 5% auto;
-  width: 90%;
-  height: auto;
-  opacity: 0.92;
-}
-
-.daycard-orbit {
-  transform-origin: 110px 112px;
-  animation: spin 40s linear infinite;
-}
-
-.daycard-orbit--rev {
-  animation-direction: reverse;
-  animation-duration: 55s;
-}
-
-.daycard-num {
+.timecard-num {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  height: 70%;
-  padding-bottom: 6px;
   pointer-events: none;
+  padding-top: 6px;
 }
 
-.daycard-month {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
+.timecard-month {
+  font-family: var(--font-brand);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   color: var(--deep);
-  opacity: 0.78;
 }
 
-.daycard-day {
+.timecard-day {
   font-family: var(--font-family-mono);
-  font-size: clamp(58px, 8vw, 76px);
+  font-size: clamp(44px, 5.5vw, 56px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.06em;
-  line-height: 0.88;
-  background: linear-gradient(180deg, var(--ink) 18%, var(--deep));
+  line-height: 0.9;
+  background: linear-gradient(180deg, var(--ink) 20%, var(--deep));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 10px 18px rgba(8, 145, 178, 0.14));
 }
 
-.daycard-marks {
+.timecard-readout {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 2px 0 0;
+}
+
+.timecard-readout__label {
+  display: block;
+  font-family: var(--font-brand);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.timecard-readout__digits {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: 1.45rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: var(--deep);
+}
+
+.timecard-colon {
+  opacity: 0.55;
+  animation: colon-blink 1s steps(1) infinite;
+}
+
+.timecard-colon--soft {
+  opacity: 0.35;
+  animation: none;
+}
+
+.timecard-sec {
+  font-size: 0.82em;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+@keyframes colon-blink {
+  0%, 49% { opacity: 0.55; }
+  50%, 100% { opacity: 0.18; }
+}
+
+.timecard-marks {
   position: relative;
   z-index: 1;
   display: flex;
   justify-content: center;
   gap: 8px;
-  margin-top: auto;
 }
 
-.daycard-mark {
+.timecard-mark {
   position: relative;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 30px;
-  border-radius: 2px 8px 8px 8px;
+  width: 38px;
+  height: 32px;
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--faint);
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px solid var(--line);
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--line-strong);
   transition: color 200ms ease, background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
-.daycard-mark.is-lit {
+.timecard-mark.is-lit {
   color: var(--deep);
-  background: rgba(8, 145, 178, 0.14);
-  border-color: rgba(8, 145, 178, 0.36);
-  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.08);
+  background: var(--color-accent-soft);
+  border-color: rgba(8, 145, 178, 0.4);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
 }
 
-.daycard-mark__dot {
+.timecard-mark__dot {
   position: absolute;
-  top: 4px;
-  right: 5px;
+  top: 5px;
+  right: 6px;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.25);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.3);
 }
 
-/* ── Boards：色觉友好 — 明度 / 形状 / 纹理 / 标签 ── */
+/* ── Boards ── */
 .boards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 22px;
   align-items: stretch;
-  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  animation: rise 0.7s var(--ease) 0.14s both;
 }
 
 .pane {
   position: relative;
-  z-index: 1;
-  min-height: 380px;
+  min-height: 420px;
   overflow: hidden;
 }
 
-/* 左：浅纸 + 横线纹理 + 方角 + 粗竖脊 —— 灰度也能认 */
 .pane--tasks {
-  padding: 24px 22px 28px 28px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--line-strong);
-  border-left: none;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm), 3px 3px 0 rgba(8, 145, 178, 0.12);
+  padding: 26px 24px 28px 28px;
+  border-radius: var(--radius-panel);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.94), rgba(246, 251, 253, 0.9));
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
 }
 
-.pane-spine {
+.pane-rail {
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  background: linear-gradient(180deg, var(--accent), var(--deep));
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--light), var(--accent) 45%, var(--deep));
 }
 
-.pane-rules {
-  pointer-events: none;
-  position: absolute;
-  inset: 0 0 0 8px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 27px,
-    rgba(8, 145, 178, 0.1) 27px,
-    rgba(8, 145, 178, 0.1) 28px
-  );
-  mask-image: linear-gradient(180deg, transparent 0, #000 72px, #000 100%);
-}
-
-/* 右：深色顶栏 + 圆角体 + 弧线纹理 */
 .pane--events {
   display: flex;
   flex-direction: column;
   padding: 0;
   border-radius: var(--radius-2xl);
-  border: 1.5px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   overflow: hidden;
@@ -1286,59 +1329,35 @@ function goEvents() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 22px 16px;
-  background:
-    linear-gradient(118deg, var(--color-zone-topbar-from), var(--color-zone-topbar-mid) 55%, var(--color-zone-topbar-to));
+  padding: 20px 24px 18px;
+  background: linear-gradient(
+    118deg,
+    var(--color-zone-topbar-from),
+    var(--color-zone-topbar-mid) 55%,
+    var(--color-zone-topbar-to)
+  );
   color: var(--color-zone-topbar-text);
-  box-shadow: inset 0 -1px 0 var(--color-zone-topbar-border);
+  box-shadow: var(--shadow-zone-topbar);
 }
 
 .pane-banner__left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 }
 
 .pane-body {
   position: relative;
   flex: 1;
-  padding: 20px 22px 26px;
+  padding: 22px 24px 28px;
   min-height: 0;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(8, 145, 178, 0.06), transparent 45%),
+    #fff;
 }
 
-.pane-arcs {
-  pointer-events: none;
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  border: 2px solid rgba(8, 145, 178, 0.18);
-  box-shadow:
-    inset 0 0 0 18px transparent,
-    0 0 0 14px rgba(8, 145, 178, 0.06);
-}
-
-.pane-arcs::before,
-.pane-arcs::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(8, 145, 178, 0.14);
-}
-
-.pane-arcs::before {
-  inset: 22%;
-}
-
-.pane-arcs::after {
-  inset: 42%;
-  border-style: dashed;
-}
-
-.pane--tasks > :not(.pane-rules):not(.pane-spine) {
+.pane--tasks > :not(.pane-rail) {
   position: relative;
   z-index: 1;
 }
@@ -1348,71 +1367,63 @@ function goEvents() {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .pane-head__left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.pane-tag {
+.pane-eyebrow {
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   line-height: 1;
 }
 
-.pane-tag__en {
-  font-family: var(--font-family-mono);
-  font-size: 10px;
+.pane-eyebrow__en {
+  font-family: var(--font-brand);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-}
-
-.pane-tag__zh {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.pane-tag--square {
-  padding: 3px 8px 3px 6px;
-  border-radius: var(--radius-xs);
-  border: 1.5px solid var(--deep);
-  background: var(--color-accent-soft);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--deep);
 }
 
-.pane-tag--round {
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(240, 249, 255, 0.4);
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--color-zone-topbar-text);
+.pane-eyebrow__zh {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--body);
+}
+
+.pane-eyebrow--on-dark .pane-eyebrow__en,
+.pane-eyebrow--on-dark .pane-eyebrow__zh {
+  color: rgba(240, 249, 255, 0.88);
 }
 
 .pane-ico {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
 }
 
 .pane-ico--check {
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   color: #fff;
-  background: var(--deep);
-  border: 2px solid var(--deep);
+  background: linear-gradient(145deg, var(--accent), var(--deep));
+  box-shadow: var(--shadow-accent);
 }
 
 .pane-ico--clock {
   border-radius: 50%;
   color: var(--deep);
   background: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35);
 }
 
@@ -1423,26 +1434,27 @@ function goEvents() {
 
 .pane-title {
   margin: 0;
-  font-size: 1.18rem;
+  font-size: 1.28rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.025em;
   color: var(--ink);
 }
 
 .pane-banner .pane-title {
   color: var(--color-zone-topbar-text);
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 
 .pane-link {
   border: none;
   background: none;
-  padding: 6px 2px;
-  font-size: 13px;
+  padding: 8px 4px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--body);
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-style: solid;
   text-underline-offset: 3px;
   transition: color 180ms ease;
 }
@@ -1452,8 +1464,8 @@ function goEvents() {
 }
 
 .pane-link--on-dark {
-  color: var(--color-zone-topbar-text-dim);
-  text-decoration-color: rgba(240, 249, 255, 0.35);
+  color: rgba(240, 249, 255, 0.88);
+  text-decoration-color: rgba(240, 249, 255, 0.4);
 }
 
 .pane-link--on-dark:hover {
@@ -1461,20 +1473,20 @@ function goEvents() {
 }
 
 .btn-ghost {
-  height: 34px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
   border: 1.5px solid var(--line-strong);
-  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-md);
+  border-radius: var(--radius-control);
   background: linear-gradient(180deg, #fff, var(--color-surface-muted));
   color: var(--deep);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition: transform 180ms var(--ease), border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .btn-ghost:hover {
-  border-color: rgba(8, 145, 178, 0.4);
+  border-color: rgba(8, 145, 178, 0.45);
   box-shadow: var(--shadow-xs);
   transform: translateY(-1px);
 }
@@ -1483,62 +1495,59 @@ function goEvents() {
   transform: scale(0.98);
 }
 
-.btn-ghost--round {
+.btn-ghost--pill {
   border-radius: 999px;
 }
 
-/* ── Cards ── */
+/* Cards */
 .list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .list--tasks {
-  gap: 6px;
+  gap: 8px;
 }
 
 .list--agenda {
-  position: relative;
   gap: 0;
-  padding-left: 0;
 }
 
 .card {
-  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(0.14s + var(--i, 0) * 0.05s);
+  animation: rise 0.5s var(--ease) both;
 }
 
 .card-btn {
   width: 100%;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px 14px;
   border: 1px solid transparent;
   text-align: left;
   cursor: pointer;
   transition:
-    transform 200ms ease,
+    transform 200ms var(--ease),
     background 200ms ease,
     border-color 200ms ease,
     box-shadow 200ms ease;
 }
 
 .card--task .card-btn {
-  border-radius: 2px;
-  background: #fff;
-  border: 1.5px solid rgba(12, 74, 94, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .card--task .card-btn:hover {
-  background: #fff;
-  border-color: var(--deep);
-  box-shadow: 2px 2px 0 rgba(6, 36, 64, 0.08);
-  transform: translateX(2px);
+  border-color: rgba(8, 145, 178, 0.4);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 #fff;
+  transform: translateX(3px);
 }
 
 .card-btn:active {
@@ -1547,8 +1556,7 @@ function goEvents() {
 
 .card.is-today .card-btn {
   background: var(--color-accent-soft);
-  border-color: var(--line-strong);
-  border-width: 2px;
+  border-color: rgba(8, 145, 178, 0.35);
 }
 
 .card.is-overdue .card-btn {
@@ -1566,10 +1574,10 @@ function goEvents() {
 
 .card-check {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   margin-top: 2px;
-  border-radius: var(--radius-xs);
+  border-radius: 6px;
   border: 2px solid var(--deep);
   background: #fff;
 }
@@ -1588,15 +1596,16 @@ function goEvents() {
 .card-btn--event {
   align-items: stretch;
   gap: 0;
-  padding: 10px 12px 10px 0;
+  padding: 12px 12px 12px 0;
   border-radius: 0;
   background: transparent;
   border: none;
 }
 
 .card-btn--event:hover {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(238, 248, 252, 0.65);
   transform: none;
+  border-radius: 12px;
 }
 
 .card-rail {
@@ -1615,7 +1624,7 @@ function goEvents() {
   left: 50%;
   width: 2px;
   margin-left: -1px;
-  background: linear-gradient(180deg, var(--accent), rgba(8, 145, 178, 0.15));
+  background: linear-gradient(180deg, var(--accent), rgba(8, 145, 178, 0.12));
 }
 
 .card--event:first-child .card-rail::before {
@@ -1640,13 +1649,12 @@ function goEvents() {
 
 .card-clock {
   flex-shrink: 0;
-  width: 3.4rem;
+  width: 3.5rem;
   padding-top: 4px;
   font-family: var(--font-family-mono);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
   color: var(--deep);
   text-align: right;
 }
@@ -1656,12 +1664,12 @@ function goEvents() {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding-top: 2px;
+  gap: 6px;
+  padding-top: 1px;
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--ink);
@@ -1675,35 +1683,28 @@ function goEvents() {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--body);
   font-variant-numeric: tabular-nums;
 }
 
 .card-badge {
   display: inline-flex;
-  padding: 1px 8px;
-  border-radius: var(--radius-xs) 7px 7px 7px;
+  padding: 2px 9px;
+  border-radius: 6px;
   font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-size: 12px;
   color: var(--deep);
   background: var(--color-accent-soft);
-  border: 1.5px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
 }
 
 .card-badge--warn,
 .card.is-overdue .card-badge {
   color: #9a3d32;
   border-color: rgba(224, 85, 69, 0.35);
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      var(--color-red-soft),
-      var(--color-red-soft) 3px,
-      #fff 3px,
-      #fff 6px
-    );
+  background: var(--color-red-soft);
 }
 
 .card.is-today .card-badge {
@@ -1712,7 +1713,7 @@ function goEvents() {
   border-color: var(--deep);
 }
 
-/* Empty states — 清单行 vs 表盘 */
+/* Empty */
 .empty {
   padding: 28px 8px 12px;
 }
@@ -1726,20 +1727,18 @@ function goEvents() {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding-top: 36px;
+  padding-top: 40px;
 }
 
 .empty-stack {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: min(100%, 200px);
   margin-bottom: 16px;
   padding: 14px;
-  border-radius: var(--radius-sm);
-  border: 1.5px dashed var(--deep);
+  border-radius: 12px;
+  border: 1.5px dashed rgba(8, 145, 178, 0.4);
   background: var(--color-surface-muted);
 }
 
@@ -1752,7 +1751,7 @@ function goEvents() {
 .empty-box {
   width: 15px;
   height: 15px;
-  border-radius: var(--radius-xs);
+  border-radius: 4px;
   border: 2px solid var(--deep);
   flex-shrink: 0;
   background: #fff;
@@ -1768,7 +1767,7 @@ function goEvents() {
   flex: 1;
   height: 5px;
   border-radius: 1px;
-  background: rgba(8, 145, 178, 0.18);
+  background: rgba(8, 145, 178, 0.2);
 }
 
 .empty-line--mid { width: 70%; flex: 0 1 70%; }
@@ -1776,9 +1775,8 @@ function goEvents() {
 
 .empty-clock {
   position: relative;
-  z-index: 1;
-  width: 96px;
-  height: 96px;
+  width: 100px;
+  height: 100px;
   margin-bottom: 18px;
 }
 
@@ -1829,40 +1827,25 @@ function goEvents() {
   background: var(--accent);
 }
 
-.empty-clock__tick {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  width: 2px;
-  height: 10px;
-  margin-left: -1px;
-  background: var(--deep);
-  transform: rotate(var(--a));
-  transform-origin: 50% 40px;
-}
-
 .empty-title {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .empty-desc {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   max-width: 22em;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
-  color: var(--muted);
-}
-
-.skel--agenda .skel-row--agenda {
-  border-radius: 999px 14px 14px 999px;
+  color: var(--body);
 }
 
 .more {
-  margin: 14px 2px 0;
-  font-size: 12px;
-  color: var(--muted);
+  margin: 16px 2px 0;
+  font-size: 13px;
+  color: var(--body);
 }
 
 .skel {
@@ -1873,7 +1856,7 @@ function goEvents() {
 
 .skel-row {
   height: 56px;
-  border-radius: 4px 14px 12px 12px;
+  border-radius: 12px;
   background: linear-gradient(
     90deg,
     rgba(8, 145, 178, 0.05),
@@ -1884,24 +1867,19 @@ function goEvents() {
   animation: shimmer 1.2s ease-in-out infinite;
 }
 
+.skel--agenda .skel-row--agenda {
+  border-radius: 999px 14px 14px 999px;
+}
+
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes spin-centered {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 @keyframes shimmer {
@@ -1914,17 +1892,12 @@ function goEvents() {
     grid-template-columns: 1fr;
   }
 
-  .daycard {
+  .timecard {
     justify-content: flex-start;
   }
 
-  .daycard-plate {
-    width: 190px;
-    transform: none;
-  }
-
-  .daycard-orbit-ring {
-    display: none;
+  .timecard-plate {
+    width: 260px;
   }
 
   .boards {
@@ -1943,32 +1916,37 @@ function goEvents() {
   }
 
   .pane {
-    padding: 20px 16px 22px;
     min-height: 0;
   }
 
+  .pane--tasks {
+    padding: 20px 16px 22px 20px;
+  }
+
   .hero-title {
-    font-size: 1.75rem;
+    font-size: 1.65rem;
+  }
+
+  .atm-wm {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hero,
-  .daycard,
+  .timecard,
   .boards,
   .card,
   .meter,
   .atm-glow,
-  .atm-rings,
-  .atm-hex,
   .atm-flow__path,
   .atm-flow__node,
-  .daycard-orbit,
-  .daycard-orbit-ring,
+  .timecard-pulse,
   .skel-row,
-  .btn-soft,
+  .btn-primary,
   .card-btn,
-  .daycard-plate {
+  .timecard-plate,
+  .timecard-colon {
     animation: none !important;
     transition: none !important;
   }
