@@ -57,7 +57,10 @@ public class AiMeetingSummaryService {
             throw new RuntimeException("会议 ID 不能为空");
         }
         WbMeeting meeting = wbMeetingService.requireOwnedMeeting(userId, meetingId);
-        List<Map<String, Object>> attachments = wbMeetingService.parseAttachments(meeting.getAttachments());
+        List<Map<String, Object>> allAttachments = wbMeetingService.parseAttachments(meeting.getAttachments());
+        List<Map<String, Object>> attachments = allAttachments.stream()
+                .filter(a -> !"ai-summary".equals(String.valueOf(a.get("kind"))))
+                .toList();
         if (attachments.isEmpty()) {
             throw new RuntimeException("请先上传会议材料，再进行 AI 整理");
         }
@@ -86,12 +89,15 @@ public class AiMeetingSummaryService {
             }
         }
 
-        wbMeetingService.applyAiSummary(userId, meetingId, summary);
+        Map<String, Object> summaryFile = wbMeetingService.applyAiSummary(userId, meetingId, summary);
 
         Map<String, Object> result = new HashMap<>();
         result.put("meetingId", meetingId);
         result.put("aiSummary", summary);
         result.put("status", "1");
+        if (summaryFile != null) {
+            result.put("summaryFile", summaryFile);
+        }
         return result;
     }
 

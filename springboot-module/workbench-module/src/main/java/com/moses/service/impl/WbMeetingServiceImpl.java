@@ -8,17 +8,21 @@ import com.moses.config.ResultConfig;
 import com.moses.entity.WbMeeting;
 import com.moses.mapper.WbMeetingMapper;
 import com.moses.service.WbMeetingService;
+import com.moses.utils.AliCloudUtil;
 import com.moses.utils.UploadFileUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,15 +30,20 @@ import java.util.UUID;
 /**
  * 会议记录 Service 实现
  */
+@Slf4j
 @Service
 public class WbMeetingServiceImpl extends ServiceImpl<WbMeetingMapper, WbMeeting>
         implements WbMeetingService {
 
     private static final long MAX_ATTACHMENT_SIZE = 20L * 1024 * 1024;
     private static final int MAX_ATTACHMENT_COUNT = 20;
+    private static final String KIND_AI_SUMMARY = "ai-summary";
 
     @Autowired
     private UploadFileUtil uploadFileUtil;
+
+    @Autowired
+    private AliCloudUtil aliCloudUtil;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -137,15 +146,75 @@ public class WbMeetingServiceImpl extends ServiceImpl<WbMeetingMapper, WbMeeting
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void applyAiSummary(Long userId, Long meetingId, String summary) {
+    public Map<String, Object> applyAiSummary(Long userId, Long meetingId, String summary) {
         if (!StringUtils.hasText(summary)) {
             throw new RuntimeException("会议概要不能为空");
         }
         WbMeeting meeting = requireOwnedMeeting(userId, meetingId);
-        meeting.setAiSummary(summary.trim());
+        String text = summary.trim();
+        meeting.setAiSummary(text);
         meeting.setStatus("1");
         meeting.setUpdateTime(new Date());
+
+        Map<String, Object> summaryFile = null;
+        try {
+            summaryFile = uploadAiSummaryFile(meeting, text);
+            if (summaryFile != null) {
+                List<Map<String, Object>> list = parseAttachments(meeting.getAttachments());
+                list.removeIf(a -> KIND_AI_SUMMARY.equals(String.valueOf(a.get("kind"))));
+                if (list.size() >= MAX_ATTACHMENT_COUNT) {
+                    // 腾出一个名额给纪要文件
+                    for (Iterator<Map<String, Object>> it = list.iterator(); it.hasNext(); ) {
+                        Map<String, Object> item = it.next();
+                        if (!KIND_AI_SUMMARY.equals(String.valueOf(item.get("kind")))) {
+                            it.remove();
+                            break;
+                        }
+                    }
+                }
+                list.add(summaryFile);
+                meeting.setAttachments(writeAttachments(list));
+            }
+        } catch (Exception e) {
+            // 概要文本已保存，文件生成失败不阻断整理结果
+            log.warn("AI 纪要文件上传失败, meetingId={}: {}", meetingId, e.getMessage());
+            summaryFile = null;
+        }
+
         updateById(meeting);
+        return summaryFile;
+    }
+
+    private Map<String, Object> uploadAiSummaryFile(WbMeeting meeting, String summary) throws Exception {
+        String baseName = sanitizeFileName(meeting.getTitle());
+        if (!StringUtils.hasText(baseName)) {
+            baseName = "会议纪要";
+        }
+        String fileName = baseName + "-会议纪要.md";
+        byte[] bytes = summary.getBytes(StandardCharsets.UTF_8);
+        String url = aliCloudUtil.upload(bytes, fileName);
+
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", UUID.randomUUID().toString().replace("-", ""));
+        item.put("name", fileName);
+        item.put("url", url);
+        item.put("size", (long) bytes.length);
+        item.put("mime", "text/markdown");
+        item.put("kind", KIND_AI_SUMMARY);
+        item.put("createTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+        return item;
+    }
+
+    private static String sanitizeFileName(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "";
+        }
+        String name = raw.trim().replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]+", "_");
+        name = name.replaceAll("\\s+", " ").trim();
+        if (name.length() > 40) {
+            name = name.substring(0, 40).trim();
+        }
+        return name;
     }
 
     private String writeAttachments(List<Map<String, Object>> list) {

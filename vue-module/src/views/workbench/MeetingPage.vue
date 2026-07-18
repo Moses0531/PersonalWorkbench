@@ -12,7 +12,12 @@ import {
 } from '@/apis/workbench/MeetingApi'
 import { meetingSummaryApi } from '@/apis/ai/AiApi'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
-import { PlusOutlined, UploadOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
+import {
+  PlusOutlined,
+  UploadOutlined,
+  ThunderboltOutlined,
+  DownloadOutlined,
+} from '@ant-design/icons-vue'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -93,6 +98,43 @@ function statusLabel(row) {
 
 function attachmentCount(row) {
   return parseAttachments(row?.attachments).length
+}
+
+function isAiSummaryFile(file) {
+  return String(file?.kind || '') === 'ai-summary'
+}
+
+const summaryFile = computed(() =>
+  currentAttachments.value.find((f) => isAiSummaryFile(f)) || null,
+)
+
+function downloadSummaryFile() {
+  const file = summaryFile.value
+  if (file?.url) {
+    const a = document.createElement('a')
+    a.href = file.url
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.download = file.name || '会议纪要.md'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    return
+  }
+  if (!currentSummary.value) {
+    message.warning('暂无可下载的纪要')
+    return
+  }
+  const base = (form.title || '会议纪要').trim().replace(/[\\/:*?"<>|]+/g, '_') || '会议纪要'
+  const blob = new Blob([currentSummary.value], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${base}-会议纪要.md`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 function resetForm() {
@@ -245,7 +287,7 @@ async function runAiSummary() {
     message.warning('请先创建会议')
     return
   }
-  if (!currentAttachments.value.length) {
+  if (!currentAttachments.value.some((f) => !isAiSummaryFile(f))) {
     message.warning('请先上传会议材料')
     return
   }
@@ -253,8 +295,23 @@ async function runAiSummary() {
   try {
     const result = await meetingSummaryApi(form.meetingId)
     currentSummary.value = result?.data?.aiSummary || ''
-    message.success('AI 整理完成')
     await loadMeetings()
+    const latest = meetings.value.find((m) => Number(m.meetingId) === Number(form.meetingId))
+    if (latest) {
+      currentAttachments.value = parseAttachments(latest.attachments)
+      currentSummary.value = latest.aiSummary || currentSummary.value
+    } else if (result?.data?.summaryFile) {
+      const file = result.data.summaryFile
+      currentAttachments.value = [
+        ...currentAttachments.value.filter((f) => !isAiSummaryFile(f)),
+        file,
+      ]
+    }
+    message.success(
+      result?.data?.summaryFile
+        ? 'AI 整理完成，已生成纪要文件'
+        : 'AI 整理完成',
+    )
   } catch (error) {
     message.error(error.message || 'AI 整理失败')
   } finally {
@@ -460,6 +517,7 @@ onMounted(loadMeetings)
                     >
                       {{ file.name }}
                     </a>
+                    <span v-if="isAiSummaryFile(file)" class="attach-item__tag">AI纪要</span>
                     <span class="attach-item__size">{{ formatSize(file.size) }}</span>
                     <button
                       v-permission="'meeting:modify'"
@@ -478,13 +536,13 @@ onMounted(loadMeetings)
                     v-permission="'ai:meeting:summary'"
                     type="button"
                     class="wb-btn wb-btn--primary"
-                    :disabled="summarizing || !currentAttachments.length"
+                    :disabled="summarizing || !currentAttachments.some((f) => !isAiSummaryFile(f))"
                     @click="runAiSummary"
                   >
                     <ThunderboltOutlined />
                     {{ summarizing ? '整理中…' : 'AI 整理' }}
                   </button>
-                  <span class="ai-row__hint">根据已上传材料自动生成会议概要</span>
+                  <span class="ai-row__hint">根据已上传材料自动生成会议概要，并导出为 Markdown 文件</span>
                 </div>
               </template>
             </div>
@@ -495,7 +553,16 @@ onMounted(loadMeetings)
             label="AI 会议概要"
             class="dialog-item dialog-item--full"
           >
-            <div class="summary-box">{{ currentSummary }}</div>
+            <div class="summary-panel">
+              <div class="summary-panel__bar">
+                <button type="button" class="wb-btn wb-btn--ghost" @click="downloadSummaryFile">
+                  <DownloadOutlined />
+                  下载纪要文件
+                </button>
+                <span v-if="summaryFile" class="summary-panel__file">{{ summaryFile.name }}</span>
+              </div>
+              <div class="summary-box">{{ currentSummary }}</div>
+            </div>
           </a-form-item>
         </div>
       </a-form>
@@ -696,6 +763,17 @@ onMounted(loadMeetings)
   font-variant-numeric: tabular-nums;
 }
 
+.attach-item__tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-deep);
+  background: rgba(8, 145, 178, 0.12);
+}
+
 .attach-item__remove {
   border: none;
   background: transparent;
@@ -720,6 +798,24 @@ onMounted(loadMeetings)
 .ai-row__hint {
   font-size: 0.78rem;
   color: var(--color-text-dim);
+}
+
+.summary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary-panel__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.summary-panel__file {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 .summary-box {

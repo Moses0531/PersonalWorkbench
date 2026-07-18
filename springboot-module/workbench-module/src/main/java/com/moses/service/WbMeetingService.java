@@ -20,5 +20,9 @@ public interface WbMeetingService extends IService<WbMeeting> {
 
     List<Map<String, Object>> parseAttachments(String json);
 
-    void applyAiSummary(Long userId, Long meetingId, String summary);
+    /**
+     * 写入 AI 概要，并生成 Markdown 纪要文件加入材料列表。
+     * @return 新生成的纪要文件元数据（上传失败时可能为 null）
+     */
+    Map<String, Object> applyAiSummary(Long userId, Long meetingId, String summary);
 }
