@@ -10,6 +10,7 @@ import 'dayjs/locale/zh-cn'
 import App from './App.vue'
 import router from './router'
 import { permissionDirective } from '@/utils/menu'
+import setupEcharts from '@/plugins/echarts'
 
 dayjs.locale('zh-cn')
 
@@ -18,6 +19,7 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(Antd)
+setupEcharts(app)
 app.directive('permission', permissionDirective)
 
 app.mount('#app')
