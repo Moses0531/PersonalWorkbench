@@ -49,13 +49,3 @@ export function listProjectAttachmentsApi(projectId) {
   })
 }
 
-/** AI 规划预览（不写库） */
-export function planPreviewApi(body) {
-  return request.post('/ai/plan/preview', body)
-}
-
-/** AI 规划确认落板 */
-export function planApplyApi(body) {
-  return request.post('/ai/plan/apply', body)
-}
-

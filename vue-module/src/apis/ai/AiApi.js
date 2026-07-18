@@ -1,10 +1,5 @@
 import request from '@/utils/request'
 
-/** Ai-module AiController */
-export function chatWithAiApi(message, conversationId) {
-  return request.get('/ai/chat', { params: { message, conversationId } })
-}
-
 /**
  * SSE 流式对话（axios fetch 适配器 + ReadableStream）
  */
@@ -97,4 +92,14 @@ export function getAiHistoryApi(conversationId) {
 
 export function deleteAiConversationApi(conversationId) {
   return request.delete('/ai/deleteConversation', { params: { conversationId } })
+}
+
+/** AI 规划预览（不写库） */
+export function planPreviewApi(body) {
+  return request.post('/ai/plan/preview', body)
+}
+
+/** AI 规划确认落板 */
+export function planApplyApi(body) {
+  return request.post('/ai/plan/apply', body)
 }

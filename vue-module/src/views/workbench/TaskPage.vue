@@ -8,12 +8,11 @@ import {
   deleteTasksApi,
   listProjectAttachmentsApi,
   pageTasksApi,
-  planApplyApi,
-  planPreviewApi,
   removeTaskAttachmentApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
 } from '@/apis/workbench/TaskApi'
+import { planApplyApi, planPreviewApi } from '@/apis/ai/AiApi'
 import {
   addProjectApi,
   deleteProjectsApi,
