@@ -18,8 +18,12 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/auth/register",
                         "/auth/config",
                         "/doc.html",
+                        "/favicon.ico",
                         "/webjars/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
                         "/swagger-resources/**",
+                        "/v3/api-docs",
                         "/v3/api-docs/**",
                         "/error"
                 );
