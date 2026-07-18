@@ -141,7 +141,7 @@ function buildProfilePayload() {
     phone: userInfo.phone,
     email: userInfo.email,
     sex: userInfo.sex,
-    birthday: userInfo.birthday ? `${userInfo.birthday}T00:00:00` : null,
+    birthday: userInfo.birthday ? `${userInfo.birthday} 00:00:00` : null,
   }
 }
 
@@ -1036,12 +1036,13 @@ onMounted(loadUserInfo)
 }
 
 .btn--primary {
-  background: var(--profile-primary);
+  /* 弹窗 teleport 到 body，不能依赖 .profile-page 上的局部变量 */
+  background: var(--color-accent);
   color: #fff;
 }
 
 .btn--primary:hover {
-  background: var(--profile-primary-deep);
+  background: var(--color-accent-deep);
 }
 
 .btn--outline {
@@ -1111,7 +1112,7 @@ onMounted(loadUserInfo)
   border-radius: var(--radius-full);
   margin: 0 auto 14px;
   background: var(--color-accent-soft);
-  color: var(--profile-primary);
+  color: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
