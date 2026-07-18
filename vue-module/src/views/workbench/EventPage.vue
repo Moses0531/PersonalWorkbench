@@ -67,36 +67,66 @@ const filteredEvents = computed(() => {
     .sort((a, b) => dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf())
 })
 
-const eventsByDate = computed(() => {
-  const map = new Map()
-  for (const ev of filteredEvents.value) {
-    const key = dayjs(ev.startTime).format('YYYY-MM-DD')
-    if (!map.has(key)) map.set(key, [])
-    map.get(key).push(ev)
-  }
-  return map
-})
-
 const selectedDateKey = computed(() => calendarValue.value.format('YYYY-MM-DD'))
-const selectedDayEvents = computed(() => eventsByDate.value.get(selectedDateKey.value) || [])
+const selectedDayEvents = computed(() => eventsOf(calendarValue.value))
 const selectedDayLabel = computed(() => formatDayLabel(selectedDateKey.value))
 
 const stats = computed(() => {
   const all = events.value
-  const todayKey = dayjs().format('YYYY-MM-DD')
-  const today = all.filter((e) => dayjs(e.startTime).format('YYYY-MM-DD') === todayKey).length
-  const upcoming = all.filter((e) => !dayjs(e.startTime).isBefore(dayjs(), 'day')).length
+  const today = dayjs().startOf('day')
+  const todayCount = all.filter((e) => eventOccursOn(e, today)).length
+  const upcoming = all.filter((e) => {
+    if (String(e.repeatType) === '1') return true
+    return !dayjs(e.startTime).isBefore(today, 'day')
+  }).length
   const repeating = all.filter((e) => String(e.repeatType) === '1').length
-  return { total: all.length, today, upcoming, repeating }
+  return { total: all.length, today: todayCount, upcoming, repeating }
 })
 
+/** 1=周一 … 7=周日，与后端 repeat_weekdays 一致 */
+function weekdayKey(day) {
+  return day.day() === 0 ? '7' : String(day.day())
+}
+
+/** 判断日程是否在指定日期出现（含每周重复展开） */
+function eventOccursOn(ev, day) {
+  const start = dayjs(ev.startTime)
+  if (!start.isValid()) return false
+  const dayKey = day.format('YYYY-MM-DD')
+  if (start.format('YYYY-MM-DD') === dayKey) return true
+  if (String(ev.repeatType) !== '1') return false
+  if (start.startOf('day').isAfter(day, 'day')) return false
+  const days = String(ev.repeatWeekdays || '')
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean)
+  const weekday = weekdayKey(day)
+  if (!days.length) return weekday === weekdayKey(start)
+  return days.includes(weekday)
+}
+
 function eventsOf(date) {
-  return eventsByDate.value.get(date.format('YYYY-MM-DD')) || []
+  const day = dayjs(date).startOf('day')
+  return filteredEvents.value.filter((ev) => eventOccursOn(ev, day))
 }
 
 function eventsInMonth(date) {
-  const key = date.format('YYYY-MM')
-  return filteredEvents.value.filter((ev) => dayjs(ev.startTime).format('YYYY-MM') === key)
+  const monthStart = date.startOf('month')
+  const monthEnd = date.endOf('month')
+  return filteredEvents.value.filter((ev) => {
+    const start = dayjs(ev.startTime)
+    if (!start.isValid()) return false
+    if (String(ev.repeatType) !== '1') {
+      return start.format('YYYY-MM') === date.format('YYYY-MM')
+    }
+    if (start.isAfter(monthEnd, 'day')) return false
+    let d = monthStart.isBefore(start, 'day') ? start.startOf('day') : monthStart
+    while (!d.isAfter(monthEnd, 'day')) {
+      if (eventOccursOn(ev, d)) return true
+      d = d.add(1, 'day')
+    }
+    return false
+  })
 }
 
 function formatDayLabel(dateStr) {
@@ -219,9 +249,9 @@ function openEdit(row) {
   dialogVisible.value = true
 }
 
-function onEventChipClick(ev, e) {
+function onEventChipClick(ev, e, date) {
   e.stopPropagation()
-  calendarValue.value = dayjs(ev.startTime)
+  if (date) calendarValue.value = dayjs(date)
   openEdit(ev)
 }
 
@@ -354,7 +384,7 @@ onMounted(refreshAll)
                     class="cal-chip"
                     :class="{ 'is-allday': Number(ev.isAllDay) === 1 }"
                     :title="ev.title"
-                    @click.stop="onEventChipClick(ev, $event)"
+                    @click.stop="onEventChipClick(ev, $event, current)"
                   >
                     <em class="cal-chip__time">{{ formatChipTime(ev) }}</em>
                     <span class="cal-chip__title">{{ ev.title }}</span>
