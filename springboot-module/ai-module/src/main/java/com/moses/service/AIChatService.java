@@ -7,6 +7,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@ConditionalOnBean(name = "chatClient")
 public class AIChatService {
 
     private final ChatClient chatClient;
