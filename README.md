@@ -102,7 +102,7 @@ spring:
       port: 6379
 ```
 
-**AI 功能（可选）：** 设置环境变量 `DEEPSEEK_KEY` 为 DeepSeek API Key。不配则 AI 对话与规划不可用，其他功能不受影响。
+**AI / DeepSeek（必填）：** 必须设置环境变量 `DEEPSEEK_KEY`。未配置时 Spring AI 会在启动阶段直接失败，后端无法启动。
 
 **OSS 附件上传（可选）：** 设置环境变量 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`，并确认 `aliyun.oss.*` 配置与桶一致。
 
@@ -156,7 +156,7 @@ pnpm build
 sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/PersonalWorkbench.git /opt/PersonalWorkbench
 cd /opt/PersonalWorkbench/deploy
 cp .env.example .env
-# 编辑 .env：设置 MYSQL_ROOT_PASSWORD，按需填写 DEEPSEEK_KEY / OSS_*
+# 编辑 .env：必须设置 MYSQL_ROOT_PASSWORD、DEEPSEEK_KEY；OSS_* 按需
 nano .env
 docker compose --env-file .env up -d --build
 ```
