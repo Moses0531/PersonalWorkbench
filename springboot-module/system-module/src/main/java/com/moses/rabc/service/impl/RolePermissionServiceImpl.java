@@ -64,16 +64,11 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         }
     }
 
-    /** role_id=0 时 getById 可能查不到，需显式按主键查询 */
     private SysRole requireRole(Long roleId) {
         if (roleId == null) {
             throw new RuntimeException("角色ID不能为空");
         }
         SysRole role = sysRoleService.getById(roleId);
-        if (role == null) {
-            role = sysRoleService.getOne(new LambdaQueryWrapper<SysRole>()
-                    .eq(SysRole::getRoleId, roleId), false);
-        }
         if (role == null) {
             throw new RuntimeException("角色不存在");
         }

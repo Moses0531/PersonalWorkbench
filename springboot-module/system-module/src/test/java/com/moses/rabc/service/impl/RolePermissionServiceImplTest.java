@@ -46,7 +46,6 @@ class RolePermissionServiceImplTest {
     @Test
     void getPermissionsByRoleId_roleMissing_throws() {
         when(sysRoleService.getById(9L)).thenReturn(null);
-        when(sysRoleService.getOne(any(), eq(false))).thenReturn(null);
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.getPermissionsByRoleId(9L));
         assertEquals("角色不存在", ex.getMessage());
     }
