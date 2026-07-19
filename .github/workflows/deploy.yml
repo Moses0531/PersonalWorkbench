@@ -85,6 +85,12 @@ jobs:
             fi
             if [[ -n "${MYSQL_ROOT_PASSWORD:-}" ]]; then
               upsert_env MYSQL_ROOT_PASSWORD "$MYSQL_ROOT_PASSWORD"
+            else
+              # appleboy `envs:` exports empty MYSQL_ROOT_PASSWORD when the Secret is unset;
+              # Compose prefers shell env over --env-file, so an empty export would wipe the
+              # JDBC password at interpolation time (SPRING_DATASOURCE_PASSWORD="").
+              unset MYSQL_ROOT_PASSWORD || true
+              echo "MYSQL_ROOT_PASSWORD Secret empty — using value already in server .env"
             fi
 
             # Fail fast if Key still missing
@@ -94,11 +100,28 @@ jobs:
               exit 1
             fi
 
+            # Load .env into this shell so compose ${VAR} interpolation cannot stay empty
+            set -a
+            # shellcheck disable=SC1091
+            source .env
+            set +a
+
+            DB_PWD="$(grep '^MYSQL_ROOT_PASSWORD=' .env | cut -d= -f2- | tr -d '\r')"
+            if [[ -z "$DB_PWD" ]]; then
+              echo "ERROR: MYSQL_ROOT_PASSWORD is empty. Set GitHub Secret or server deploy/.env"
+              exit 1
+            fi
+
             docker compose --env-file .env up -d --build --remove-orphans --force-recreate backend
             docker compose --env-file .env up -d --build --remove-orphans
             docker image prune -f
 
-            echo "==> Verify DEEPSEEK_KEY inside backend container"
+            echo "==> Verify secrets inside backend container"
             docker compose exec -T backend printenv DEEPSEEK_KEY >/dev/null
-            echo "DEEPSEEK_KEY is present in container"
+            PWD_LEN="$(docker compose exec -T backend sh -c 'printf %s "$SPRING_DATASOURCE_PASSWORD" | wc -c' | tr -d '[:space:]')"
+            if [[ "$PWD_LEN" -lt 1 ]]; then
+              echo "ERROR: SPRING_DATASOURCE_PASSWORD is empty inside backend container"
+              exit 1
+            fi
+            echo "DEEPSEEK_KEY present; SPRING_DATASOURCE_PASSWORD length=$PWD_LEN"
             docker compose ps
