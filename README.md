@@ -88,12 +88,13 @@ CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4
 一个为数据+结构，一个为仅结构
 ### 3.3 配置后端
 
-编辑 `springboot-module/start-module/src/main/resources/application.yml`，按本机环境修改：
+编辑 `springboot-module/start-module/src/main/resources/application.yml`，按本机环境修改密码即可。  
+**本地与服务器 JDBC 连接参数已对齐**（时区 / `allowPublicKeyRetrieval` / `useSSL`）；Docker 只覆盖 host（`mysql`）与密码（`MYSQL_ROOT_PASSWORD`）。
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/personal_workbench
+    url: jdbc:mysql://localhost:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
     password: 你的密码
   data:
@@ -105,6 +106,17 @@ spring:
 **AI / DeepSeek（必填）：** 必须设置环境变量 `DEEPSEEK_KEY`。未配置时 Spring AI 会在启动阶段直接失败，后端无法启动。
 
 **OSS 附件上传（可选）：** 设置环境变量 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`，并确认 `aliyun.oss.*` 配置与桶一致。
+
+### 3.3.1 本地 vs 服务器：允许不同的只有这些
+
+| 项 | 本地开发 | 服务器 Docker |
+| --- | --- | --- |
+| MySQL host | `localhost` | `mysql`（compose 服务名） |
+| Redis host | `localhost` | `redis` |
+| DB 密码 | `application.yml` / `SPRING_DATASOURCE_PASSWORD` | `deploy/.env` → `MYSQL_ROOT_PASSWORD` |
+| 前端 API | Vite 代理 `/api` → `8090` | Nginx `/api/` → `backend:8090`（须 `underscores_in_headers on`，否则丢弃 `rbac_token`） |
+| JDBC 其它参数 | **相同** | **相同** |
+| Token 头名 | `rbac_token` | `rbac_token`（与本地一致） |
 
 ### 3.4 启动后端
 

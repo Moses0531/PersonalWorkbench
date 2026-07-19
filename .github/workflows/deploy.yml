@@ -125,3 +125,22 @@ jobs:
             fi
             echo "DEEPSEEK_KEY present; SPRING_DATASOURCE_PASSWORD length=$PWD_LEN"
             docker compose ps
+
+            # 冒烟：对齐本地「能打开站点 + API 通」的最低验收（经 nginx，同 Vite /api 代理）
+            HTTP_PORT_VAL="$(grep '^HTTP_PORT=' .env | cut -d= -f2- | tr -d '\r')"
+            HTTP_PORT_VAL="${HTTP_PORT_VAL:-80}"
+            echo "==> Smoke: GET /api/auth/config via localhost:${HTTP_PORT_VAL}"
+            ok=0
+            for i in $(seq 1 36); do
+              if curl -sf "http://127.0.0.1:${HTTP_PORT_VAL}/api/auth/config" | grep -q '"code":1'; then
+                ok=1
+                break
+              fi
+              sleep 5
+            done
+            if [[ "$ok" -ne 1 ]]; then
+              echo "ERROR: smoke check failed — /api/auth/config not healthy"
+              docker compose --env-file .env logs backend --tail 80 || true
+              exit 1
+            fi
+            echo "Smoke OK: /api/auth/config returned code=1"

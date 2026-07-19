@@ -48,6 +48,7 @@ services:
     env_file:
       - .env
     environment:
+      # 与 application.yml 默认 JDBC 参数保持一致，仅 host=mysql（开发环境为 localhost）
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: root
       # Require non-empty so an empty shell export cannot silently wipe JDBC auth
