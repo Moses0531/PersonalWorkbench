@@ -188,6 +188,8 @@ docker compose --env-file .env up -d --build
 | `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
 | `DEEPSEEK_KEY` | **必填**：写入服务器 `.env` 并注入后端容器 |
 | `MYSQL_ROOT_PASSWORD` | 建议填写，与服务器 `.env` 中数据库密码一致 |
+| `OSS_ACCESS_KEY_ID` | **头像/附件上传必填**：写入服务器 `.env` 并注入后端容器 |
+| `OSS_ACCESS_KEY_SECRET` | **头像/附件上传必填**：与上一行成对配置 |
 
 配置完成后，日常只需本地：
 

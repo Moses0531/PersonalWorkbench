@@ -51,13 +51,15 @@ jobs:
         env:
           DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
           command_timeout: 45m
-          envs: DEEPSEEK_KEY,MYSQL_ROOT_PASSWORD
+          envs: DEEPSEEK_KEY,MYSQL_ROOT_PASSWORD,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET
           script: |
             set -euo pipefail
             DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}/deploy"
@@ -92,6 +94,21 @@ jobs:
               unset MYSQL_ROOT_PASSWORD || true
               echo "MYSQL_ROOT_PASSWORD Secret empty — using value already in server .env"
             fi
+            # OSS：头像 / 附件上传依赖这两个变量；Secret 为空时必须 unset，避免空导出覆盖服务器 .env
+            if [[ -n "${OSS_ACCESS_KEY_ID:-}" ]]; then
+              upsert_env OSS_ACCESS_KEY_ID "$OSS_ACCESS_KEY_ID"
+              echo "Wrote OSS_ACCESS_KEY_ID into .env from GitHub Secret"
+            else
+              unset OSS_ACCESS_KEY_ID || true
+              echo "OSS_ACCESS_KEY_ID Secret empty — using value already in server .env (if any)"
+            fi
+            if [[ -n "${OSS_ACCESS_KEY_SECRET:-}" ]]; then
+              upsert_env OSS_ACCESS_KEY_SECRET "$OSS_ACCESS_KEY_SECRET"
+              echo "Wrote OSS_ACCESS_KEY_SECRET into .env from GitHub Secret"
+            else
+              unset OSS_ACCESS_KEY_SECRET || true
+              echo "OSS_ACCESS_KEY_SECRET Secret empty — using value already in server .env (if any)"
+            fi
 
             # Fail fast if Key still missing
             KEY_VAL="$(grep '^DEEPSEEK_KEY=' .env | cut -d= -f2- | tr -d '\r')"
@@ -112,6 +129,13 @@ jobs:
               exit 1
             fi
 
+            OSS_ID_VAL="$(grep '^OSS_ACCESS_KEY_ID=' .env | cut -d= -f2- | tr -d '\r')"
+            OSS_SK_VAL="$(grep '^OSS_ACCESS_KEY_SECRET=' .env | cut -d= -f2- | tr -d '\r')"
+            if [[ -z "$OSS_ID_VAL" || -z "$OSS_SK_VAL" ]]; then
+              echo "WARNING: OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET empty — avatar and attachment upload will fail"
+              echo "Add GitHub Secrets OSS_ACCESS_KEY_ID + OSS_ACCESS_KEY_SECRET (or set them in server deploy/.env)"
+            fi
+
             docker compose --env-file .env up -d --build --remove-orphans --force-recreate backend
             docker compose --env-file .env up -d --build --remove-orphans
             docker image prune -f
@@ -123,7 +147,12 @@ jobs:
               echo "ERROR: SPRING_DATASOURCE_PASSWORD is empty inside backend container"
               exit 1
             fi
-            echo "DEEPSEEK_KEY present; SPRING_DATASOURCE_PASSWORD length=$PWD_LEN"
+            OSS_ID_LEN="$(docker compose exec -T backend sh -c 'printf %s "$OSS_ACCESS_KEY_ID" | wc -c' | tr -d '[:space:]')"
+            OSS_SK_LEN="$(docker compose exec -T backend sh -c 'printf %s "$OSS_ACCESS_KEY_SECRET" | wc -c' | tr -d '[:space:]')"
+            echo "DEEPSEEK_KEY present; SPRING_DATASOURCE_PASSWORD length=$PWD_LEN; OSS_ACCESS_KEY_ID length=$OSS_ID_LEN; OSS_ACCESS_KEY_SECRET length=$OSS_SK_LEN"
+            if [[ "$OSS_ID_LEN" -lt 1 || "$OSS_SK_LEN" -lt 1 ]]; then
+              echo "WARNING: OSS credentials missing inside backend — /user-profile/updateAvatar will fail"
+            fi
             docker compose ps
 
             # 冒烟：对齐本地「能打开站点 + API 通」的最低验收（经 nginx，同 Vite /api 代理）
