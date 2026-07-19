@@ -136,6 +136,10 @@ jobs:
               echo "Add GitHub Secrets OSS_ACCESS_KEY_ID + OSS_ACCESS_KEY_SECRET (or set them in server deploy/.env)"
             fi
 
+            # 先拉预览镜像（Hub 无 4.4.0；compose 使用 keking/kkfileview:4.1.0）
+            echo "==> Pull kkFileView image"
+            docker compose --env-file .env pull kkfileview
+
             docker compose --env-file .env up -d --build --remove-orphans --force-recreate backend
             docker compose --env-file .env up -d --build --remove-orphans
             docker image prune -f

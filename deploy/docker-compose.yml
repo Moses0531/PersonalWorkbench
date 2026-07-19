@@ -68,8 +68,9 @@ services:
       - pw-net
 
   # 附件在线预览（经 nginx /preview 同域反代，不对外暴露 8012）
+  # 注意：官方 Hub 无 4.4.0 标签（仅离线包）；公开可用最新为 4.1.0 / latest
   kkfileview:
-    image: keking/kkfileview:4.4.0
+    image: keking/kkfileview:4.1.0
     container_name: pw-kkfileview
     restart: unless-stopped
     environment:
