@@ -11,7 +11,6 @@ import com.moses.service.AiPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,7 +28,6 @@ import java.util.Map;
 @Tag(name = "Ai对话", description = "Ai助手对话、项目智能规划与会议整理")
 @RestController
 @RequestMapping("/ai")
-@ConditionalOnBean(AIChatService.class)
 public class AiController {
 
     private static final int MAX_MESSAGE_LENGTH = 4000;

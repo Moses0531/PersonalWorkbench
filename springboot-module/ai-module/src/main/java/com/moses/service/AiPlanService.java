@@ -7,7 +7,6 @@ import com.moses.entity.WbProject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -26,7 +25,6 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-@ConditionalOnBean(name = "planningChatClient")
 public class AiPlanService {
 
     private static final int MAX_GOAL_LENGTH = 2000;
