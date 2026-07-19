@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { constantRoutes } from './routers'
 import { useUserStore } from '@/stores/userStore'
-import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, FALLBACK_ROUTE_NAME, ERROR_ROUTE_NAME } from './dynamicRoutes'
+import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, FALLBACK_ROUTE_NAME, ERROR_ROUTE_NAME, resolveDefaultPath } from './dynamicRoutes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,13 +40,14 @@ router.beforeEach(async (to) => {
         userStore.clearAuth()
         return true
       }
-      const first = userStore.getMenuRouterList?.[0]
-      return first?.path ? (first.path.startsWith('/') ? first.path : `/${first.path}`) : '/dashboard'
+      // 已登录访问登录页：进首页（或第一个可路由菜单）
+      return resolveDefaultPath('/dashboard')
     }
     return true
   }
 
-  if (to.meta.requiresAuth !== false && !userStore.isLoggedIn) {
+  // 仅对明确要求登录的路由拦截；未匹配路径 meta 为空，不能当成 requiresAuth
+  if (to.matched.some((record) => record.meta.requiresAuth === true) && !userStore.isLoggedIn) {
     return { path: '/auth', query: { redirect: to.fullPath } }
   }
 

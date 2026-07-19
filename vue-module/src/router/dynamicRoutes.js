@@ -52,7 +52,8 @@ export function buildRoutes(router) {
   }
 
   if (routerList.length > 0) {
-    const redirect = routerList[0].path
+    const dashboardChild = routerList.find((item) => item.path === 'dashboard')
+    const redirect = dashboardChild?.path || routerList[0].path
     router.addRoute({
       path: '/',
       name: MAIN_LAYOUT_NAME,
@@ -82,14 +83,25 @@ function toChildPath(path) {
   return String(path).replace(/^\//, '')
 }
 
-/** 登录后默认跳转路径：优先 redirect，否则第一个可路由菜单 */
+/** 登录后默认跳转路径：优先首页，否则第一个已能解析组件的菜单 */
 export function resolveDefaultPath(fallback = '/dashboard') {
   const userStore = useUserStore()
-  const first = userStore.getMenuRouterList?.[0]
-  if (first?.path) {
-    return first.path.startsWith('/') ? first.path : `/${first.path}`
+  const menus = userStore.getMenuRouterList || []
+  const dashboard = menus.find((item) => normalizePath(item.path) === '/dashboard')
+  if (dashboard && resolveViewLoader(dashboard)) {
+    return '/dashboard'
+  }
+  for (const item of menus) {
+    if (!item?.path || !resolveViewLoader(item)) continue
+    return normalizePath(item.path)
   }
   return fallback
+}
+
+function normalizePath(path) {
+  const raw = String(path || '').trim()
+  if (!raw) return ''
+  return raw.startsWith('/') ? raw : `/${raw}`
 }
 
 export { ERROR_ROUTE_PATH, ERROR_ROUTE_NAME }

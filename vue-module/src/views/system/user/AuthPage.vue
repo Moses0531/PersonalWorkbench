@@ -212,7 +212,7 @@
 
 <script setup>
 /** 登录/注册页：左插画 + 右同色纯底表单区 */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -348,7 +348,20 @@ function resolveRegisterContact() {
   return { error: '请输入正确的手机号或邮箱' }
 }
 
-function completeLogin(data, successMsg = '登录成功') {
+function resolveSafeRedirect() {
+  const raw = typeof route.query.redirect === 'string' ? route.query.redirect.trim() : ''
+  if (
+    raw.startsWith('/') &&
+    raw !== '/' &&
+    !raw.startsWith('/auth') &&
+    !raw.startsWith('/error')
+  ) {
+    return raw
+  }
+  return resolveDefaultPath('/dashboard')
+}
+
+async function completeLogin(data, successMsg = '登录成功') {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
   }
@@ -363,11 +376,21 @@ function completeLogin(data, successMsg = '登录成功') {
     avatar: data.avatar,
   })
   setUserLoginInfo(data)
-  buildRoutes(appRouter)
+
+  let ready = buildRoutes(appRouter)
+  if (!ready) {
+    const refreshed = await userStore.refreshSessionFromServer()
+    ready = refreshed && buildRoutes(appRouter)
+  }
+  if (!ready) {
+    userStore.clearAuth()
+    throw new Error('登录成功但未获取到可用菜单，请联系管理员分配权限')
+  }
+
   message.success(successMsg)
-  const redirect =
-    typeof route.query.redirect === 'string' ? route.query.redirect : resolveDefaultPath('/dashboard')
-  router.replace(redirect)
+  const target = resolveSafeRedirect()
+  await nextTick()
+  await router.replace(target)
 }
 
 async function handleLogin() {
@@ -385,7 +408,7 @@ async function handleLogin() {
       captchaToken: captchaOnLogin.value ? captchaToken.value : undefined,
       captchaTimestamp: captchaOnLogin.value ? captchaTimestamp.value : undefined,
     })
-    completeLogin(result?.data || {})
+    await completeLogin(result?.data || {})
   } catch (error) {
     message.error(error.message || '登录失败')
     if (captchaOnLogin.value) {
@@ -436,7 +459,7 @@ async function handleRegister() {
     if (!data.account) {
       throw new Error('注册成功但未获取到系统账号')
     }
-    completeLogin(data, `注册成功，已自动登录（账号：${data.account}）`)
+    await completeLogin(data, `注册成功，已自动登录（账号：${data.account}）`)
   } catch (error) {
     message.error(error.message || '注册失败')
     if (captchaOnRegister.value) {

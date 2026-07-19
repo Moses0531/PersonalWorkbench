@@ -283,7 +283,10 @@ export function buildMenuState(rawMenuList = []) {
   return {
     menuList,
     menuTree,
-    menuRouterList: menuList.filter((item) => item.path),
+    // 仅注册菜单页（M）；目录/按钮不应进入动态路由
+    menuRouterList: menuList.filter(
+      (item) => isMenuType(item) && item.path && !item.disabledFlag,
+    ),
     menuParentIdListMap: buildMenuParentIdListMap(menuTree),
     functionList: menuList.filter(
       (item) => isFunctionType(item) && item.visibleFlag && !item.disabledFlag,
