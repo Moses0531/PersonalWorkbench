@@ -115,6 +115,7 @@ spring:
 | Redis host | `localhost` | `redis` |
 | DB 密码 | `application.yml` / `SPRING_DATASOURCE_PASSWORD` | `deploy/.env` → `MYSQL_ROOT_PASSWORD` |
 | 前端 API | Vite 代理 `/api` → `8090` | Nginx `/api/` → `backend:8090`（须 `underscores_in_headers on`，否则丢弃 `rbac_token`） |
+| 附件预览 | 本机 kkFileView `http://127.0.0.1:8012` | Nginx `/preview` → `kkfileview:8012`（同域，勿再指向本机 8012） |
 | JDBC 其它参数 | **相同** | **相同** |
 | Token 头名 | `rbac_token` | `rbac_token`（与本地一致） |
 
@@ -139,6 +140,8 @@ pnpm dev
 ```
 
 Vite 已将 `/api` 代理到 `http://localhost:8090`（`/api` 前缀自动去除）。浏览器访问 `http://localhost:5173`。
+
+附件在线预览依赖 [kkFileView](https://kkfileview.keking.cn/)：本地在 `vue-module/.env.development` 配置 `VITE_KK_FILE_VIEW_BASE=http://127.0.0.1:8012`，并本机启动 kkFileView；服务器由 Compose 拉起 `pw-kkfileview`，前端生产构建写死同域 `/preview`。
 
 生产构建：
 
@@ -203,7 +206,7 @@ git push origin master
 
 ```
 PersonalWorkbench/
-├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis）
+├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis / kkFileView）
 ├── .github/workflows/      # CI + 自动部署
 ├── doc/                    # SQL 脚本
 ├── springboot-module/      # 后端 Maven 多模块
@@ -212,16 +215,15 @@ PersonalWorkbench/
 │   ├── system-module/      # RBAC 认证授权
 │   ├── workbench-module/   # 工作台业务
 │   └── ai-module/          # AI 能力
-├── vue-module/             # 前端 Vue 3 项目
-│   ├── src/
-│   │   ├── apis/           # API 封装
-│   │   ├── components/     # 通用组件
-│   │   ├── router/         # 路由（静态 + 动态）
-│   │   ├── stores/         # Pinia 状态
-│   │   ├── utils/          # 工具函数
-│   │   └── views/          # 页面组件
-│   └── vite.config.js      # Vite 配置 + /api 代理
-└── tools/                  # 本地辅助工具（kkFileView 文件预览）
+└── vue-module/             # 前端 Vue 3 项目
+    ├── src/
+    │   ├── apis/           # API 封装
+    │   ├── components/     # 通用组件
+    │   ├── router/         # 路由（静态 + 动态）
+    │   ├── stores/         # Pinia 状态
+    │   ├── utils/          # 工具函数（含 kkFileView 预览）
+    │   └── views/          # 页面组件
+    └── vite.config.js      # Vite 配置 + /api 代理
 ```
 
 ## 6 开发约定

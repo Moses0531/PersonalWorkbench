@@ -1,6 +1,7 @@
 /**
  * kkFileView 在线预览
- * 约定：VITE_KK_FILE_VIEW_BASE 指向服务根地址，如 http://127.0.0.1:8012
+ * - 本地：VITE_KK_FILE_VIEW_BASE=http://127.0.0.1:8012（.env.development）
+ * - 服务器：同域 /preview（.env.production + nginx → kkfileview）
  */
 function utf8ToBase64(str) {
   const bytes = new TextEncoder().encode(str)

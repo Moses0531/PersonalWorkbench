@@ -11,6 +11,8 @@ RUN pnpm install --frozen-lockfile
 COPY vue-module/index.html vue-module/vite.config.js vue-module/jsconfig.json ./
 COPY vue-module/public ./public
 COPY vue-module/src ./src
+# 生产同域预览（nginx → kkfileview）；勿回退到 127.0.0.1:8012
+ENV VITE_KK_FILE_VIEW_BASE=/preview
 RUN pnpm build
 
 FROM nginx:1.27-alpine
