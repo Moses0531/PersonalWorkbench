@@ -1,6 +1,9 @@
 package com.moses.user.entity;
 
+import com.moses.rabc.entity.SysPermission;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class Register {
@@ -31,4 +34,16 @@ public class Register {
 
     /** 用户ID（注册成功后返回） */
     private Long userId;
+
+    /** 登录令牌（注册成功后自动登录返回） */
+    private String token;
+
+    /** 用户名（注册成功后返回） */
+    private String username;
+
+    /** 头像 URL（注册成功后返回） */
+    private String avatar;
+
+    /** 当前用户可访问的权限菜单列表（平铺） */
+    private List<SysPermission> menuList;
 }

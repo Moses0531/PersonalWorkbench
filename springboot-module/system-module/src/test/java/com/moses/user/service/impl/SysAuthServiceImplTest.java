@@ -113,16 +113,27 @@ class SysAuthServiceImplTest {
             u.setUserId(100L);
             return true;
         });
+        when(sysUserService.updateById(any(SysUser.class))).thenReturn(true);
+        when(sysPermissionMapper.selectMenusByUserId(100L)).thenReturn(new ArrayList<>());
 
-        Register result = authService.register(validRegisterPhone());
-        assertEquals(100L, result.getUserId());
-        assertNotNull(result.getAccount());
-        verify(sysUserService).save(argThat(u ->
-                "13800138000".equals(u.getPhone())
-                        && u.getEmail() == null
-                        && "0".equals(u.getStatus())
-                        && Long.valueOf(2L).equals(u.getRoleId())
-        ));
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(() -> StpUtil.login(100L)).thenAnswer(inv -> null);
+            stp.when(StpUtil::getTokenValue).thenReturn("reg-token-phone");
+
+            Register result = authService.register(validRegisterPhone());
+            assertEquals(100L, result.getUserId());
+            assertNotNull(result.getAccount());
+            assertEquals("reg-token-phone", result.getToken());
+            assertNotNull(result.getMenuList());
+            stp.verify(() -> StpUtil.login(100L));
+            verify(sysUserService).save(argThat(u ->
+                    "13800138000".equals(u.getPhone())
+                            && u.getEmail() == null
+                            && "0".equals(u.getStatus())
+                            && Long.valueOf(2L).equals(u.getRoleId())
+            ));
+            verify(sysUserService).updateById(any(SysUser.class));
+        }
     }
 
     @Test
@@ -133,14 +144,23 @@ class SysAuthServiceImplTest {
             u.setUserId(101L);
             return true;
         });
+        when(sysUserService.updateById(any(SysUser.class))).thenReturn(true);
+        when(sysPermissionMapper.selectMenusByUserId(101L)).thenReturn(new ArrayList<>());
 
-        Register reg = new Register();
-        reg.setEmail("user@example.com");
-        reg.setPassword("abcdef");
-        reg.setConfirmPassword("abcdef");
-        Register result = authService.register(reg);
-        assertEquals(101L, result.getUserId());
-        verify(sysUserService).save(argThat(u -> "user@example.com".equals(u.getEmail())));
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(() -> StpUtil.login(101L)).thenAnswer(inv -> null);
+            stp.when(StpUtil::getTokenValue).thenReturn("reg-token-email");
+
+            Register reg = new Register();
+            reg.setEmail("user@example.com");
+            reg.setPassword("abcdef");
+            reg.setConfirmPassword("abcdef");
+            Register result = authService.register(reg);
+            assertEquals(101L, result.getUserId());
+            assertEquals("reg-token-email", result.getToken());
+            verify(sysUserService).save(argThat(u -> "user@example.com".equals(u.getEmail())));
+            stp.verify(() -> StpUtil.login(101L));
+        }
     }
 
     @Test

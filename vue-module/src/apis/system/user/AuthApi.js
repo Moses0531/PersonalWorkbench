@@ -21,7 +21,7 @@ export function fetchUserMenusApi() {
   return request.get('/auth/menus')
 }
 
-/** 用户注册：phone 与 email 二选一 */
+/** 用户注册：phone 与 email 二选一；成功后直接返回登录令牌与菜单 */
 export function registerApi(payload) {
   const body = {
     password: payload.password,

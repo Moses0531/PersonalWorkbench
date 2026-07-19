@@ -109,9 +109,19 @@ public class SysAuthServiceImpl implements SysAuthService {
         sysUser.setUpdateTime(now);
         sysUserService.save(sysUser);
 
+        // 注册成功后直接建立登录会话，返回与登录一致的令牌与菜单
+        StpUtil.login(sysUser.getUserId());
+        sysUser.setLastLoginTime(now);
+        sysUser.setUpdateTime(now);
+        sysUserService.updateById(sysUser);
+
         Register result = new Register();
+        result.setToken(StpUtil.getTokenValue());
         result.setAccount(account);
         result.setUserId(sysUser.getUserId());
+        result.setUsername(sysUser.getUsername());
+        result.setAvatar(sysUser.getAvatar());
+        result.setMenuList(loadMenusForUser(sysUser.getUserId()));
         return result;
     }
 

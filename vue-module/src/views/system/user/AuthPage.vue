@@ -348,7 +348,7 @@ function resolveRegisterContact() {
   return { error: '请输入正确的手机号或邮箱' }
 }
 
-function completeLogin(data) {
+function completeLogin(data, successMsg = '登录成功') {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
   }
@@ -364,7 +364,7 @@ function completeLogin(data) {
   })
   setUserLoginInfo(data)
   buildRoutes(appRouter)
-  message.success('登录成功')
+  message.success(successMsg)
   const redirect =
     typeof route.query.redirect === 'string' ? route.query.redirect : resolveDefaultPath('/dashboard')
   router.replace(redirect)
@@ -436,13 +436,7 @@ async function handleRegister() {
     if (!data.account) {
       throw new Error('注册成功但未获取到系统账号')
     }
-    message.success(`注册成功，系统账号：${data.account}`)
-    loginForm.account = data.account
-    registerForm.contact = ''
-    registerForm.password = ''
-    registerForm.confirmPassword = ''
-    registerForm.captcha = ''
-    switchMode('login')
+    completeLogin(data, `注册成功，已自动登录（账号：${data.account}）`)
   } catch (error) {
     message.error(error.message || '注册失败')
     if (captchaOnRegister.value) {
