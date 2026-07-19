@@ -1,0 +1,18 @@
+# Build Spring Boot fat JAR (multi-module)
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY springboot-module/pom.xml ./pom.xml
+COPY springboot-module/common-module ./common-module
+COPY springboot-module/system-module ./system-module
+COPY springboot-module/workbench-module ./workbench-module
+COPY springboot-module/ai-module ./ai-module
+COPY springboot-module/start-module ./start-module
+RUN mvn -B -DskipTests package -pl start-module -am
+
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+RUN useradd -r -u 10001 appuser
+COPY --from=build /build/start-module/target/start-module-*.jar /app/app.jar
+USER appuser
+EXPOSE 8090
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

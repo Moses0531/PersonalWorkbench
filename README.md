@@ -142,10 +142,53 @@ pnpm build
 - 种子账号见 `PersonalWorkbench-SQL.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
 - 登录后菜单由后端权限动态下发：普通用户可见首页、工作台（日程 / 事务 / 项目）、个人中心、AI；系统管理菜单仅管理员可见。
 
-## 4 项目结构
+## 4 生产部署（阿里云 ECS + Docker + GitHub Actions）
+
+推送到 `master` 后，GitHub Actions 经 SSH 在 ECS 上执行 `deploy/deploy.sh`，用 Docker Compose 启动 Nginx（前端）+ Spring Boot + MySQL + Redis。浏览器访问 `http://ECS公网IP`（或已解析的域名）。
+
+### 4.1 阿里云一次性准备
+
+1. ECS 已安装 Docker Engine 与 Compose 插件，并绑定公网 IP。
+2. 安全组入方向：放行 **TCP 80**（站点）、**TCP 22**（SSH）；不要对公网开放 3306 / 6379 / 8090。
+3. 克隆仓库到服务器（示例路径 `/opt/PersonalWorkbench`）：
+
+```bash
+sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/PersonalWorkbench.git /opt/PersonalWorkbench
+cd /opt/PersonalWorkbench/deploy
+cp .env.example .env
+# 编辑 .env：设置 MYSQL_ROOT_PASSWORD，按需填写 DEEPSEEK_KEY / OSS_*
+nano .env
+docker compose --env-file .env up -d --build
+```
+
+4. 浏览器打开 `http://公网IP` 验证。若使用域名，在阿里云 DNS 添加 A 记录指向该 IP。
+
+### 4.2 GitHub Secrets（自动部署）
+
+在仓库 **Settings → Secrets and variables → Actions** 中配置：
+
+| Secret | 说明 |
+| --- | --- |
+| `SSH_HOST` | ECS 公网 IP 或域名 |
+| `SSH_USER` | SSH 用户名（如 `root`） |
+| `SSH_PRIVATE_KEY` | 对应私钥全文 |
+| `SSH_PORT` | 可选，默认 `22` |
+| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
+
+配置完成后，向 `master` 推送即可触发 [Deploy](.github/workflows/deploy.yml)；PR / push 还会跑 [CI](.github/workflows/ci.yml) 编译检查。
+
+手动在服务器更新：
+
+```bash
+cd /opt/PersonalWorkbench && bash deploy/deploy.sh
+```
+
+## 5 项目结构
 
 ```
 PersonalWorkbench/
+├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis）
+├── .github/workflows/      # CI + 自动部署
 ├── doc/                    # SQL 脚本
 ├── springboot-module/      # 后端 Maven 多模块
 │   ├── start-module/       # 启动入口 + application.yml
@@ -165,7 +208,7 @@ PersonalWorkbench/
 └── tools/                  # 本地辅助工具（kkFileView 文件预览）
 ```
 
-## 5 开发约定
+## 6 开发约定
 
 - 接口统一使用 `ResultConfig` 信封返回；业务数据通过 `StpUtil.getLoginIdAsLong()` 做用户隔离，禁止仅凭资源 ID 越权访问。
 - 前端页面通过 `views/**/*.vue` 与菜单权限中的 `router_name` / `component_path` 动态挂载，新增页面时保持组件名与权限种子一致。

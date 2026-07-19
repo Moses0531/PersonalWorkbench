@@ -16,22 +16,22 @@ spring:
       write-dates-as-timestamps: false
   ai:
     deepseek:
-      api-key: ${DEEPSEEK_KEY}
+      api-key: ${DEEPSEEK_KEY:}
       chat:
         options:
           model: deepseek-chat
-  # MySQL 连接配置
+  # MySQL 连接配置（Docker 部署通过环境变量覆盖）
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/personal_workbench
-    username: root
-    password: 123456
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/personal_workbench}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
   # Redis配置
   data:
     redis:
-      host: localhost
-      port: 6379
-      password:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
       database: 0
       timeout: 2000ms
       lettuce:

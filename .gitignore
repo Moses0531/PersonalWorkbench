@@ -6,3 +6,6 @@
 
 # 可选：忽略 Maven 构建产物（如 target 目录）
 target/
+
+# 部署密钥（服务器上从 .env.example 复制）
+deploy/.env
