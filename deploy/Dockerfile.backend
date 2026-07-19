@@ -1,6 +1,8 @@
 # Build Spring Boot fat JAR (multi-module)
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
+# China-friendly Maven mirror (Aliyun) — local ~/.m2 is not used inside Docker
+COPY deploy/maven-settings.xml /root/.m2/settings.xml
 COPY springboot-module/pom.xml ./pom.xml
 COPY springboot-module/common-module ./common-module
 COPY springboot-module/system-module ./system-module
