@@ -1,9 +1,10 @@
 # Build Vue static assets, then serve via Nginx (also reverse-proxies /api)
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
-# China-friendly npm registry
+# Install pnpm via China mirror (corepack defaults to registry.npmjs.org)
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
 RUN npm config set registry https://registry.npmmirror.com \
+    && npm install -g pnpm@9.15.9 \
     && pnpm config set registry https://registry.npmmirror.com
 COPY vue-module/package.json vue-module/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
