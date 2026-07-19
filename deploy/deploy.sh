@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
+# Manual deploy on the server (when you already updated the code by other means).
+# CI/CD uploads code via GitHub Actions scp — it does not call this git pull path.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT_DIR"
+cd "$ROOT_DIR/deploy"
 
-if [[ ! -f deploy/.env ]]; then
+if [[ ! -f .env ]]; then
   echo "Missing deploy/.env — copy deploy/.env.example and fill secrets first."
   exit 1
 fi
 
-echo "==> Pull latest code"
-git pull --ff-only origin master
-
 echo "==> Build & restart containers"
-cd deploy
 docker compose --env-file .env up -d --build --remove-orphans
-
-echo "==> Prune dangling images"
 docker image prune -f
-
-echo "==> Done. Check: docker compose ps"
 docker compose ps

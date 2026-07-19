@@ -144,7 +144,7 @@ pnpm build
 
 ## 4 生产部署（阿里云 ECS + Docker + GitHub Actions）
 
-推送到 `master` 后，GitHub Actions 经 SSH 在 ECS 上执行 `deploy/deploy.sh`，用 Docker Compose 启动 Nginx（前端）+ Spring Boot + MySQL + Redis。浏览器访问 `http://ECS公网IP`（或已解析的域名）。
+推送到 `master` 后，GitHub Actions 将代码 **scp 到 ECS**（避免服务器直连 GitHub 失败），再 SSH 执行 `docker compose up -d --build`。浏览器访问 `http://ECS公网IP`（或已解析的域名）。
 
 ### 4.1 阿里云一次性准备
 
@@ -177,10 +177,10 @@ docker compose --env-file .env up -d --build
 
 配置完成后，向 `master` 推送即可触发 [Deploy](.github/workflows/deploy.yml)；PR / push 还会跑 [CI](.github/workflows/ci.yml) 编译检查。
 
-手动在服务器更新：
+手动在服务器更新（需已自行把新代码放到机器上）：
 
 ```bash
-cd /opt/PersonalWorkbench && bash deploy/deploy.sh
+cd /opt/PersonalWorkbench/deploy && bash deploy.sh
 ```
 
 ## 5 项目结构

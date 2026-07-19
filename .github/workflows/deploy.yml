@@ -14,14 +14,35 @@ jobs:
     name: Deploy to Aliyun ECS
     runs-on: ubuntu-latest
     steps:
-      - name: SSH deploy (docker compose)
+      # Build context is uploaded from Actions (GitHub network),
+      # so the ECS does not need to git pull from github.com.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload code to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          # Do not upload .git; deploy/.env is not in repo so server .env is kept
+          source: "deploy,springboot-module,vue-module,doc,.dockerignore,README.md"
+          target: ${{ secrets.DEPLOY_PATH }}
+          overwrite: true
+
+      - name: Build and restart containers
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
+          command_timeout: 45m
           script: |
             set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-            bash deploy/deploy.sh
+            cd "${{ secrets.DEPLOY_PATH }}/deploy"
+            test -f .env
+            docker compose --env-file .env up -d --build --remove-orphans
+            docker image prune -f
+            docker compose ps
