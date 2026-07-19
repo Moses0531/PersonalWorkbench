@@ -174,6 +174,8 @@ docker compose --env-file .env up -d --build
 | `SSH_PRIVATE_KEY` | 对应私钥全文 |
 | `SSH_PORT` | 可选，默认 `22` |
 | `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
+| `DEEPSEEK_KEY` | **必填**：写入服务器 `.env` 并注入后端容器 |
+| `MYSQL_ROOT_PASSWORD` | 建议填写，与服务器 `.env` 中数据库密码一致 |
 
 配置完成后，日常只需本地：
 

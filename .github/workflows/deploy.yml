@@ -14,10 +14,26 @@ jobs:
     name: Deploy to Aliyun ECS
     runs-on: ubuntu-latest
     steps:
-      # Build context is uploaded from Actions (GitHub network),
-      # so the ECS does not need to git pull from github.com.
       - name: Checkout
         uses: actions/checkout@v4
+
+      # scp of deploy/ can wipe server-side .env — backup first, restore after
+      - name: Backup server .env
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}/deploy"
+            if [[ -f "$DEPLOY_DIR/.env" ]]; then
+              cp -a "$DEPLOY_DIR/.env" /tmp/pw.deploy.env.bak
+              echo "Backed up existing .env"
+            else
+              echo "No .env yet on server (first deploy)"
+            fi
 
       - name: Upload code to ECS
         uses: appleboy/scp-action@v0.1.7
@@ -26,23 +42,63 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
-          # Do not upload .git; deploy/.env is not in repo so server .env is kept
           source: "deploy,springboot-module,vue-module,doc,.dockerignore,README.md"
           target: ${{ secrets.DEPLOY_PATH }}
           overwrite: true
 
-      - name: Build and restart containers
+      - name: Restore .env, inject secrets, recreate backend
         uses: appleboy/ssh-action@v1.2.2
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
           command_timeout: 45m
+          envs: DEEPSEEK_KEY,MYSQL_ROOT_PASSWORD
           script: |
             set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}/deploy"
-            test -f .env
+            DEPLOY_DIR="${{ secrets.DEPLOY_PATH }}/deploy"
+            cd "$DEPLOY_DIR"
+
+            # Restore .env wiped by scp
+            if [[ -f /tmp/pw.deploy.env.bak ]]; then
+              cp -a /tmp/pw.deploy.env.bak .env
+              echo "Restored .env from backup"
+            elif [[ ! -f .env ]]; then
+              cp .env.example .env
+              echo "Created .env from example"
+            fi
+
+            # Prefer GitHub Secrets so Key always lands in .env (and then into container)
+            upsert_env() {
+              local key="$1" val="$2"
+              grep -v "^${key}=" .env > .env.tmp || true
+              printf '%s=%s\n' "$key" "$val" >> .env.tmp
+              mv .env.tmp .env
+            }
+            if [[ -n "${DEEPSEEK_KEY:-}" ]]; then
+              upsert_env DEEPSEEK_KEY "$DEEPSEEK_KEY"
+              echo "Wrote DEEPSEEK_KEY into .env from GitHub Secret"
+            fi
+            if [[ -n "${MYSQL_ROOT_PASSWORD:-}" ]]; then
+              upsert_env MYSQL_ROOT_PASSWORD "$MYSQL_ROOT_PASSWORD"
+            fi
+
+            # Fail fast if Key still missing
+            KEY_VAL="$(grep '^DEEPSEEK_KEY=' .env | cut -d= -f2- | tr -d '\r')"
+            if [[ -z "$KEY_VAL" ]]; then
+              echo "ERROR: DEEPSEEK_KEY is empty. Add GitHub Secret DEEPSEEK_KEY or keep it in server deploy/.env"
+              exit 1
+            fi
+
+            docker compose --env-file .env up -d --build --remove-orphans --force-recreate backend
             docker compose --env-file .env up -d --build --remove-orphans
             docker image prune -f
+
+            echo "==> Verify DEEPSEEK_KEY inside backend container"
+            docker compose exec -T backend printenv DEEPSEEK_KEY >/dev/null
+            echo "DEEPSEEK_KEY is present in container"
             docker compose ps

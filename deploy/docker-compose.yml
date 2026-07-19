@@ -44,13 +44,16 @@ services:
       dockerfile: deploy/Dockerfile.backend
     container_name: pw-backend
     restart: unless-stopped
+    # Load secrets from deploy/.env into the container (Key must be present)
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: "6379"
-      DEEPSEEK_KEY: ${DEEPSEEK_KEY:-}
+      DEEPSEEK_KEY: ${DEEPSEEK_KEY:?DEEPSEEK_KEY is required in deploy/.env}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
       TZ: Asia/Shanghai
