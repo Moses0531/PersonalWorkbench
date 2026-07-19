@@ -175,13 +175,13 @@ docker compose --env-file .env up -d --build
 | `SSH_PORT` | 可选，默认 `22` |
 | `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
 
-配置完成后，向 `master` 推送即可触发 [Deploy](.github/workflows/deploy.yml)；PR / push 还会跑 [CI](.github/workflows/ci.yml) 编译检查。
-
-手动在服务器更新（需已自行把新代码放到机器上）：
+配置完成后，日常只需本地：
 
 ```bash
-cd /opt/PersonalWorkbench/deploy && bash deploy.sh
+git push origin master
 ```
+
+即可触发 [Deploy](.github/workflows/deploy.yml) 自动上传代码并重建容器；PR / push 还会跑 [CI](.github/workflows/ci.yml) 编译检查。无需再登录服务器拷代码。
 
 ## 5 项目结构
 
