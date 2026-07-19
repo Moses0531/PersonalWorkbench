@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="auth-page">
     <section class="auth-visual" aria-label="产品介绍">
       <div
