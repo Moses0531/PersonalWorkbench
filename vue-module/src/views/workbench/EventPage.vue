@@ -187,7 +187,9 @@ function resetForm(dateStr) {
 async function loadTasks() {
   try {
     const result = await pageTasksApi(1, null)
-    tasks.value = (result?.data?.records || []).filter((t) => String(t.status) !== '3')
+    tasks.value = (result?.data?.records || []).filter(
+      (t) => (t.nodeType || 'task') === 'task' && String(t.status) !== '3',
+    )
   } catch {
     tasks.value = []
   }

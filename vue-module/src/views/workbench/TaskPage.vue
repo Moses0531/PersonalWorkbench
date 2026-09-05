@@ -9,18 +9,12 @@ import {
   listProjectAttachmentsApi,
   pageTasksApi,
   removeTaskAttachmentApi,
+  setProjectArchivedApi,
   updateAttachmentStatusApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
 } from '@/apis/workbench/TaskApi'
 import { planApplyApi, planPreviewApi } from '@/apis/ai/AiApi'
-import {
-  addProjectApi,
-  deleteProjectsApi,
-  pageProjectsApi,
-  updateProjectApi,
-} from '@/apis/workbench/ProjectApi'
-import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import EditorView from '@/components/EditorView.vue'
 import {
@@ -28,7 +22,6 @@ import {
   countTaskStatus,
   completionGaugeOption,
   statusDoughnutOption,
-  miniProgressOption,
 } from '@/utils/wbCharts'
 import { openKkFileViewPreview } from '@/utils/kkFileView'
 import {
@@ -39,13 +32,33 @@ import {
   FolderOutlined,
   PaperClipOutlined,
   ClockCircleOutlined,
-  CheckSquareOutlined,
   InboxOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+
+const NODE_PROJECT = 'project'
+const NODE_PHASE = 'phase'
+const NODE_TASK = 'task'
+
+/** 兼容缺省 / 下划线字段，缺省按叶子任务处理 */
+function nodeTypeOf(t) {
+  const raw = t?.nodeType ?? t?.node_type ?? ''
+  const v = String(raw).trim().toLowerCase()
+  if (v === NODE_PROJECT || v === NODE_PHASE || v === NODE_TASK) return v
+  return NODE_TASK
+}
+function isLeafTask(t) {
+  return nodeTypeOf(t) === NODE_TASK
+}
+function isPhaseNode(t) {
+  return nodeTypeOf(t) === NODE_PHASE
+}
+function isProjectNode(t) {
+  return nodeTypeOf(t) === NODE_PROJECT
+}
 
 const STATUS_COLUMNS = [
   { key: '0', label: '待办' },
@@ -54,7 +67,6 @@ const STATUS_COLUMNS = [
   { key: '3', label: '已取消' },
 ]
 
-const activeTab = ref(route.query.tab === 'projects' ? 'projects' : 'tasks')
 const filterProjectId = ref(
   route.query.projectId != null && route.query.projectId !== ''
     ? Number(route.query.projectId)
@@ -64,19 +76,148 @@ const syncingQuery = ref(false)
 
 const inProjectSpace = computed(() => filterProjectId.value != null)
 
+/* ---------- 统一任务树 ---------- */
+const taskLoading = ref(false)
+const taskSubmitting = ref(false)
+const taskDialogVisible = ref(false)
+const taskIsEdit = ref(false)
+const tasks = ref([])
+const taskSearchQuery = ref('')
+const filterPriority = ref(null)
+/** null=全部 | independent=无父任务 | bound=有父任务 */
+const filterBinding = ref(null)
+
+const taskById = computed(() => {
+  const map = new Map()
+  for (const t of tasks.value) map.set(Number(t.taskId), t)
+  return map
+})
+
+const childrenByParent = computed(() => {
+  const map = new Map()
+  for (const t of tasks.value) {
+    if (t.parentTaskId == null || t.parentTaskId === '') continue
+    const pid = Number(t.parentTaskId)
+    if (!map.has(pid)) map.set(pid, [])
+    map.get(pid).push(t)
+  }
+  return map
+})
+
+/** 顶层任务节点（nodeType=project，展示用 name = title） */
+const projects = computed(() =>
+  tasks.value
+    .filter((t) => isProjectNode(t))
+    .slice()
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map((t) => ({
+      ...t,
+      nodeType: NODE_PROJECT,
+      name: t.title,
+    })),
+)
+
+const projectMap = computed(() => {
+  const map = new Map()
+  for (const p of projects.value) map.set(Number(p.taskId), p.title || p.name || '')
+  return map
+})
+
+const activeProjects = computed(() =>
+  projects.value.filter((p) => String(p.archived) !== '1'),
+)
+
+function isProjectArchived(project) {
+  return project != null && String(project.archived) === '1'
+}
+
+function getTaskById(id) {
+  if (id == null || id === '') return null
+  return taskById.value.get(Number(id)) || null
+}
+
+/** 沿 parentTaskId 向上找到顶层节点 */
+function findAncestorProject(taskLike) {
+  if (!taskLike) return null
+  let cur
+  if (typeof taskLike === 'object') {
+    cur =
+      taskLike.taskId != null
+        ? getTaskById(taskLike.taskId) || taskLike
+        : taskLike
+  } else {
+    cur = getTaskById(taskLike)
+  }
+  const seen = new Set()
+  while (cur) {
+    const id = Number(cur.taskId)
+    if (!Number.isNaN(id)) {
+      if (seen.has(id)) break
+      seen.add(id)
+    }
+    if (isProjectNode(cur)) return cur
+    if (cur.parentTaskId == null || cur.parentTaskId === '') break
+    cur = getTaskById(cur.parentTaskId)
+  }
+  return null
+}
+
+function collectDescendants(rootId) {
+  const root = Number(rootId)
+  const out = []
+  const queue = [...(childrenByParent.value.get(root) || [])]
+  const seen = new Set()
+  while (queue.length) {
+    const node = queue.shift()
+    const id = Number(node.taskId)
+    if (seen.has(id)) continue
+    seen.add(id)
+    out.push(node)
+    const kids = childrenByParent.value.get(id)
+    if (kids?.length) queue.push(...kids)
+  }
+  return out
+}
+
+function leafTasksUnder(rootId) {
+  return collectDescendants(rootId).filter((t) => isLeafTask(t))
+}
+
+function hasProjectAncestor(task) {
+  return findAncestorProject(task) != null
+}
+
+function phaseTitleOf(task) {
+  if (!task?.parentTaskId) return ''
+  const parent = getTaskById(task.parentTaskId)
+  if (parent && isPhaseNode(parent)) return parent.title || ''
+  return ''
+}
+
+function projectNameOf(taskLike) {
+  const project = findAncestorProject(taskLike)
+  if (!project) return ''
+  return project.title || project.name || projectMap.value.get(Number(project.taskId)) || ''
+}
+
 const currentProject = computed(() => {
   if (!inProjectSpace.value) return null
   const id = Number(filterProjectId.value)
-  return projects.value.find((p) => Number(p.projectId) === id) || null
+  return projects.value.find((p) => Number(p.taskId) === id) || getTaskById(id)
 })
 
 const filterProjectName = computed(() => {
   if (!inProjectSpace.value) return ''
-  return currentProject.value?.name || projectMap.value.get(Number(filterProjectId.value)) || `项目 #${filterProjectId.value}`
+  return (
+    currentProject.value?.title ||
+    currentProject.value?.name ||
+    projectMap.value.get(Number(filterProjectId.value)) ||
+    `任务 #${filterProjectId.value}`
+  )
 })
 
 const projectAttachmentsReadonly = computed(
-  () => inProjectSpace.value && String(currentProject.value?.status) === '1',
+  () => inProjectSpace.value && isProjectArchived(currentProject.value),
 )
 
 const headerCopy = computed(() => {
@@ -88,27 +229,19 @@ const headerCopy = computed(() => {
       desc:
         desc ||
         (archived
-          ? '项目已归档 · 附件只读，可下载存档'
-          : '项目空间 · 按状态推进本项目任务，可审查附件'),
-    }
-  }
-  if (activeTab.value === 'projects') {
-    return {
-      title: '事务',
-      desc: '梳理进行中与已归档的个人项目，点项目名进入项目空间。',
+          ? '已归档 · 附件只读，可下载存档'
+          : '任务组 · 阶段用父任务、步骤用子任务；看板只推进叶子任务'),
     }
   }
   return {
     title: '事务',
-    desc: '按状态推进个人任务，支持关联项目与优先级。',
+    desc: '任务与子任务统一管理；可建父任务拆分子任务，看板推进叶子任务。',
   }
 })
 
 function buildQuery() {
   const query = {}
-  if (activeTab.value === 'projects') {
-    query.tab = 'projects'
-  } else if (filterProjectId.value != null && !Number.isNaN(Number(filterProjectId.value))) {
+  if (filterProjectId.value != null && !Number.isNaN(Number(filterProjectId.value))) {
     query.projectId = String(filterProjectId.value)
   }
   return query
@@ -116,15 +249,13 @@ function buildQuery() {
 
 function syncRouteQuery() {
   const next = buildQuery()
-  const curTab = route.query.tab === 'projects' ? 'projects' : 'tasks'
   const curProject =
     route.query.projectId != null && route.query.projectId !== ''
       ? String(route.query.projectId)
       : undefined
-  const nextTab = next.tab === 'projects' ? 'projects' : 'tasks'
   const nextProject = next.projectId
 
-  if (curTab === nextTab && curProject === nextProject) return
+  if (curProject === nextProject) return
 
   syncingQuery.value = true
   router.replace({ path: route.path, query: next }).finally(() => {
@@ -132,31 +263,22 @@ function syncRouteQuery() {
   })
 }
 
-function setTab(tab) {
-  if (activeTab.value === tab && !inProjectSpace.value) return
-  activeTab.value = tab
-  filterProjectId.value = null
-}
-
-function viewProjectTasks(projectId) {
-  filterProjectId.value = Number(projectId)
-  activeTab.value = 'tasks'
+function viewProjectTasks(projectTaskId) {
+  filterProjectId.value = Number(projectTaskId)
 }
 
 function leaveProjectSpace() {
   filterProjectId.value = null
-  activeTab.value = 'projects'
 }
 
-watch([activeTab, filterProjectId], () => {
+watch(filterProjectId, () => {
   syncRouteQuery()
 })
 
 watch(
-  () => [route.query.tab, route.query.projectId],
+  () => route.query.projectId,
   () => {
     if (syncingQuery.value) return
-    activeTab.value = route.query.tab === 'projects' ? 'projects' : 'tasks'
     filterProjectId.value =
       route.query.projectId != null && route.query.projectId !== ''
         ? Number(route.query.projectId)
@@ -164,21 +286,10 @@ watch(
   },
 )
 
-/* ---------- 任务列表 ---------- */
-const taskLoading = ref(false)
-const taskSubmitting = ref(false)
-const taskDialogVisible = ref(false)
-const taskIsEdit = ref(false)
-const tasks = ref([])
-const projects = ref([])
-const taskSearchQuery = ref('')
-const filterPriority = ref(null)
-/** null=全部 | independent=独立任务 | bound=绑定项目 */
-const filterBinding = ref(null)
-
 const taskForm = reactive({
   taskId: null,
-  projectId: null,
+  nodeType: NODE_TASK,
+  parentTaskId: null,
   title: '',
   description: '',
   status: '0',
@@ -189,31 +300,73 @@ const taskForm = reactive({
   remark: '',
 })
 
-const projectMap = computed(() => {
-  const map = new Map()
-  for (const p of projects.value) map.set(Number(p.projectId), p.name)
-  return map
-})
-
-const activeProjects = computed(() =>
-  projects.value.filter((p) => String(p.status) !== '1'),
-)
-
+/** 看板只展示 leaf task；任务组内取根下子孙 leaf */
 const projectScopedTasks = computed(() => {
-  if (!inProjectSpace.value) return tasks.value
-  const id = Number(filterProjectId.value)
-  return tasks.value.filter((t) => Number(t.projectId) === id)
+  if (!inProjectSpace.value) return tasks.value.filter((t) => isLeafTask(t))
+  return leafTasksUnder(filterProjectId.value)
 })
+
+/** 任务组：阶段 + 下属步骤的紧凑树 */
+const projectPhaseTree = computed(() => {
+  if (!inProjectSpace.value) return []
+  const rootId = Number(filterProjectId.value)
+  const phases = (childrenByParent.value.get(rootId) || [])
+    .filter((t) => isPhaseNode(t))
+    .slice()
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+  return phases.map((phase) => ({
+    ...phase,
+    steps: (childrenByParent.value.get(Number(phase.taskId)) || [])
+      .filter((t) => isLeafTask(t))
+      .slice()
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+  }))
+})
+
+/** 可选父节点：活跃顶层 +（任务组内）本阶段 */
+const parentSelectOptions = computed(() => {
+  const opts = []
+  for (const p of activeProjects.value) {
+    opts.push({
+      value: Number(p.taskId),
+      label: p.title || p.name,
+      kind: 'project',
+    })
+  }
+  if (inProjectSpace.value && filterProjectId.value != null) {
+    const rootId = Number(filterProjectId.value)
+    const phases = (childrenByParent.value.get(rootId) || []).filter((t) => isPhaseNode(t))
+    for (const ph of phases) {
+      if (opts.some((o) => o.value === Number(ph.taskId))) continue
+      opts.push({
+        value: Number(ph.taskId),
+        label: `${filterProjectName.value} / ${ph.title}`,
+        kind: 'phase',
+      })
+    }
+  }
+  return opts
+})
+
+/** 看板顶栏：快捷进入未归档父任务 */
+const projectQuickEntries = computed(() =>
+  activeProjects.value.slice(0, 8).map((p) => ({
+    taskId: Number(p.taskId),
+    title: p.title || p.name || `任务 #${p.taskId}`,
+  })),
+)
 
 const filteredTasks = computed(() => {
   const q = taskSearchQuery.value.trim().toLowerCase()
   return projectScopedTasks.value.filter((t) => {
-    if (filterPriority.value != null && Number(t.priority) !== Number(filterPriority.value)) return false
+    if (filterPriority.value != null && Number(t.priority) !== Number(filterPriority.value)) {
+      return false
+    }
     if (!inProjectSpace.value) {
       if (filterBinding.value === 'independent') {
-        if (t.projectId != null && t.projectId !== '') return false
+        if (t.parentTaskId != null && t.parentTaskId !== '') return false
       } else if (filterBinding.value === 'bound') {
-        if (t.projectId == null || t.projectId === '') return false
+        if (!hasProjectAncestor(t)) return false
       }
     }
     if (!q) return true
@@ -235,7 +388,6 @@ const columnsData = computed(() =>
   })),
 )
 
-/** 当前状态 Tab */
 const statusTab = ref('0')
 
 const activeStatusColumn = computed(
@@ -265,23 +417,13 @@ const projectStatusChartOption = computed(() =>
   statusDoughnutOption(countTaskStatus(projectScopedTasks.value), { title: 'STATUS' }),
 )
 
-/** 各项目完成率：done / (total − cancelled) */
+/** 各父任务完成率：leaf task descendants（条目标题等展示） */
 const projectProgressMap = computed(() => {
-  const map = new Map()
-  for (const t of tasks.value) {
-    const pid = t.projectId
-    if (pid == null || pid === '') continue
-    const id = Number(pid)
-    if (!map.has(id)) map.set(id, [])
-    map.get(id).push(t)
-  }
   const result = new Map()
-  for (const [id, list] of map) {
+  for (const p of projects.value) {
+    const list = leafTasksUnder(p.taskId)
     const stats = calcCompletion(list)
-    result.set(id, {
-      ...stats,
-      option: miniProgressOption(stats.rate),
-    })
+    result.set(Number(p.taskId), stats)
   }
   return result
 })
@@ -292,17 +434,17 @@ const emptyProjectProgress = {
   eligible: 0,
   total: 0,
   rate: 0,
-  option: miniProgressOption(0),
 }
 
-function projectProgressOf(projectId) {
-  return projectProgressMap.value.get(Number(projectId)) || emptyProjectProgress
+function projectProgressOf(projectTaskId) {
+  return projectProgressMap.value.get(Number(projectTaskId)) || emptyProjectProgress
 }
 
 function resetTaskForm(defaults = {}) {
   Object.assign(taskForm, {
     taskId: null,
-    projectId: null,
+    nodeType: NODE_TASK,
+    parentTaskId: null,
     title: '',
     description: '',
     status: '0',
@@ -313,11 +455,6 @@ function resetTaskForm(defaults = {}) {
     remark: '',
     ...defaults,
   })
-}
-
-function projectNameOf(projectId) {
-  if (projectId == null || projectId === '') return ''
-  return projectMap.value.get(Number(projectId)) || ''
 }
 
 function formatDue(value) {
@@ -351,7 +488,6 @@ function resolveAttachmentStatus(file) {
   if (!file) return '0'
   const s = file.status != null ? String(file.status).trim() : ''
   if (s === '0' || s === '1' || s === '2') return s
-  // 兼容旧字段 handled
   const v = file.handled
   if (v === true || v === 1 || v === '1' || v === 'true') return '1'
   return '0'
@@ -396,17 +532,30 @@ function formatFileSize(size) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function isTaskAttachmentsReadonly(projectId) {
-  if (projectId == null || projectId === '') return false
-  const p = projects.value.find((x) => Number(x.projectId) === Number(projectId))
-  return p != null && String(p.status) === '1'
+/** 附件只读：祖先顶层 archived === '1' */
+function isTaskAttachmentsReadonly(taskLike) {
+  if (taskLike == null || taskLike === '') return false
+  if (typeof taskLike === 'object' && isProjectNode(taskLike)) {
+    return isProjectArchived(taskLike)
+  }
+  const project = findAncestorProject(taskLike)
+  if (project) return isProjectArchived(project)
+  // 表单仅有 parentTaskId 时
+  if (typeof taskLike === 'object' && taskLike.parentTaskId != null) {
+    return isProjectArchived(findAncestorProject({ parentTaskId: taskLike.parentTaskId }))
+  }
+  return false
 }
 
 /* ---------- 任务附件 ---------- */
 const taskAttachments = ref([])
 
 const taskFormAttachmentsReadonly = computed(() =>
-  isTaskAttachmentsReadonly(taskForm.projectId),
+  isTaskAttachmentsReadonly({
+    taskId: taskForm.taskId,
+    nodeType: taskForm.nodeType,
+    parentTaskId: taskForm.parentTaskId,
+  }),
 )
 
 const projectAttachmentList = ref([])
@@ -474,9 +623,7 @@ const filesModalTitle = computed(() => {
 
 const filesModalFiles = computed(() => parseAttachments(filesModalTask.value?.attachments))
 
-const filesModalReadonly = computed(() =>
-  isTaskAttachmentsReadonly(filesModalTask.value?.projectId),
-)
+const filesModalReadonly = computed(() => isTaskAttachmentsReadonly(filesModalTask.value))
 
 function openFilesModal(task) {
   filesModalTask.value = task
@@ -491,10 +638,7 @@ function closeFilesModal() {
 function removeFilesModalAttachment(attachmentId) {
   const task = filesModalTask.value
   if (!task) return
-  return removeAttachment(attachmentId, {
-    taskId: task.taskId,
-    projectId: task.projectId,
-  })
+  return removeAttachment(attachmentId, { taskId: task.taskId, task })
 }
 
 function syncAttachmentViews(taskId) {
@@ -512,7 +656,6 @@ function syncAttachmentViews(taskId) {
   }
 }
 
-/** 交给 EditorView 的 uploadHandler，仍走任务附件接口 */
 async function handleAttachmentUpload(file) {
   if (!file || !taskForm.taskId) {
     throw new Error('未选择有效文件')
@@ -525,10 +668,19 @@ async function handleAttachmentUpload(file) {
   return { url: '' }
 }
 
+function resolveReadonlyTask(ctx = {}) {
+  if (ctx.task) return ctx.task
+  if (ctx.taskId != null) return getTaskById(ctx.taskId) || { taskId: ctx.taskId, parentTaskId: ctx.parentTaskId }
+  return {
+    taskId: taskForm.taskId,
+    nodeType: taskForm.nodeType,
+    parentTaskId: taskForm.parentTaskId,
+  }
+}
+
 async function removeAttachment(attachmentId, ctx = {}) {
   const taskId = ctx.taskId ?? taskForm.taskId
-  const projectId = ctx.projectId ?? taskForm.projectId
-  if (!taskId || isTaskAttachmentsReadonly(projectId)) return
+  if (!taskId || isTaskAttachmentsReadonly(resolveReadonlyTask(ctx))) return
   try {
     await removeTaskAttachmentApi(taskId, attachmentId)
     message.success('已删除附件')
@@ -542,10 +694,11 @@ async function removeAttachment(attachmentId, ctx = {}) {
 
 async function setAttachmentStatus(file, status, ctx = {}) {
   const taskId = ctx.taskId ?? file?.taskId ?? taskForm.taskId
-  const projectId = ctx.projectId ?? taskForm.projectId
   const attachmentId = file?.id
   const next = String(status)
-  if (!taskId || !attachmentId || isTaskAttachmentsReadonly(projectId)) return
+  if (!taskId || !attachmentId || isTaskAttachmentsReadonly(resolveReadonlyTask({ ...ctx, taskId }))) {
+    return
+  }
   if (resolveAttachmentStatus(file) === next) return
   try {
     await updateAttachmentStatusApi(taskId, attachmentId, next)
@@ -556,15 +709,6 @@ async function setAttachmentStatus(file, status, ctx = {}) {
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
     message.error(error.message || '更新失败')
-  }
-}
-
-async function loadProjectsForSelect() {
-  try {
-    const result = await pageProjectsApi(1, null)
-    projects.value = result?.data?.records || []
-  } catch {
-    projects.value = []
   }
 }
 
@@ -581,7 +725,7 @@ async function loadTasks() {
 }
 
 async function refreshTasks() {
-  await Promise.all([loadTasks(), loadProjectsForSelect()])
+  await loadTasks()
 }
 
 const planDialogVisible = ref(false)
@@ -615,17 +759,17 @@ function openPlanDialog() {
 async function runPlanPreview() {
   if (!filterProjectId.value) return
   if (!planForm.deadline) {
-    message.warning('请先选择项目截止时间')
+    message.warning('请先选择截止时间')
     return
   }
   if (dayjs(planForm.deadline).isBefore(dayjs(), 'day')) {
-    message.warning('项目截止时间不能早于今天')
+    message.warning('截止时间不能早于今天')
     return
   }
   planPreviewing.value = true
   try {
     const result = await planPreviewApi({
-      projectId: Number(filterProjectId.value),
+      projectTaskId: Number(filterProjectId.value),
       goal: planForm.goal?.trim() || undefined,
       deadline: dayjs(planForm.deadline).format('YYYY-MM-DD'),
       constraints: planForm.constraints?.trim() || undefined,
@@ -648,7 +792,7 @@ async function applyPlanPreview() {
   planApplying.value = true
   try {
     const result = await planApplyApi({
-      projectId: Number(filterProjectId.value),
+      projectTaskId: Number(filterProjectId.value),
       planBatchId: planPreview.value.planBatchId,
       phases: planPreview.value.phases,
     })
@@ -670,7 +814,21 @@ function openCreateTask(status = '0') {
   taskAttachments.value = []
   resetTaskForm({
     status: String(status),
-    projectId: filterProjectId.value != null ? Number(filterProjectId.value) : null,
+    nodeType: NODE_TASK,
+    parentTaskId: filterProjectId.value != null ? Number(filterProjectId.value) : null,
+  })
+  taskDialogVisible.value = true
+}
+
+function openCreatePhase() {
+  if (!inProjectSpace.value || filterProjectId.value == null) return
+  taskIsEdit.value = false
+  taskAttachments.value = []
+  resetTaskForm({
+    nodeType: NODE_PHASE,
+    parentTaskId: Number(filterProjectId.value),
+    status: '0',
+    priority: 0,
   })
   taskDialogVisible.value = true
 }
@@ -680,7 +838,8 @@ function openEditTask(row) {
   taskAttachments.value = parseAttachments(row.attachments)
   resetTaskForm({
     taskId: row.taskId,
-    projectId: row.projectId != null ? Number(row.projectId) : null,
+    nodeType: row.nodeType || NODE_TASK,
+    parentTaskId: row.parentTaskId != null ? Number(row.parentTaskId) : null,
     title: row.title || '',
     description: row.description || '',
     status: row.status != null ? String(row.status) : '0',
@@ -694,9 +853,11 @@ function openEditTask(row) {
 }
 
 function toTaskPayload() {
+  const nodeType = taskForm.nodeType || NODE_TASK
   return {
     taskId: taskForm.taskId,
-    projectId: taskForm.projectId != null ? Number(taskForm.projectId) : null,
+    nodeType,
+    parentTaskId: taskForm.parentTaskId != null ? Number(taskForm.parentTaskId) : null,
     title: taskForm.title.trim(),
     description: taskForm.description?.trim() || '',
     status: String(taskForm.status ?? '0'),
@@ -708,9 +869,19 @@ function toTaskPayload() {
   }
 }
 
+const taskDialogTitle = computed(() => {
+  if (taskIsEdit.value) {
+    if (taskForm.nodeType === NODE_PHASE) return '编辑阶段'
+    if (taskForm.nodeType === NODE_PROJECT) return '编辑父任务'
+    return '编辑任务'
+  }
+  if (taskForm.nodeType === NODE_PHASE) return '新建阶段'
+  return '新建任务'
+})
+
 async function submitTaskForm() {
   if (!taskForm.title?.trim()) {
-    message.warning('请填写任务标题')
+    message.warning(taskForm.nodeType === NODE_PHASE ? '请填写阶段标题' : '请填写任务标题')
     return
   }
   taskSubmitting.value = true
@@ -738,93 +909,29 @@ async function removeTask(id) {
   }
 }
 
-/* ---------- 项目列表 ---------- */
-const projectLoading = ref(false)
+/* ---------- 父任务（nodeType=project）创建 / 编辑 / 归档 ---------- */
 const projectSubmitting = ref(false)
 const projectDialogVisible = ref(false)
 const projectIsEdit = ref(false)
-const projectTableData = ref([])
-const projectSearchQuery = ref('')
-const filteredProjects = ref([])
 
 const projectForm = reactive({
-  projectId: null,
-  name: '',
+  taskId: null,
+  title: '',
   description: '',
-  status: '0',
+  archived: '0',
   displayOrder: 0,
   remark: '',
 })
 
-const projectColumns = [
-  { prop: 'name', label: '项目名称', cellClass: 'cell-name' },
-  { prop: 'progress', label: '进度', headerClass: 'th-progress', width: '120px' },
-  { prop: 'status', label: '状态', headerClass: 'th-status' },
-  { prop: 'description', label: '描述' },
-  { prop: 'displayOrder', label: '排序', headerClass: 'th-id', cellClass: 'cell-id' },
-  { prop: 'updateTime', label: '更新时间', cellClass: 'cell-muted' },
-  { prop: 'actions', label: '操作', type: 'actions', headerClass: 'th-action', align: 'center', width: '148px' },
-]
-
-const projectStats = computed(() => {
-  const all = projectTableData.value
-  const active = all.filter((r) => String(r.status) === '0').length
-  const archived = all.filter((r) => String(r.status) === '1').length
-  return { total: all.length, active, archived }
-})
-
 function resetProjectForm() {
   Object.assign(projectForm, {
-    projectId: null,
-    name: '',
+    taskId: null,
+    title: '',
     description: '',
-    status: '0',
+    archived: '0',
     displayOrder: 0,
     remark: '',
   })
-}
-
-function formatTime(value) {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return String(value)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${day} ${hh}:${mm}`
-}
-
-function applyProjectFilter() {
-  const q = projectSearchQuery.value.trim().toLowerCase()
-  if (!q) {
-    filteredProjects.value = projectTableData.value
-    return
-  }
-  filteredProjects.value = projectTableData.value.filter(
-    (row) =>
-      (row.name || '').toLowerCase().includes(q) ||
-      (row.description || '').toLowerCase().includes(q) ||
-      (row.remark || '').toLowerCase().includes(q),
-  )
-}
-
-async function loadProjectTable() {
-  projectLoading.value = true
-  try {
-    const result = await pageProjectsApi(1, null)
-    projectTableData.value = result?.data?.records || []
-    applyProjectFilter()
-  } catch (error) {
-    message.error(error.message || '获取项目列表失败')
-  } finally {
-    projectLoading.value = false
-  }
-}
-
-async function onProjectsChanged() {
-  await Promise.all([loadProjectTable(), loadProjectsForSelect()])
 }
 
 function openCreateProject() {
@@ -834,12 +941,13 @@ function openCreateProject() {
 }
 
 function openEditProject(row) {
+  if (!row) return
   projectIsEdit.value = true
   Object.assign(projectForm, {
-    projectId: row.projectId,
-    name: row.name || '',
+    taskId: row.taskId,
+    title: row.title || row.name || '',
     description: row.description || '',
-    status: row.status != null ? String(row.status) : '0',
+    archived: row.archived != null ? String(row.archived) : '0',
     displayOrder: row.displayOrder ?? 0,
     remark: row.remark || '',
   })
@@ -847,25 +955,28 @@ function openEditProject(row) {
 }
 
 async function submitProjectForm() {
-  if (!projectForm.name?.trim()) {
-    message.warning('请填写项目名称')
+  if (!projectForm.title?.trim()) {
+    message.warning('请填写标题')
     return
   }
   projectSubmitting.value = true
   try {
     const payload = {
-      projectId: projectForm.projectId,
-      name: projectForm.name.trim(),
+      taskId: projectForm.taskId,
+      nodeType: NODE_PROJECT,
+      parentTaskId: null,
+      title: projectForm.title.trim(),
       description: projectForm.description?.trim() || '',
-      status: String(projectForm.status ?? '0'),
+      archived: String(projectForm.archived ?? '0'),
       displayOrder: Number(projectForm.displayOrder) || 0,
       remark: projectForm.remark?.trim() || '',
+      status: '0',
     }
-    if (projectIsEdit.value) await updateProjectApi(payload)
-    else await addProjectApi(payload)
+    if (projectIsEdit.value) await updateTaskApi(payload)
+    else await addTaskApi(payload)
     message.success('操作成功')
     projectDialogVisible.value = false
-    await onProjectsChanged()
+    await loadTasks()
   } catch (error) {
     message.error(error.message || '操作失败')
   } finally {
@@ -875,35 +986,35 @@ async function submitProjectForm() {
 
 async function removeProject(id) {
   try {
-    await deleteProjectsApi(id)
+    await deleteTasksApi(id)
     message.success('删除成功')
-    await onProjectsChanged()
+    if (filterProjectId.value != null && Number(filterProjectId.value) === Number(id)) {
+      leaveProjectSpace()
+    }
+    await loadTasks()
   } catch (error) {
     message.error(error.message || '删除失败')
   }
 }
 
 async function toggleArchive(row) {
-  const next = String(row.status) === '0' ? '1' : '0'
+  if (!row?.taskId) return
+  const next = String(row.archived) === '1' ? '0' : '1'
   try {
-    await updateProjectApi({ ...row, status: next })
+    await setProjectArchivedApi(row.taskId, next)
     message.success(next === '1' ? '已归档' : '已恢复进行中')
-    await onProjectsChanged()
+    await loadTasks()
   } catch (error) {
     message.error(error.message || '状态更新失败')
   }
 }
 
 async function refreshCurrent() {
-  if (activeTab.value === 'projects') {
-    await loadProjectTable()
-  } else {
-    await refreshTasks()
-  }
+  await loadTasks()
 }
 
 onMounted(async () => {
-  await Promise.all([refreshTasks(), loadProjectTable()])
+  await loadTasks()
 })
 </script>
 
@@ -923,7 +1034,7 @@ onMounted(async () => {
             @click="leaveProjectSpace"
           >
             <LeftOutlined />
-            返回项目
+            返回
           </button>
           <h1 class="wb-header__title" :class="{ 'wb-header__title--space': inProjectSpace }">
             {{ headerCopy.title }}
@@ -931,38 +1042,46 @@ onMounted(async () => {
           <p class="wb-header__desc">{{ headerCopy.desc }}</p>
         </div>
         <div class="wb-header__actions">
-          <div v-if="!inProjectSpace" class="affair-tabs" role="tablist" aria-label="事务视图">
+          <template v-if="inProjectSpace && currentProject">
             <button
+              v-permission="'task:modify'"
               type="button"
-              class="affair-tab"
-              :class="{ 'is-active': activeTab === 'tasks' }"
-              role="tab"
-              :aria-selected="activeTab === 'tasks'"
-              @click="setTab('tasks')"
+              class="wb-btn wb-btn--ghost"
+              @click="openEditProject(currentProject)"
             >
-              任务
+              <EditOutlined />
+              编辑
             </button>
             <button
+              v-permission="'task:modify'"
               type="button"
-              class="affair-tab"
-              :class="{ 'is-active': activeTab === 'projects' }"
-              role="tab"
-              :aria-selected="activeTab === 'projects'"
-              @click="setTab('projects')"
+              class="wb-btn wb-btn--ghost"
+              @click="toggleArchive(currentProject)"
             >
-              项目
+              <InboxOutlined />
+              {{ String(currentProject.archived) === '1' ? '恢复' : '归档' }}
             </button>
-          </div>
+            <a-popconfirm
+              v-permission="'task:remove'"
+              title="确认删除该父任务及其子任务？"
+              @confirm="removeProject(currentProject.taskId)"
+            >
+              <button type="button" class="wb-btn wb-btn--ghost">
+                <DeleteOutlined />
+                删除
+              </button>
+            </a-popconfirm>
+          </template>
           <button type="button" class="wb-btn wb-btn--ghost" @click="refreshCurrent">刷新</button>
         </div>
       </header>
 
-      <!-- 任务列表 -->
-      <div v-show="activeTab === 'tasks'" class="task-view">
+      <!-- 任务看板 -->
+      <div class="task-view">
         <section
           v-if="inProjectSpace"
           class="tp-charts"
-          aria-label="项目进度"
+          aria-label="任务组进度"
         >
           <article class="tp-chart-card tp-chart-card--gauge">
             <v-chart class="tp-chart" :option="projectGaugeOption" autoresize />
@@ -974,7 +1093,7 @@ onMounted(async () => {
           <article class="tp-chart-card">
             <v-chart class="tp-chart" :option="projectStatusChartOption" autoresize />
             <p class="tp-chart-meta">
-              <span>本项目 {{ taskStats.total }} 项任务</span>
+              <span>本组 {{ taskStats.total }} 项任务</span>
             </p>
           </article>
         </section>
@@ -982,7 +1101,7 @@ onMounted(async () => {
         <div class="tp-pulse" aria-label="任务概览">
           <div class="tp-pulse__hero">
             <span class="tp-pulse__value">{{ taskStats.total }}</span>
-            <span class="tp-pulse__label">{{ inProjectSpace ? '本项目任务' : '全部任务' }}</span>
+            <span class="tp-pulse__label">{{ inProjectSpace ? '本组任务' : '全部任务' }}</span>
           </div>
           <div class="tp-pulse__rail" role="group" aria-label="快捷筛选">
             <button
@@ -1015,6 +1134,27 @@ onMounted(async () => {
           </div>
         </div>
 
+        <section
+          v-if="!inProjectSpace && projectQuickEntries.length"
+          class="project-strip"
+          aria-label="快捷进入父任务"
+        >
+          <span class="project-strip__label">父任务</span>
+          <div class="project-strip__chips">
+            <button
+              v-for="p in projectQuickEntries"
+              :key="p.taskId"
+              type="button"
+              class="project-strip__chip"
+              :title="`${projectProgressOf(p.taskId).rate}% · ${projectProgressOf(p.taskId).done}/${projectProgressOf(p.taskId).eligible}`"
+              @click="viewProjectTasks(p.taskId)"
+            >
+              <FolderOutlined />
+              {{ p.title }}
+            </button>
+          </div>
+        </section>
+
         <div class="wb-toolbar task-view__toolbar">
           <input
             v-model="taskSearchQuery"
@@ -1036,8 +1176,8 @@ onMounted(async () => {
             placeholder="任务归属"
             class="task-view__binding"
           >
-            <a-select-option value="independent">独立任务</a-select-option>
-            <a-select-option value="bound">绑定项目</a-select-option>
+            <a-select-option value="independent">独立（无父节点）</a-select-option>
+            <a-select-option value="bound">有父任务</a-select-option>
           </a-select>
           <button
             v-if="inProjectSpace"
@@ -1051,6 +1191,27 @@ onMounted(async () => {
             智能规划
           </button>
           <button
+            v-if="inProjectSpace"
+            v-permission="'task:add'"
+            type="button"
+            class="wb-btn wb-btn--ghost"
+            :disabled="projectAttachmentsReadonly"
+            @click="openCreatePhase"
+          >
+            <PlusOutlined />
+            新建阶段
+          </button>
+          <button
+            v-if="!inProjectSpace"
+            v-permission="'task:add'"
+            type="button"
+            class="wb-btn wb-btn--ghost"
+            @click="openCreateProject"
+          >
+            <PlusOutlined />
+            新建父任务
+          </button>
+          <button
             v-permission="'task:add'"
             type="button"
             class="wb-btn wb-btn--primary"
@@ -1061,7 +1222,39 @@ onMounted(async () => {
           </button>
         </div>
 
-        <section v-if="inProjectSpace" class="attach-review" aria-label="项目附件审查">
+        <section
+          v-if="inProjectSpace && projectPhaseTree.length"
+          class="phase-tree"
+          aria-label="阶段结构"
+        >
+          <h2 class="phase-tree__title">阶段结构</h2>
+          <ul class="phase-tree__list">
+            <li v-for="phase in projectPhaseTree" :key="phase.taskId" class="phase-tree__phase">
+              <div class="phase-tree__phase-head">
+                <span class="phase-tree__phase-name">{{ phase.title }}</span>
+                <span class="phase-tree__phase-count">{{ phase.steps.length }} 步</span>
+                <button
+                  v-permission="'task:modify'"
+                  type="button"
+                  class="phase-tree__edit"
+                  title="编辑阶段"
+                  @click="openEditTask(phase)"
+                >
+                  <EditOutlined />
+                </button>
+              </div>
+              <ul v-if="phase.steps.length" class="phase-tree__steps">
+                <li v-for="step in phase.steps" :key="step.taskId" class="phase-tree__step">
+                  <span class="phase-tree__step-status" :data-s="String(step.status ?? '0')" />
+                  <span class="phase-tree__step-title">{{ step.title }}</span>
+                </li>
+              </ul>
+              <p v-else class="phase-tree__empty">暂无步骤</p>
+            </li>
+          </ul>
+        </section>
+
+        <section v-if="inProjectSpace" class="attach-review" aria-label="附件审查">
           <div class="attach-review__head">
             <h2 class="attach-review__title">附件审查</h2>
             <span class="attach-review__meta">
@@ -1106,14 +1299,14 @@ onMounted(async () => {
                     class="attach-status-select"
                     :value="resolveAttachmentStatus(file)"
                     :aria-label="`附件状态 · ${file.name || ''}`"
-                    @change="setAttachmentStatus(file, $event.target.value, { taskId: file.taskId, projectId: filterProjectId })"
+                    @change="setAttachmentStatus(file, $event.target.value, { taskId: file.taskId, task: currentProject })"
                   >
                     <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
                   </select>
                 </div>
               </li>
             </ul>
-            <p v-else class="attach-review__empty">本项目任务下还没有附件</p>
+            <p v-else class="attach-review__empty">本组任务下还没有附件</p>
           </a-spin>
         </section>
 
@@ -1136,13 +1329,39 @@ onMounted(async () => {
 
         <a-spin :spinning="taskLoading">
           <div v-if="!taskLoading && !projectScopedTasks.length" class="wb-empty">
-            <h2 class="wb-empty__title">{{ inProjectSpace ? '项目空间还是空的' : '还没有任务' }}</h2>
+            <h2 class="wb-empty__title">
+              {{ inProjectSpace ? '这组任务还是空的' : '还没有叶子任务' }}
+            </h2>
             <p class="wb-empty__desc">
-              {{ inProjectSpace ? '为本项目创建第一条任务，从「待办」开始推进。' : '创建第一条任务，放进「待办」，再逐步推进。' }}
+              <template v-if="inProjectSpace">
+                为本组创建阶段或子任务；阶段下的步骤会出现在下方看板。
+              </template>
+              <template v-else-if="projects.length">
+                看板只显示叶子任务。你已有 {{ projects.length }} 个父任务，可点上方芯片进入任务组。
+              </template>
+              <template v-else>
+                先新建一条任务，或新建父任务后再拆阶段 / 子任务。
+              </template>
             </p>
-            <button v-permission="'task:add'" type="button" class="wb-btn wb-btn--primary" @click="openCreateTask('0')">
-              新建任务
-            </button>
+            <div class="wb-empty__actions">
+              <button
+                v-permission="'task:add'"
+                type="button"
+                class="wb-btn wb-btn--primary"
+                @click="openCreateTask('0')"
+              >
+                新建任务
+              </button>
+              <button
+                v-if="!inProjectSpace"
+                v-permission="'task:add'"
+                type="button"
+                class="wb-btn wb-btn--ghost"
+                @click="openCreateProject"
+              >
+                新建父任务
+              </button>
+            </div>
           </div>
 
           <div v-else class="task-panel">
@@ -1208,12 +1427,15 @@ onMounted(async () => {
                 </div>
 
                 <footer
-                  v-if="(!inProjectSpace && projectNameOf(task.projectId)) || attachmentCount(task) || task.dueTime"
+                  v-if="(!inProjectSpace && projectNameOf(task)) || (inProjectSpace && phaseTitleOf(task)) || attachmentCount(task) || task.dueTime"
                   class="task-card__meta"
                 >
-                  <span v-if="!inProjectSpace && projectNameOf(task.projectId)" class="meta-chip meta-chip--project">
+                  <span v-if="!inProjectSpace && projectNameOf(task)" class="meta-chip meta-chip--project">
                     <FolderOutlined />
-                    {{ projectNameOf(task.projectId) }}
+                    {{ projectNameOf(task) }}
+                  </span>
+                  <span v-if="inProjectSpace && phaseTitleOf(task)" class="meta-chip meta-chip--phase">
+                    {{ phaseTitleOf(task) }}
                   </span>
                   <button
                     v-if="attachmentCount(task)"
@@ -1244,130 +1466,11 @@ onMounted(async () => {
           </div>
         </a-spin>
       </div>
-
-      <!-- 项目列表 -->
-      <div v-show="activeTab === 'projects'">
-        <FlatManageListView
-          v-model:search-query="projectSearchQuery"
-          embedded
-          :show-background="false"
-          title=""
-          desc=""
-          :loading="projectLoading"
-          :data="filteredProjects"
-          :columns="projectColumns"
-          row-key="projectId"
-          search-placeholder="搜索项目名称、描述..."
-          empty-text="还没有项目，创建一个开始吧"
-          @refresh="loadProjectTable"
-          @search="applyProjectFilter"
-        >
-          <template #stats>
-            <div class="wb-stats wb-stats--inline">
-              <div class="wb-stat wb-stat--accent">
-                <span class="wb-stat__label">全部项目</span>
-                <span class="wb-stat__value">{{ projectStats.total }}</span>
-              </div>
-              <div class="wb-stat">
-                <span class="wb-stat__label">进行中</span>
-                <span class="wb-stat__value">{{ projectStats.active }}</span>
-              </div>
-              <div class="wb-stat">
-                <span class="wb-stat__label">已归档</span>
-                <span class="wb-stat__value">{{ projectStats.archived }}</span>
-              </div>
-            </div>
-          </template>
-
-          <template #toolbar-actions>
-            <button v-permission="'project:add'" type="button" class="mlv-btn-primary" @click="openCreateProject">
-              <PlusOutlined />
-              新建项目
-            </button>
-          </template>
-
-          <template #cell-name="{ row }">
-            <div class="proj-name-cell">
-              <span class="proj-name-dot" :class="String(row.status) === '0' ? 'is-active' : 'is-archived'" />
-              <button type="button" class="proj-name-link" @click="viewProjectTasks(row.projectId)">
-                {{ row.name || '-' }}
-              </button>
-            </div>
-          </template>
-
-          <template #cell-progress="{ row }">
-            <div
-              class="proj-progress"
-              :title="`${projectProgressOf(row.projectId).rate}% · ${projectProgressOf(row.projectId).done}/${projectProgressOf(row.projectId).eligible}`"
-            >
-              <v-chart
-                class="proj-progress__chart"
-                :option="projectProgressOf(row.projectId).option"
-                autoresize
-              />
-              <span class="proj-progress__pct">{{ projectProgressOf(row.projectId).rate }}%</span>
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-            <span
-              class="wb-chip"
-              :class="String(row.status) === '0' ? 'wb-chip--active' : 'wb-chip--archived'"
-            >
-              {{ String(row.status) === '0' ? '进行中' : '已归档' }}
-            </span>
-          </template>
-
-          <template #cell-description="{ row }">
-            <span class="cell-muted proj-desc">{{ row.description || '-' }}</span>
-          </template>
-
-          <template #cell-updateTime="{ row }">
-            <span class="cell-muted">{{ formatTime(row.updateTime) }}</span>
-          </template>
-
-          <template #actions="{ row }">
-            <div class="action-btns">
-              <button
-                type="button"
-                class="btn-action btn-action--perm"
-                title="查看任务"
-                @click="viewProjectTasks(row.projectId)"
-              >
-                <CheckSquareOutlined />
-              </button>
-              <button
-                v-permission="'project:modify'"
-                type="button"
-                class="btn-action btn-action--edit"
-                title="编辑"
-                @click="openEditProject(row)"
-              >
-                <EditOutlined />
-              </button>
-              <button
-                v-permission="'project:modify'"
-                type="button"
-                class="btn-action btn-action--perm"
-                :title="String(row.status) === '0' ? '归档' : '恢复'"
-                @click="toggleArchive(row)"
-              >
-                <InboxOutlined />
-              </button>
-              <a-popconfirm v-permission="'project:remove'" title="确认删除该项目？" @confirm="removeProject(row.projectId)">
-                <button type="button" class="btn-action btn-action--delete" title="删除">
-                  <DeleteOutlined />
-                </button>
-              </a-popconfirm>
-            </div>
-          </template>
-        </FlatManageListView>
-      </div>
     </div>
 
     <DataOperationView
       v-model="taskDialogVisible"
-      :title="taskIsEdit ? '编辑任务' : '新建任务'"
+      :title="taskDialogTitle"
       :columns="2"
       :loading="taskSubmitting"
       :confirm-text="taskIsEdit ? '保存修改' : '确认创建'"
@@ -1378,13 +1481,13 @@ onMounted(async () => {
           <a-form-item label="标题" class="dialog-item dialog-item--full" required>
             <a-input
               v-model:value.trim="taskForm.title"
-              placeholder="要完成什么？"
+              :placeholder="taskForm.nodeType === 'phase' ? '阶段名称' : '要完成什么？'"
               :maxlength="120"
               size="large"
             />
           </a-form-item>
 
-          <a-form-item label="状态" class="dialog-item">
+          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="状态" class="dialog-item">
             <a-select v-model:value="taskForm.status" style="width: 100%">
               <a-select-option v-for="col in STATUS_COLUMNS" :key="col.key" :value="col.key">
                 {{ col.label }}
@@ -1392,25 +1495,50 @@ onMounted(async () => {
             </a-select>
           </a-form-item>
 
-          <a-form-item label="优先级" class="dialog-item">
+          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="优先级" class="dialog-item">
             <a-input-number v-model:value="taskForm.priority" :precision="0" style="width: 100%" />
           </a-form-item>
 
-          <a-form-item label="所属项目" class="dialog-item">
+          <a-form-item
+            v-if="inProjectSpace || taskIsEdit"
+            label="节点类型"
+            class="dialog-item"
+          >
             <a-select
-              v-model:value="taskForm.projectId"
-              allow-clear
-              :disabled="inProjectSpace"
-              placeholder="独立任务可不选"
+              v-model:value="taskForm.nodeType"
+              :disabled="taskIsEdit || (!inProjectSpace && taskForm.nodeType === 'task')"
               style="width: 100%"
             >
-              <a-select-option v-for="p in activeProjects" :key="p.projectId" :value="Number(p.projectId)">
-                {{ p.name }}
+              <a-select-option value="task">任务</a-select-option>
+              <a-select-option v-if="inProjectSpace || taskForm.nodeType === 'phase'" value="phase">
+                阶段
               </a-select-option>
             </a-select>
           </a-form-item>
 
-          <a-form-item label="截止时间" class="dialog-item">
+          <a-form-item
+            v-if="taskForm.nodeType !== 'phase' || !inProjectSpace"
+            label="父节点"
+            class="dialog-item"
+          >
+            <a-select
+              v-model:value="taskForm.parentTaskId"
+              allow-clear
+              :disabled="taskForm.nodeType === 'phase'"
+              placeholder="独立任务可不选；可挂到父任务或阶段下"
+              style="width: 100%"
+            >
+              <a-select-option
+                v-for="opt in parentSelectOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="截止时间" class="dialog-item">
             <a-date-picker
               v-model:value="taskForm.dueTime"
               show-time
@@ -1420,7 +1548,7 @@ onMounted(async () => {
             />
           </a-form-item>
 
-          <a-form-item label="标签" class="dialog-item">
+          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="标签" class="dialog-item">
             <a-input v-model:value.trim="taskForm.tags" placeholder="逗号分隔，如：设计,本周" />
           </a-form-item>
 
@@ -1436,12 +1564,16 @@ onMounted(async () => {
             <a-textarea v-model:value.trim="taskForm.remark" :rows="2" placeholder="选填" />
           </a-form-item>
 
-          <a-form-item label="附件" class="dialog-item dialog-item--full">
+          <a-form-item
+            v-if="taskForm.nodeType !== 'phase'"
+            label="附件"
+            class="dialog-item dialog-item--full"
+          >
             <div class="task-attach">
               <p v-if="!taskIsEdit" class="task-attach__hint">先创建任务，再上传附件</p>
               <template v-else>
                 <p v-if="taskFormAttachmentsReadonly" class="task-attach__hint">
-                  所属项目已归档，附件只读，可下载
+                  上级任务组已归档，附件只读，可下载
                 </p>
                 <ul v-if="taskAttachments.length" class="task-attach__list">
                   <li v-for="file in taskAttachments" :key="file.id" class="task-attach__item">
@@ -1502,7 +1634,7 @@ onMounted(async () => {
       @cancel="closeFilesModal"
     >
       <p v-if="filesModalReadonly" class="task-attach__hint files-modal__hint">
-        所属项目已归档，附件只读，可预览与下载
+        上级任务组已归档，附件只读，可预览与下载
       </p>
       <ul v-if="filesModalFiles.length" class="files-modal__list">
         <li
@@ -1543,7 +1675,7 @@ onMounted(async () => {
               :aria-label="`附件状态 · ${file.name || ''}`"
               @change="setAttachmentStatus(file, $event.target.value, {
                 taskId: filesModalTask?.taskId,
-                projectId: filesModalTask?.projectId,
+                task: filesModalTask,
               })"
             >
               <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
@@ -1570,7 +1702,7 @@ onMounted(async () => {
 
     <DataOperationView
       v-model="projectDialogVisible"
-      :title="projectIsEdit ? '编辑项目' : '新建项目'"
+      :title="projectIsEdit ? '编辑父任务' : '新建父任务'"
       :columns="2"
       :loading="projectSubmitting"
       :confirm-text="projectIsEdit ? '保存修改' : '确认创建'"
@@ -1578,12 +1710,12 @@ onMounted(async () => {
     >
       <a-form layout="vertical" :model="projectForm" class="dialog-form">
         <div class="dialog-grid">
-          <a-form-item label="项目名称" class="dialog-item dialog-item--full" required>
-            <a-input v-model:value.trim="projectForm.name" placeholder="例如：个人知识库改版" :maxlength="100" />
+          <a-form-item label="标题" class="dialog-item dialog-item--full" required>
+            <a-input v-model:value.trim="projectForm.title" placeholder="例如：个人知识库改版" :maxlength="100" />
           </a-form-item>
 
-          <a-form-item label="状态" class="dialog-item">
-            <a-select v-model:value="projectForm.status" style="width: 100%">
+          <a-form-item label="归档状态" class="dialog-item">
+            <a-select v-model:value="projectForm.archived" style="width: 100%">
               <a-select-option value="0">进行中</a-select-option>
               <a-select-option value="1">已归档</a-select-option>
             </a-select>
@@ -1594,7 +1726,7 @@ onMounted(async () => {
           </a-form-item>
 
           <a-form-item label="描述" class="dialog-item dialog-item--full">
-            <a-textarea v-model:value.trim="projectForm.description" :rows="3" placeholder="一句话说明这个项目在做什么" :maxlength="500" />
+            <a-textarea v-model:value.trim="projectForm.description" :rows="3" placeholder="一句话说明要做什么" :maxlength="500" />
           </a-form-item>
 
           <a-form-item label="备注" class="dialog-item dialog-item--full">
@@ -1618,15 +1750,15 @@ onMounted(async () => {
       <a-spin :spinning="planPreviewing">
         <div class="plan-dialog">
           <p class="plan-dialog__hint">
-            必须指定整项目截止时间：两周与两个月会按不同节奏拆阶段；预览确认后再写入看板。
+            必须指定整组截止时间：两周与两个月会按不同节奏拆阶段；预览确认后再写入看板。
           </p>
           <a-form layout="vertical" class="dialog-form">
-            <a-form-item label="项目截止时间" required>
+            <a-form-item label="截止时间" required>
               <a-date-picker
                 v-model:value="planForm.deadline"
                 format="YYYY-MM-DD"
                 style="width: 100%"
-                placeholder="整个项目要在哪天完成"
+                placeholder="整组要在哪天完成"
                 :disabled-date="(current) => current && current < dayjs().startOf('day')"
               />
               <p v-if="planDeadlineHint" class="plan-dialog__deadline-hint">{{ planDeadlineHint }}</p>
@@ -1637,7 +1769,7 @@ onMounted(async () => {
                 :rows="3"
                 :maxlength="2000"
                 show-count
-                placeholder="要达成什么？默认使用项目描述"
+                placeholder="要达成什么？默认使用描述"
               />
             </a-form-item>
             <a-form-item label="其它约束（可选）">
@@ -1907,6 +2039,68 @@ onMounted(async () => {
   color: var(--color-text-dim);
 }
 
+.project-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--space-4);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-light);
+  background: var(--tp-glass);
+  backdrop-filter: blur(8px);
+}
+
+.project-strip__label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+}
+
+.project-strip__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.project-strip__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.project-strip__chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(8, 145, 178, 0.35);
+  box-shadow: var(--shadow-xs);
+}
+
+.wb-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
 .task-view__toolbar {
   margin-bottom: var(--space-4);
 }
@@ -1916,50 +2110,7 @@ onMounted(async () => {
 }
 
 .task-view__binding {
-  width: 132px;
-}
-
-.affair-tabs {
-  display: inline-flex;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--tp-glass);
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-xs), inset 0 1px 0 var(--tp-glass-border);
-  backdrop-filter: blur(10px);
-}
-
-.affair-tab {
-  height: 32px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 9px;
-  background: transparent;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background 0.22s var(--tp-ease), color 0.22s ease, transform 0.15s var(--tp-ease), box-shadow 0.22s ease;
-}
-
-.affair-tab:hover {
-  color: var(--color-text-primary);
-}
-
-.affair-tab:active {
-  transform: scale(0.97);
-}
-
-.affair-tab:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.affair-tab.is-active {
-  color: #fff;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-deep) 100%);
-  box-shadow: 0 4px 14px rgba(8, 145, 178, 0.28);
+  width: 160px;
 }
 
 .space-back {
@@ -2410,6 +2561,131 @@ onMounted(async () => {
   color: var(--color-accent-deep);
   background: var(--color-accent-soft);
   border-color: rgba(8, 145, 178, 0.16);
+}
+
+.meta-chip--phase {
+  color: #0f766e;
+  background: rgba(13, 148, 136, 0.1);
+  border-color: rgba(13, 148, 136, 0.18);
+}
+
+/* —— 任务组阶段树 —— */
+.phase-tree {
+  margin-bottom: var(--space-4);
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.phase-tree__title {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.phase-tree__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.phase-tree__phase {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(8, 145, 178, 0.04);
+  border: 1px solid rgba(8, 145, 178, 0.1);
+}
+
+.phase-tree__phase-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.phase-tree__phase-name {
+  font-weight: 650;
+  font-size: 0.92rem;
+  color: var(--tp-ink);
+}
+
+.phase-tree__phase-count {
+  font-size: 0.72rem;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.phase-tree__edit {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.phase-tree__edit:hover {
+  color: var(--color-accent-deep);
+  background: rgba(8, 145, 178, 0.1);
+}
+
+.phase-tree__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phase-tree__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.phase-tree__step-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #94a3b8;
+}
+
+.phase-tree__step-status[data-s='1'] {
+  background: #0891b2;
+}
+
+.phase-tree__step-status[data-s='2'] {
+  background: #16a34a;
+}
+
+.phase-tree__step-status[data-s='3'] {
+  background: #94a3b8;
+  opacity: 0.55;
+}
+
+.phase-tree__step-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phase-tree__empty {
+  margin: 0;
+  padding-left: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-tertiary);
 }
 
 .meta-chip--files {

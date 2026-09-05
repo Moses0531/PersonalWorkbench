@@ -34,9 +34,9 @@ class StpInterfaceConfigTest {
     @Test
     void getPermissionList_returnsCodes() {
         when(sysPermissionMapper.selectPermissionCodesByUserId(1L))
-                .thenReturn(List.of("task:query", "project:add"));
+                .thenReturn(List.of("task:query", "task:add"));
         List<String> codes = stpInterfaceConfig.getPermissionList("1", "login");
-        assertEquals(List.of("task:query", "project:add"), codes);
+        assertEquals(List.of("task:query", "task:add"), codes);
     }
 
     @Test

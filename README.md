@@ -4,7 +4,7 @@
 
 ### 1.1 项目介绍
 
-基于 Spring Boot 3.5 + Vue 3 的个人效率工作台，涵盖任务管理、日程安排、项目追踪、会议记录与 DeepSeek AI 助手。
+基于 Spring Boot 3.5 + Vue 3 的个人效率工作台，涵盖任务与子任务、日程安排、会议记录与 DeepSeek AI 助手。
 
 数据按用户隔离，不做多人协作。系统管理（RBAC）与工作台功能并存：普通用户聚焦工作台，管理员保留用户 / 角色 / 权限运维能力。
 
@@ -33,7 +33,7 @@ springboot-module/
 ├── start-module        # 启动入口 RunApplication（端口 8090）
 ├── common-module       # 通用配置、工具类、统一响应信封（ResultConfig）、全局异常处理
 ├── system-module       # 认证、用户、角色、权限（RBAC）
-├── workbench-module    # 任务 / 日程 / 项目 / 会议
+├── workbench-module    # 任务 / 日程 / 会议
 └── ai-module           # AI 对话（SSE 流式）、智能规划、会议摘要
 ```
 
@@ -58,9 +58,8 @@ springboot-module/
 | --- | --- |
 | 认证与个人中心 | 登录 / 注册（图形验证码可选）、资料维护、密码修改、头像上传 |
 | 系统管理（RBAC） | 普通用户 / 管理员分表管理；角色 CRUD；权限（菜单+功能码）CRUD；角色-权限绑定；登录后菜单按角色动态下发 |
-| 工作台 · 任务 | 任务 CRUD，按项目分组，按状态筛选（待办/进行中/已完成/已取消）；支持优先级、截止日、标签；任务附件上传（OSS）及处理状态追踪 |
+| 工作台 · 事务 | 任务 / 子任务统一树：顶层任务可拆阶段与子任务；看板按状态推进叶子任务；附件（OSS）与处理状态；可选 AI 拆解 |
 | 工作台 · 日程 | 日程 CRUD，支持全天事件、起止时间、地点、周重复规则、可选关联任务 |
-| 工作台 · 项目 | 项目 CRUD，作为任务的归属容器；支持进行中/已归档状态 |
 | 工作台 · 会议 | 会议 CRUD，记录标题/时间/地点/参会人；上传会议材料（OSS），由 AI 自动整理摘要 |
 | AI 对话 | DeepSeek 流式对话（SSE），多会话管理（创建/切换/删除），Redis 持久化记忆 |
 | AI 智能规划 | 输入目标 → LLM 拆解步骤预览 → 确认后批量落为任务 |
@@ -86,6 +85,15 @@ CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4
 
 在库中按执行SQL文件：
 一个为数据+结构，一个为仅结构
+
+**已有库升级（任务树统一）：** 在备份后执行增量脚本即可，不要改全量 dump：
+
+```text
+doc/sql/migrate_project_into_task.sql
+```
+
+该脚本将旧「项目」表迁为任务树上的顶层节点（`node_type=project`），阶段/步骤挂到 `parent_task_id` 下。只应执行一次。界面不再单独暴露「项目」概念。
+
 ### 3.3 配置后端
 
 编辑 `springboot-module/start-module/src/main/resources/application.yml`，按本机环境修改密码即可。  
@@ -155,7 +163,8 @@ pnpm build
 
 - 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验工作台。
 - 种子账号见 `PersonalWorkbench-SQL.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
-- 登录后菜单由后端权限动态下发：普通用户可见首页、工作台（日程 / 事务 / 项目）、个人中心、AI；系统管理菜单仅管理员可见。
+- 登录后菜单由后端权限动态下发：普通用户可见首页、工作台（日程 / 事务）、个人中心、AI；系统管理菜单仅管理员可见。  
+  事务页为统一任务树：顶层任务 → 阶段（父任务）→ 子任务；看板只推进叶子任务。
 
 ## 4 生产部署（阿里云 ECS + Docker + GitHub Actions）
 

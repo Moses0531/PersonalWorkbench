@@ -5,10 +5,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moses.config.ResultConfig;
-import com.moses.entity.WbProject;
 import com.moses.entity.WbTask;
 import com.moses.mapper.WbTaskMapper;
-import com.moses.service.WbProjectService;
 import com.moses.service.WbTaskService;
 import com.moses.utils.UploadFileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,17 +16,21 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Administrator
- * @description 针对表【wb_task(工作台-任务表（独立任务或项目子任务）)】的数据库操作Service实现
- * @createDate 2026-07-16 22:59:29
+ * @description 针对表【wb_task(工作台-任务表（项目根/阶段/任务统一树）)】的数据库操作Service实现
  */
 @Service
 public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
@@ -41,10 +43,86 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     private UploadFileUtil uploadFileUtil;
 
     @Autowired
-    private WbProjectService wbProjectService;
-
-    @Autowired
     private ObjectMapper objectMapper;
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createOwnedTask(Long userId, WbTask task) {
+        task.setTaskId(null);
+        task.setUserId(userId);
+        task.setAttachments(null);
+        normalizeAndValidate(userId, task, true);
+        task.setCreateTime(new Date());
+        task.setUpdateTime(new Date());
+        save(task);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOwnedTask(Long userId, WbTask task) {
+        if (task.getTaskId() == null) {
+            throw new RuntimeException("任务 ID 不能为空");
+        }
+        WbTask existing = requireOwnedTask(userId, task.getTaskId());
+        task.setUserId(userId);
+        task.setAttachments(null);
+        if (!StringUtils.hasText(task.getNodeType())) {
+            task.setNodeType(existing.getNodeType());
+        }
+        if (task.getArchived() == null) {
+            task.setArchived(existing.getArchived());
+        }
+        normalizeAndValidate(userId, task, false);
+        task.setUpdateTime(new Date());
+        update(
+                task,
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getTaskId, task.getTaskId())
+                        .eq(WbTask::getUserId, userId)
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteOwnedTasksCascade(Long userId, List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        Set<Long> toDelete = new HashSet<>();
+        for (Long id : ids) {
+            if (id == null) {
+                continue;
+            }
+            WbTask root = getOne(
+                    new LambdaQueryWrapper<WbTask>()
+                            .eq(WbTask::getTaskId, id)
+                            .eq(WbTask::getUserId, userId)
+            );
+            if (root == null) {
+                continue;
+            }
+            toDelete.add(id);
+            toDelete.addAll(collectDescendantIds(userId, id));
+        }
+        if (toDelete.isEmpty()) {
+            return;
+        }
+        remove(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getUserId, userId)
+                        .in(WbTask::getTaskId, toDelete)
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setProjectArchived(Long userId, Long projectTaskId, String archived) {
+        WbTask project = requireOwnedProject(userId, projectTaskId);
+        String flag = "1".equals(String.valueOf(archived).trim()) ? "1" : "0";
+        project.setArchived(flag);
+        project.setUpdateTime(new Date());
+        updateById(project);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -144,26 +222,9 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     }
 
     @Override
-    public List<Map<String, Object>> listProjectAttachments(Long userId, Long projectId) {
-        if (projectId == null) {
-            throw new RuntimeException("项目 ID 不能为空");
-        }
-        WbProject project = wbProjectService.getOne(
-                new LambdaQueryWrapper<WbProject>()
-                        .eq(WbProject::getProjectId, projectId)
-                        .eq(WbProject::getUserId, userId)
-        );
-        if (project == null) {
-            throw new RuntimeException("项目不存在");
-        }
-
-        List<WbTask> tasks = list(
-                new LambdaQueryWrapper<WbTask>()
-                        .eq(WbTask::getUserId, userId)
-                        .eq(WbTask::getProjectId, projectId)
-                        .orderByAsc(WbTask::getDisplayOrder)
-                        .orderByDesc(WbTask::getUpdateTime)
-        );
+    public List<Map<String, Object>> listProjectAttachments(Long userId, Long projectTaskId) {
+        requireOwnedProject(userId, projectTaskId);
+        List<WbTask> tasks = listDescendants(userId, projectTaskId);
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (WbTask task : tasks) {
@@ -180,15 +241,9 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     }
 
     @Override
-    public Map<String, Object> getProjectBoardSnapshot(Long userId, Long projectId) {
-        WbProject project = requireOwnedProject(userId, projectId);
-        List<WbTask> tasks = list(
-                new LambdaQueryWrapper<WbTask>()
-                        .eq(WbTask::getUserId, userId)
-                        .eq(WbTask::getProjectId, projectId)
-                        .orderByAsc(WbTask::getDisplayOrder)
-                        .orderByDesc(WbTask::getUpdateTime)
-        );
+    public Map<String, Object> getProjectBoardSnapshot(Long userId, Long projectTaskId) {
+        WbTask project = requireOwnedProject(userId, projectTaskId);
+        List<WbTask> tasks = listDescendants(userId, projectTaskId);
 
         List<Map<String, Object>> taskSummaries = new ArrayList<>();
         int todo = 0;
@@ -197,15 +252,18 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         int cancelled = 0;
         for (WbTask task : tasks) {
             String status = task.getStatus() != null ? String.valueOf(task.getStatus()) : "0";
-            switch (status) {
-                case "1" -> doing++;
-                case "2" -> done++;
-                case "3" -> cancelled++;
-                default -> todo++;
+            if (WbTask.NODE_TASK.equals(normalizeNodeType(task.getNodeType()))) {
+                switch (status) {
+                    case "1" -> doing++;
+                    case "2" -> done++;
+                    case "3" -> cancelled++;
+                    default -> todo++;
+                }
             }
             Map<String, Object> row = new HashMap<>();
             row.put("taskId", task.getTaskId());
             row.put("parentTaskId", task.getParentTaskId());
+            row.put("nodeType", normalizeNodeType(task.getNodeType()));
             row.put("planBatchId", task.getPlanBatchId());
             row.put("title", task.getTitle());
             row.put("status", status);
@@ -222,10 +280,10 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         counts.put("cancelled", cancelled);
 
         Map<String, Object> snapshot = new HashMap<>();
-        snapshot.put("projectId", project.getProjectId());
-        snapshot.put("name", project.getName());
+        snapshot.put("projectTaskId", project.getTaskId());
+        snapshot.put("name", project.getTitle());
         snapshot.put("description", project.getDescription());
-        snapshot.put("status", project.getStatus());
+        snapshot.put("archived", project.getArchived() != null ? project.getArchived() : "0");
         snapshot.put("counts", counts);
         snapshot.put("tasks", taskSummaries);
         return snapshot;
@@ -234,7 +292,7 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     @Override
     @Transactional(rollbackFor = Exception.class)
     @SuppressWarnings("unchecked")
-    public Map<String, Object> applyPlanBatch(Long userId, Long projectId, String planBatchId,
+    public Map<String, Object> applyPlanBatch(Long userId, Long projectTaskId, String planBatchId,
                                               List<Map<String, Object>> phases) {
         if (!StringUtils.hasText(planBatchId)) {
             throw new RuntimeException("规划批次号不能为空");
@@ -242,9 +300,9 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         if (phases == null || phases.isEmpty()) {
             throw new RuntimeException("规划阶段不能为空");
         }
-        WbProject project = requireOwnedProject(userId, projectId);
-        if ("1".equals(String.valueOf(project.getStatus()))) {
-            throw new RuntimeException("项目已归档，无法写入规划任务");
+        WbTask project = requireOwnedProject(userId, projectTaskId);
+        if ("1".equals(String.valueOf(project.getArchived()))) {
+            throw new RuntimeException("已归档，无法写入规划任务");
         }
 
         int created = 0;
@@ -259,7 +317,9 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
             }
             WbTask parent = new WbTask();
             parent.setUserId(userId);
-            parent.setProjectId(projectId);
+            parent.setNodeType(WbTask.NODE_PHASE);
+            parent.setArchived("0");
+            parent.setParentTaskId(projectTaskId);
             parent.setPlanBatchId(planBatchId.trim());
             parent.setTitle(title);
             parent.setDescription(str(phase.get("description")));
@@ -286,7 +346,8 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
                 }
                 WbTask child = new WbTask();
                 child.setUserId(userId);
-                child.setProjectId(projectId);
+                child.setNodeType(WbTask.NODE_TASK);
+                child.setArchived("0");
                 child.setParentTaskId(parent.getTaskId());
                 child.setPlanBatchId(planBatchId.trim());
                 child.setTitle(stepTitle);
@@ -311,21 +372,120 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         Map<String, Object> result = new HashMap<>();
         result.put("created", created);
         result.put("planBatchId", planBatchId.trim());
-        result.put("projectId", projectId);
+        result.put("projectTaskId", projectTaskId);
         return result;
     }
 
-    private WbProject requireOwnedProject(Long userId, Long projectId) {
-        if (projectId == null) {
-            throw new RuntimeException("项目 ID 不能为空");
+    private void normalizeAndValidate(Long userId, WbTask task, boolean creating) {
+        if (!StringUtils.hasText(task.getTitle())) {
+            throw new RuntimeException("标题不能为空");
         }
-        WbProject project = wbProjectService.getOne(
-                new LambdaQueryWrapper<WbProject>()
-                        .eq(WbProject::getProjectId, projectId)
-                        .eq(WbProject::getUserId, userId)
+        String nodeType = normalizeNodeType(task.getNodeType());
+        task.setNodeType(nodeType);
+        if (task.getArchived() == null || !StringUtils.hasText(task.getArchived())) {
+            task.setArchived("0");
+        }
+        if (!"0".equals(task.getArchived()) && !"1".equals(task.getArchived())) {
+            throw new RuntimeException("归档标记无效");
+        }
+        if (!WbTask.NODE_PROJECT.equals(nodeType) && "1".equals(task.getArchived())) {
+            throw new RuntimeException("仅顶层任务可设置归档");
+        }
+        if (task.getStatus() == null || !StringUtils.hasText(task.getStatus())) {
+            task.setStatus("0");
+        }
+        if (task.getPriority() == null) {
+            task.setPriority(0);
+        }
+        if (task.getDisplayOrder() == null) {
+            task.setDisplayOrder(0);
+        }
+        if (task.getDescription() == null) {
+            task.setDescription("");
+        }
+        if (task.getTags() == null) {
+            task.setTags("");
+        }
+        if (task.getRemark() == null) {
+            task.setRemark("");
+        }
+
+        Long parentId = task.getParentTaskId();
+        if (WbTask.NODE_PROJECT.equals(nodeType)) {
+            if (parentId != null) {
+                throw new RuntimeException("顶层任务不能挂在其它节点下");
+            }
+            return;
+        }
+        if (parentId == null) {
+            if (!WbTask.NODE_TASK.equals(nodeType)) {
+                throw new RuntimeException("阶段必须挂在顶层任务下");
+            }
+            return;
+        }
+        if (!creating && Objects.equals(parentId, task.getTaskId())) {
+            throw new RuntimeException("不能将自身设为父任务");
+        }
+        WbTask parent = requireOwnedTask(userId, parentId);
+        String parentType = normalizeNodeType(parent.getNodeType());
+        if (WbTask.NODE_PHASE.equals(nodeType)) {
+            if (!WbTask.NODE_PROJECT.equals(parentType)) {
+                throw new RuntimeException("阶段的父节点必须是顶层任务");
+            }
+        } else if (WbTask.NODE_TASK.equals(nodeType)) {
+            if (!WbTask.NODE_PROJECT.equals(parentType) && !WbTask.NODE_PHASE.equals(parentType)) {
+                throw new RuntimeException("任务只能挂在顶层任务或阶段下");
+            }
+        } else {
+            throw new RuntimeException("节点类型无效");
+        }
+    }
+
+    private List<Long> collectDescendantIds(Long userId, Long rootId) {
+        List<Long> ids = new ArrayList<>();
+        for (WbTask t : listDescendants(userId, rootId)) {
+            ids.add(t.getTaskId());
+        }
+        return ids;
+    }
+
+    private List<WbTask> listDescendants(Long userId, Long rootId) {
+        List<WbTask> all = list(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getUserId, userId)
+                        .orderByAsc(WbTask::getDisplayOrder)
+                        .orderByDesc(WbTask::getUpdateTime)
         );
-        if (project == null) {
-            throw new RuntimeException("项目不存在");
+        Map<Long, List<WbTask>> children = new HashMap<>();
+        for (WbTask t : all) {
+            if (t.getParentTaskId() == null) {
+                continue;
+            }
+            children.computeIfAbsent(t.getParentTaskId(), k -> new ArrayList<>()).add(t);
+        }
+        List<WbTask> result = new ArrayList<>();
+        Queue<Long> queue = new ArrayDeque<>();
+        queue.add(rootId);
+        Set<Long> visited = new HashSet<>();
+        visited.add(rootId);
+        while (!queue.isEmpty()) {
+            Long pid = queue.poll();
+            List<WbTask> kids = children.getOrDefault(pid, List.of());
+            for (WbTask kid : kids) {
+                if (!visited.add(kid.getTaskId())) {
+                    continue;
+                }
+                result.add(kid);
+                queue.add(kid.getTaskId());
+            }
+        }
+        return result;
+    }
+
+    private WbTask requireOwnedProject(Long userId, Long projectTaskId) {
+        WbTask project = requireOwnedTask(userId, projectTaskId);
+        if (!WbTask.NODE_PROJECT.equals(normalizeNodeType(project.getNodeType()))) {
+            throw new RuntimeException("顶层任务不存在");
         }
         return project;
     }
@@ -346,17 +506,47 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
     }
 
     private void assertAttachmentsWritable(Long userId, WbTask task) {
-        if (task.getProjectId() == null) {
-            return;
+        WbTask project = findProjectRoot(userId, task);
+        if (project != null && "1".equals(String.valueOf(project.getArchived()))) {
+            throw new RuntimeException("已归档，附件只读");
         }
-        WbProject project = wbProjectService.getOne(
-                new LambdaQueryWrapper<WbProject>()
-                        .eq(WbProject::getProjectId, task.getProjectId())
-                        .eq(WbProject::getUserId, userId)
-        );
-        if (project != null && "1".equals(String.valueOf(project.getStatus()))) {
-            throw new RuntimeException("项目已归档，附件只读");
+    }
+
+    private WbTask findProjectRoot(Long userId, WbTask task) {
+        if (task == null) {
+            return null;
         }
+        if (WbTask.NODE_PROJECT.equals(normalizeNodeType(task.getNodeType()))) {
+            return task;
+        }
+        Long cursor = task.getParentTaskId();
+        Set<Long> seen = new HashSet<>();
+        while (cursor != null && seen.add(cursor)) {
+            WbTask node = getOne(
+                    new LambdaQueryWrapper<WbTask>()
+                            .eq(WbTask::getTaskId, cursor)
+                            .eq(WbTask::getUserId, userId)
+            );
+            if (node == null) {
+                return null;
+            }
+            if (WbTask.NODE_PROJECT.equals(normalizeNodeType(node.getNodeType()))) {
+                return node;
+            }
+            cursor = node.getParentTaskId();
+        }
+        return null;
+    }
+
+    private static String normalizeNodeType(String nodeType) {
+        if (!StringUtils.hasText(nodeType)) {
+            return WbTask.NODE_TASK;
+        }
+        String raw = nodeType.trim().toLowerCase();
+        if (WbTask.NODE_PROJECT.equals(raw) || WbTask.NODE_PHASE.equals(raw) || WbTask.NODE_TASK.equals(raw)) {
+            return raw;
+        }
+        throw new RuntimeException("节点类型无效，仅支持 project / phase / task");
     }
 
     private List<Map<String, Object>> parseAttachments(String json) {
@@ -383,9 +573,6 @@ public class WbTaskServiceImpl extends ServiceImpl<WbTaskMapper, WbTask>
         throw new RuntimeException("附件状态无效，仅支持 0-未处理 / 1-已处理 / 2-处理完成");
     }
 
-    /**
-     * 兼容旧字段 handled：true → 1（已处理），缺省 → 0（未处理）
-     */
     private static String resolveAttachmentStatus(Map<String, Object> item) {
         if (item == null) {
             return "0";

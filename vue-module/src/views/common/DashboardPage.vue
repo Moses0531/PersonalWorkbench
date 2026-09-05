@@ -95,10 +95,15 @@ const monthLabel = computed(() => `${dayjs(now.value).month() + 1}月`)
 const today = computed(() => dayjs(now.value).startOf('day'))
 const dueHorizon = computed(() => today.value.add(DUE_WITHIN_DAYS - 1, 'day').endOf('day'))
 
+/** 首页统计仅叶子任务，排除顶层与阶段节点 */
+const leafTasks = computed(() =>
+  tasks.value.filter((t) => (t.nodeType || 'task') === 'task'),
+)
+
 const focusTasks = computed(() => {
   const start = today.value
   const end = dueHorizon.value
-  return tasks.value
+  return leafTasks.value
     .filter((t) => {
       const status = String(t.status ?? '0')
       if (status === '2' || status === '3') return false
@@ -194,12 +199,12 @@ const coreMeters = computed(() => [
 ])
 
 const statusChartOption = computed(() =>
-  statusDoughnutOption(countTaskStatus(tasks.value), { title: 'TASK MIX' }),
+  statusDoughnutOption(countTaskStatus(leafTasks.value), { title: 'TASK MIX' }),
 )
 
 const dueChartOption = computed(() => dueBarOption(dayMarks.value))
 
-const weekTrend = computed(() => completionTrendSeries(tasks.value, today.value, 7))
+const weekTrend = computed(() => completionTrendSeries(leafTasks.value, today.value, 7))
 
 const trendChartOption = computed(() =>
   trendLineOption(weekTrend.value.labels, weekTrend.value.values, { title: 'WEEK DONE' }),
@@ -507,7 +512,7 @@ function goEvents() {
           <v-chart class="insight-chart" :option="statusChartOption" autoresize />
           <p class="insight-foot">
             <span class="insight-foot__label">全部任务</span>
-            <span class="insight-foot__val">{{ loading ? '—' : tasks.length }}</span>
+            <span class="insight-foot__val">{{ loading ? '—' : leafTasks.length }}</span>
           </p>
         </article>
         <article class="insight insight--due" style="--i: 1">

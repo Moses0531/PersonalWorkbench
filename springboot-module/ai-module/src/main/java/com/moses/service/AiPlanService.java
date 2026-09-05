@@ -3,7 +3,7 @@ package com.moses.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.moses.entity.WbProject;
+import com.moses.entity.WbTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 项目 AI 规划：预览用结构化 JSON（Map），落板走 WbTaskService。
+ * 任务组 AI 规划：预览用结构化 JSON（Map），落板走 WbTaskService。
  */
 @Slf4j
 @Service
@@ -32,7 +32,7 @@ public class AiPlanService {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String PLAN_SYSTEM_PROMPT = """
-            你是个人工作台的项目规划助手。根据项目主题、目标与【整项目截止时间】拆解阶段与步骤。
+            你是个人工作台的任务规划助手。根据任务主题、目标与【整组截止时间】拆解阶段与步骤。
             只输出一个 JSON 对象，不要 markdown 代码块或其它文字。字段：
             summary(string), phases(array)。
             phases 元素：title, description, dueTime(yyyy-MM-dd，该阶段建议完成日), steps。
@@ -41,41 +41,38 @@ public class AiPlanService {
             - 剩余 ≤14 天：阶段 2～3 个，每阶段 2～3 步，只保留必须交付，压缩并行与验收。
             - 剩余 15～45 天：阶段 3～4 个，节奏均衡，含必要缓冲。
             - 剩余 >45 天：阶段 4～6 个，可含调研/打磨，步骤可更细，但仍要落在截止日前。
-            所有 dueTime 不得晚于项目截止日；阶段 dueTime 应随顺序递增；summary 首句点明剩余天数与拆解节奏。
+            所有 dueTime 不得晚于整组截止日；阶段 dueTime 应随顺序递增；summary 首句点明剩余天数与拆解节奏。
             """;
 
     private final ChatClient planningChatClient;
-    private final WbProjectService wbProjectService;
     private final WbTaskService wbTaskService;
     private final ObjectMapper objectMapper;
 
     public AiPlanService(@Qualifier("planningChatClient") ChatClient planningChatClient,
-                         WbProjectService wbProjectService,
                          WbTaskService wbTaskService,
                          ObjectMapper objectMapper) {
         this.planningChatClient = planningChatClient;
-        this.wbProjectService = wbProjectService;
         this.wbTaskService = wbTaskService;
         this.objectMapper = objectMapper;
     }
 
     public Map<String, Object> preview(Long userId, Map<String, Object> body) {
-        Long projectId = toLong(body != null ? body.get("projectId") : null);
-        if (projectId == null) {
-            throw new RuntimeException("项目 ID 不能为空");
+        Long projectTaskId = resolveProjectTaskId(body);
+        if (projectTaskId == null) {
+            throw new RuntimeException("顶层任务 ID 不能为空");
         }
-        WbProject project = requireOwnedProject(userId, projectId);
-        if ("1".equals(String.valueOf(project.getStatus()))) {
-            throw new RuntimeException("项目已归档，无法规划");
+        WbTask project = requireOwnedProject(userId, projectTaskId);
+        if ("1".equals(String.valueOf(project.getArchived()))) {
+            throw new RuntimeException("已归档，无法规划");
         }
 
         LocalDate deadline = parseDeadline(body != null ? body.get("deadline") : null);
         if (deadline == null) {
-            throw new RuntimeException("请填写项目截止时间");
+            throw new RuntimeException("请填写截止时间");
         }
         LocalDate today = LocalDate.now();
         if (deadline.isBefore(today)) {
-            throw new RuntimeException("项目截止时间不能早于今天");
+            throw new RuntimeException("截止时间不能早于今天");
         }
         long daysLeft = ChronoUnit.DAYS.between(today, deadline);
         String paceHint = paceHint(daysLeft);
@@ -85,7 +82,7 @@ public class AiPlanService {
             goal = project.getDescription() != null ? project.getDescription().trim() : "";
         }
         if (!StringUtils.hasText(goal)) {
-            goal = "推进并完成项目「" + project.getName() + "」";
+            goal = "推进并完成「" + project.getTitle() + "」";
         }
         if (goal.length() > MAX_GOAL_LENGTH) {
             throw new RuntimeException("规划目标不能超过 " + MAX_GOAL_LENGTH + " 字");
@@ -103,7 +100,7 @@ public class AiPlanService {
                     .call()
                     .content();
         } catch (Exception e) {
-            log.error("AI 规划预览失败, userId={}, projectId={}", userId, projectId, e);
+            log.error("AI 规划预览失败, userId={}, projectTaskId={}", userId, projectTaskId, e);
             throw new RuntimeException("AI 规划失败，请稍后重试");
         }
 
@@ -125,11 +122,11 @@ public class AiPlanService {
         if (body == null) {
             throw new RuntimeException("请求体不能为空");
         }
-        Long projectId = toLong(body.get("projectId"));
+        Long projectTaskId = resolveProjectTaskId(body);
         String planBatchId = text(body.get("planBatchId"));
         Object phasesObj = body.get("phases");
-        if (projectId == null) {
-            throw new RuntimeException("项目 ID 不能为空");
+        if (projectTaskId == null) {
+            throw new RuntimeException("顶层任务 ID 不能为空");
         }
         if (!StringUtils.hasText(planBatchId)) {
             throw new RuntimeException("规划批次号不能为空");
@@ -138,18 +135,29 @@ public class AiPlanService {
         if (phases.isEmpty()) {
             throw new RuntimeException("规划阶段不能为空");
         }
-        return wbTaskService.applyPlanBatch(userId, projectId, planBatchId, phases);
+        return wbTaskService.applyPlanBatch(userId, projectTaskId, planBatchId, phases);
     }
 
-    private String buildUserPrompt(WbProject project, String goal, String constraints,
+    private Long resolveProjectTaskId(Map<String, Object> body) {
+        if (body == null) {
+            return null;
+        }
+        Long id = toLong(body.get("projectTaskId"));
+        if (id != null) {
+            return id;
+        }
+        return toLong(body.get("projectId"));
+    }
+
+    private String buildUserPrompt(WbTask project, String goal, String constraints,
                                    LocalDate deadline, long daysLeft, String paceHint) {
         StringBuilder sb = new StringBuilder();
-        sb.append("项目名称：").append(project.getName()).append('\n');
+        sb.append("任务名称：").append(project.getTitle()).append('\n');
         if (StringUtils.hasText(project.getDescription())) {
-            sb.append("项目描述：").append(project.getDescription().trim()).append('\n');
+            sb.append("任务描述：").append(project.getDescription().trim()).append('\n');
         }
         sb.append("规划目标：").append(goal).append('\n');
-        sb.append("项目截止时间：").append(deadline.format(DAY)).append('\n');
+        sb.append("截止时间：").append(deadline.format(DAY)).append('\n');
         sb.append("剩余天数：").append(daysLeft).append(" 天\n");
         sb.append("拆解节奏：").append(paceHint).append('\n');
         if (StringUtils.hasText(constraints)) {
@@ -180,7 +188,7 @@ public class AiPlanService {
         try {
             return LocalDate.parse(raw, DAY);
         } catch (DateTimeParseException e) {
-            throw new RuntimeException("项目截止时间格式无效，请使用 yyyy-MM-dd");
+            throw new RuntimeException("截止时间格式无效，请使用 yyyy-MM-dd");
         }
     }
 
@@ -267,14 +275,15 @@ public class AiPlanService {
         }
     }
 
-    private WbProject requireOwnedProject(Long userId, Long projectId) {
-        WbProject project = wbProjectService.getOne(
-                new LambdaQueryWrapper<WbProject>()
-                        .eq(WbProject::getProjectId, projectId)
-                        .eq(WbProject::getUserId, userId)
+    private WbTask requireOwnedProject(Long userId, Long projectTaskId) {
+        WbTask project = wbTaskService.getOne(
+                new LambdaQueryWrapper<WbTask>()
+                        .eq(WbTask::getTaskId, projectTaskId)
+                        .eq(WbTask::getUserId, userId)
+                        .eq(WbTask::getNodeType, WbTask.NODE_PROJECT)
         );
         if (project == null) {
-            throw new RuntimeException("项目不存在");
+            throw new RuntimeException("顶层任务不存在");
         }
         return project;
     }

@@ -250,9 +250,9 @@ const captchaTimestamp = ref(0)
 const isLogin = computed(() => activeTab.value === 'login')
 
 const coreFeatures = [
-  { title: '事务看板', desc: '任务与项目同屏推进，拖拽排序跟手' },
+  { title: '事务看板', desc: '任务与子任务同屏推进，按状态跟进' },
   { title: '日程安排', desc: '今天的时间一眼可见，可关联任务' },
-  { title: 'AI 助手', desc: '流式对话与项目智能规划，一键落板' },
+  { title: 'AI 助手', desc: '流式对话与任务智能拆解，一键落板' },
 ]
 
 const loginForm = reactive({

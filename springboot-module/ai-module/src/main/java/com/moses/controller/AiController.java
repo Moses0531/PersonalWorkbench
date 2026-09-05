@@ -25,7 +25,7 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 import java.util.Map;
 
-@Tag(name = "Ai对话", description = "Ai助手对话、项目智能规划与会议整理")
+@Tag(name = "Ai对话", description = "Ai助手对话、任务智能规划与会议整理")
 @RestController
 @RequestMapping("/ai")
 public class AiController {

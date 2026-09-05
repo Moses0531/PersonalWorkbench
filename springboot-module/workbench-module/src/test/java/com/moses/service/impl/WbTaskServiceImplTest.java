@@ -2,9 +2,7 @@ package com.moses.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moses.config.ResultConfig;
-import com.moses.entity.WbProject;
 import com.moses.entity.WbTask;
-import com.moses.service.WbProjectService;
 import com.moses.utils.UploadFileUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,9 +28,6 @@ class WbTaskServiceImplTest {
 
     @Mock
     private UploadFileUtil uploadFileUtil;
-
-    @Mock
-    private WbProjectService wbProjectService;
 
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
@@ -83,23 +78,19 @@ class WbTaskServiceImplTest {
 
     @Test
     void uploadAttachment_archivedProject_throws() {
-        WbTask task = ownedTask(10L, 20L, "[]");
-        doReturn(task).when(service).getOne(any());
-        WbProject archived = new WbProject();
-        archived.setProjectId(20L);
-        archived.setUserId(USER_ID);
-        archived.setStatus("1");
-        when(wbProjectService.getOne(any())).thenReturn(archived);
+        WbTask task = ownedTask(10L, 20L, WbTask.NODE_TASK, "[]");
+        WbTask project = projectRoot(20L, "1");
+        doReturn(task, project).when(service).getOne(any());
 
         MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "hi".getBytes());
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> service.uploadAttachment(USER_ID, 10L, file));
-        assertEquals("项目已归档，附件只读", ex.getMessage());
+        assertEquals("已归档，附件只读", ex.getMessage());
     }
 
     @Test
     void uploadAttachment_success() throws Exception {
-        WbTask task = ownedTask(10L, null, "[]");
+        WbTask task = ownedTask(10L, null, WbTask.NODE_TASK, "[]");
         doReturn(task).when(service).getOne(any());
         doReturn(ResultConfig.success("https://oss/a.txt")).when(uploadFileUtil).uploadToAliYun(any());
 
@@ -121,7 +112,7 @@ class WbTaskServiceImplTest {
 
     @Test
     void removeAttachment_notFound_throws() {
-        WbTask task = ownedTask(10L, null, "[{\"id\":\"att1\",\"name\":\"a.txt\"}]");
+        WbTask task = ownedTask(10L, null, WbTask.NODE_TASK, "[{\"id\":\"att1\",\"name\":\"a.txt\"}]");
         doReturn(task).when(service).getOne(any());
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> service.removeAttachment(USER_ID, 10L, "missing"));
@@ -130,7 +121,7 @@ class WbTaskServiceImplTest {
 
     @Test
     void removeAttachment_success() {
-        WbTask task = ownedTask(10L, null, "[{\"id\":\"att1\",\"name\":\"a.txt\"}]");
+        WbTask task = ownedTask(10L, null, WbTask.NODE_TASK, "[{\"id\":\"att1\",\"name\":\"a.txt\"}]");
         doReturn(task).when(service).getOne(any());
         service.removeAttachment(USER_ID, 10L, "att1");
         verify(service).updateById(argThat(t -> "[]".equals(t.getAttachments()) || "[]".equals(t.getAttachments().replace(" ", ""))));
@@ -145,7 +136,7 @@ class WbTaskServiceImplTest {
 
     @Test
     void updateAttachmentStatus_success() {
-        WbTask task = ownedTask(10L, null, "[{\"id\":\"att1\",\"name\":\"a.txt\",\"status\":\"0\"}]");
+        WbTask task = ownedTask(10L, null, WbTask.NODE_TASK, "[{\"id\":\"att1\",\"name\":\"a.txt\",\"status\":\"0\"}]");
         doReturn(task).when(service).getOne(any());
 
         Map<String, Object> updated = service.updateAttachmentStatus(USER_ID, 10L, "att1", "2");
@@ -155,20 +146,18 @@ class WbTaskServiceImplTest {
 
     @Test
     void listProjectAttachments_projectMissing_throws() {
-        when(wbProjectService.getOne(any())).thenReturn(null);
+        doReturn(null).when(service).getOne(any());
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> service.listProjectAttachments(USER_ID, 20L));
-        assertEquals("项目不存在", ex.getMessage());
+        assertEquals("任务不存在", ex.getMessage());
     }
 
     @Test
     void listProjectAttachments_aggregatesAndMapsHandled() {
-        WbProject project = new WbProject();
-        project.setProjectId(20L);
-        project.setUserId(USER_ID);
-        when(wbProjectService.getOne(any())).thenReturn(project);
+        WbTask project = projectRoot(20L, "0");
+        doReturn(project).when(service).getOne(any());
 
-        WbTask task = ownedTask(10L, 20L, "[{\"id\":\"a1\",\"name\":\"x.pdf\",\"handled\":true}]");
+        WbTask task = ownedTask(10L, 20L, WbTask.NODE_TASK, "[{\"id\":\"a1\",\"name\":\"x.pdf\",\"handled\":true}]");
         doReturn(List.of(task)).when(service).list(any(Wrapper.class));
 
         List<Map<String, Object>> rows = service.listProjectAttachments(USER_ID, 20L);
@@ -180,20 +169,17 @@ class WbTaskServiceImplTest {
 
     @Test
     void getProjectBoardSnapshot_countsByStatus() {
-        WbProject project = new WbProject();
-        project.setProjectId(20L);
-        project.setUserId(USER_ID);
-        project.setName("Demo");
-        project.setStatus("0");
-        when(wbProjectService.getOne(any())).thenReturn(project);
+        WbTask project = projectRoot(20L, "0");
+        project.setTitle("Demo");
+        doReturn(project).when(service).getOne(any());
 
-        WbTask t0 = ownedTask(1L, 20L, null);
+        WbTask t0 = ownedTask(1L, 20L, WbTask.NODE_TASK, null);
         t0.setStatus("0");
-        WbTask t1 = ownedTask(2L, 20L, null);
+        WbTask t1 = ownedTask(2L, 20L, WbTask.NODE_TASK, null);
         t1.setStatus("1");
-        WbTask t2 = ownedTask(3L, 20L, null);
+        WbTask t2 = ownedTask(3L, 20L, WbTask.NODE_TASK, null);
         t2.setStatus("2");
-        WbTask t3 = ownedTask(4L, 20L, null);
+        WbTask t3 = ownedTask(4L, 20L, WbTask.NODE_TASK, null);
         t3.setStatus("3");
         doReturn(List.of(t0, t1, t2, t3)).when(service).list(any(Wrapper.class));
 
@@ -205,6 +191,7 @@ class WbTaskServiceImplTest {
         assertEquals(1, counts.get("doing"));
         assertEquals(1, counts.get("done"));
         assertEquals(1, counts.get("cancelled"));
+        assertEquals(20L, snapshot.get("projectTaskId"));
     }
 
     @Test
@@ -216,26 +203,20 @@ class WbTaskServiceImplTest {
 
     @Test
     void applyPlanBatch_archived_throws() {
-        WbProject archived = new WbProject();
-        archived.setProjectId(20L);
-        archived.setUserId(USER_ID);
-        archived.setStatus("1");
-        when(wbProjectService.getOne(any())).thenReturn(archived);
+        WbTask archived = projectRoot(20L, "1");
+        doReturn(archived).when(service).getOne(any());
 
         Map<String, Object> phase = new HashMap<>();
         phase.put("title", "阶段一");
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> service.applyPlanBatch(USER_ID, 20L, "batch-1", List.of(phase)));
-        assertEquals("项目已归档，无法写入规划任务", ex.getMessage());
+        assertEquals("已归档，无法写入规划任务", ex.getMessage());
     }
 
     @Test
     void applyPlanBatch_createsParentAndChild() {
-        WbProject project = new WbProject();
-        project.setProjectId(20L);
-        project.setUserId(USER_ID);
-        project.setStatus("0");
-        when(wbProjectService.getOne(any())).thenReturn(project);
+        WbTask project = projectRoot(20L, "0");
+        doReturn(project).when(service).getOne(any());
 
         Map<String, Object> step = new HashMap<>();
         step.put("title", "步骤A");
@@ -247,6 +228,7 @@ class WbTaskServiceImplTest {
         Map<String, Object> result = service.applyPlanBatch(USER_ID, 20L, " batch-1 ", List.of(phase));
         assertEquals(2, result.get("created"));
         assertEquals("batch-1", result.get("planBatchId"));
+        assertEquals(20L, result.get("projectTaskId"));
         verify(service, times(2)).save(any(WbTask.class));
     }
 
@@ -258,11 +240,25 @@ class WbTaskServiceImplTest {
         assertEquals("任务不存在", ex.getMessage());
     }
 
-    private static WbTask ownedTask(Long taskId, Long projectId, String attachments) {
+    private static WbTask projectRoot(Long taskId, String archived) {
         WbTask task = new WbTask();
         task.setTaskId(taskId);
         task.setUserId(USER_ID);
-        task.setProjectId(projectId);
+        task.setNodeType(WbTask.NODE_PROJECT);
+        task.setArchived(archived);
+        task.setParentTaskId(null);
+        task.setTitle("项目" + taskId);
+        task.setStatus("0");
+        return task;
+    }
+
+    private static WbTask ownedTask(Long taskId, Long parentTaskId, String nodeType, String attachments) {
+        WbTask task = new WbTask();
+        task.setTaskId(taskId);
+        task.setUserId(USER_ID);
+        task.setNodeType(nodeType);
+        task.setArchived("0");
+        task.setParentTaskId(parentTaskId);
         task.setTitle("任务" + taskId);
         task.setAttachments(attachments);
         task.setStatus("0");

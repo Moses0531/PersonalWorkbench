@@ -453,7 +453,8 @@
 {
   "taskId": 0,
   "userId": 0,
-  "projectId": 0,
+  "nodeType": "task",
+  "archived": "0",
   "parentTaskId": 0,
   "planBatchId": "",
   "title": "",
@@ -479,7 +480,8 @@
 |wbTask|WbTask|body|true|WbTask|WbTask|
 |&emsp;&emsp;taskId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;projectId|||false|integer(int64)||
+|&emsp;&emsp;nodeType|project / phase / task|false|string||
+|&emsp;&emsp;archived|仅 project：0-否 1-是|false|string||
 |&emsp;&emsp;parentTaskId|||false|integer(int64)||
 |&emsp;&emsp;planBatchId|||false|string||
 |&emsp;&emsp;title|||false|string||
@@ -585,6 +587,49 @@
 ```
 
 
+## 归档/恢复项目根
+
+
+**接口地址**:`/wbTask/setProjectArchived`
+
+
+**请求方式**:`POST`
+
+
+**请求数据类型**:`application/json`
+
+
+**接口描述**:仅 `nodeType=project` 的根任务可归档；归档后子孙附件只读。
+
+
+**请求示例**:
+
+```javascript
+{
+  "projectTaskId": 10,
+  "archived": "1"
+}
+```
+
+
+**请求参数**:
+
+
+| 参数名称 | 参数说明 | 请求类型 | 是否必须 | 数据类型 |
+| -------- | -------- | ----- | -------- | -------- |
+|projectTaskId|项目根任务 ID|body|true|integer(int64)|
+|taskId|兼容字段，等同 projectTaskId|body|false|integer(int64)|
+|archived|0-恢复，1-归档|body|true|string|
+
+
+**响应状态**:
+
+
+| 状态码 | 说明 | schema |
+| -------- | -------- | ----- | 
+|200|OK|ResultConfig|
+
+
 ## 获取任务分页列表
 
 
@@ -600,7 +645,7 @@
 **响应数据类型**:`*/*`
 
 
-**接口描述**:<p>仅返回当前登录用户的任务</p>
+**接口描述**:<p>仅返回当前登录用户的任务；可按 nodeType / parentTaskId / archived 过滤</p>
 
 
 
@@ -611,6 +656,9 @@
 | -------- | -------- | ----- | -------- | -------- | ------ |
 |pageNum||query|false|integer(int32)||
 |pageRows||query|false|integer(int32)||
+|nodeType|project / phase / task|query|false|string||
+|parentTaskId|父任务 ID|query|false|integer(int64)||
+|archived|仅对项目根有意义：0/1|query|false|string||
 
 
 **响应状态**:
@@ -664,7 +712,8 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|projectId||query|true|integer(int64)||
+|projectTaskId|项目根任务 ID|query|true|integer(int64)||
+|projectId|兼容旧参数，等同 projectTaskId|query|false|integer(int64)||
 
 
 **响应状态**:
@@ -824,7 +873,8 @@
 {
   "taskId": 0,
   "userId": 0,
-  "projectId": 0,
+  "nodeType": "task",
+  "archived": "0",
   "parentTaskId": 0,
   "planBatchId": "",
   "title": "",
@@ -850,7 +900,8 @@
 |wbTask|WbTask|body|true|WbTask|WbTask|
 |&emsp;&emsp;taskId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;projectId|||false|integer(int64)||
+|&emsp;&emsp;nodeType|project / phase / task|false|string||
+|&emsp;&emsp;archived|仅 project：0-否 1-是|false|string||
 |&emsp;&emsp;parentTaskId|||false|integer(int64)||
 |&emsp;&emsp;planBatchId|||false|string||
 |&emsp;&emsp;title|||false|string||
@@ -1255,284 +1306,7 @@
 # 工作台-项目
 
 
-## 新增项目
-
-
-**接口地址**:`/wbProject/addProject`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "projectId": 0,
-  "userId": 0,
-  "name": "",
-  "description": "",
-  "status": "",
-  "displayOrder": 0,
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|wbProject|WbProject|body|true|WbProject|WbProject|
-|&emsp;&emsp;projectId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;name|||false|string||
-|&emsp;&emsp;description|||false|string||
-|&emsp;&emsp;status|||false|string||
-|&emsp;&emsp;displayOrder|||false|integer(int32)||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 批量删除项目
-
-
-**接口地址**:`/wbProject/deleteBatchProject`
-
-
-**请求方式**:`DELETE`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-[]
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|integers|integer|body|true|array||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 获取项目分页列表
-
-
-**接口地址**:`/wbProject/getProjectPage`
-
-
-**请求方式**:`GET`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:<p>仅返回当前登录用户的项目</p>
-
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|pageNum||query|false|integer(int32)||
-|pageRows||query|false|integer(int32)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 修改项目
-
-
-**接口地址**:`/wbProject/updateProject`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "projectId": 0,
-  "userId": 0,
-  "name": "",
-  "description": "",
-  "status": "",
-  "displayOrder": 0,
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|wbProject|WbProject|body|true|WbProject|WbProject|
-|&emsp;&emsp;projectId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;name|||false|string||
-|&emsp;&emsp;description|||false|string||
-|&emsp;&emsp;status|||false|string||
-|&emsp;&emsp;displayOrder|||false|integer(int32)||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
+> **说明（方案 A）**：项目已并入任务树，原 `/wbProject/*` 接口已废弃。请使用 `nodeType=project` 的 `/wbTask/*` 管理项目根节点（以及 `phase` / `task` 子节点）。存量库请执行增量脚本 `doc/sql/migrate_project_into_task.sql`（全量 dump `personal_workbench.sql` / `personal_workbench(s).sql` 保持不变）。
 
 
 # 角色管理
@@ -3570,13 +3344,32 @@
 **响应数据类型**:`*/*`
 
 
-**接口描述**:
+**接口描述**:<p>将预览阶段写入任务树。body 使用 <code>projectTaskId</code>（项目根任务 ID）；后端仍兼容旧字段 <code>projectId</code>。</p>
+
+
+
+**请求示例**:
+
+
+```javascript
+{
+  "projectTaskId": 0,
+  "planBatchId": "",
+  "phases": []
+}
+```
 
 
 **请求参数**:
 
 
-暂无
+| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
+| -------- | -------- | ----- | -------- | -------- | ------ |
+|body|Map|body|true|object||
+|&emsp;&emsp;projectTaskId|项目根任务 ID（nodeType=project）|body|true|integer(int64)||
+|&emsp;&emsp;projectId|兼容旧字段，等同 projectTaskId|body|false|integer(int64)||
+|&emsp;&emsp;planBatchId|规划批次号|body|true|string||
+|&emsp;&emsp;phases|阶段与步骤|body|true|array||
 
 
 **响应状态**:
@@ -3622,13 +3415,34 @@
 **响应数据类型**:`*/*`
 
 
-**接口描述**:
+**接口描述**:<p>按项目根任务生成阶段规划预览（不写库）。body 使用 <code>projectTaskId</code>；后端仍兼容旧字段 <code>projectId</code>。</p>
+
+
+
+**请求示例**:
+
+
+```javascript
+{
+  "projectTaskId": 0,
+  "deadline": "2026-10-01",
+  "goal": "",
+  "constraints": ""
+}
+```
 
 
 **请求参数**:
 
 
-暂无
+| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
+| -------- | -------- | ----- | -------- | -------- | ------ |
+|body|Map|body|true|object||
+|&emsp;&emsp;projectTaskId|项目根任务 ID（nodeType=project）|body|true|integer(int64)||
+|&emsp;&emsp;projectId|兼容旧字段，等同 projectTaskId|body|false|integer(int64)||
+|&emsp;&emsp;deadline|项目截止时间|body|true|string||
+|&emsp;&emsp;goal|规划目标（可选，默认取项目描述）|body|false|string||
+|&emsp;&emsp;constraints|约束说明|body|false|string||
 
 
 **响应状态**:

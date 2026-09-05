@@ -31,35 +31,41 @@ class WbTaskControllerTest {
     private WbTaskController controller;
 
     @Test
-    void addTask_bindsUserAndClearsAttachments() {
+    void addTask_delegatesToCreateOwnedTask() {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::getLoginIdAsLong).thenReturn(3L);
-            when(wbTaskService.save(any(WbTask.class))).thenReturn(true);
+            doNothing().when(wbTaskService).createOwnedTask(eq(3L), any(WbTask.class));
 
             WbTask body = new WbTask();
-            body.setTaskId(9L);
-            body.setAttachments("[{\"id\":1}]");
+            body.setTitle("demo");
             ResultConfig result = controller.addTask(body);
 
             assertEquals(1, result.getCode());
-            assertNull(body.getTaskId());
-            assertEquals(3L, body.getUserId());
-            assertNull(body.getAttachments());
+            verify(wbTaskService).createOwnedTask(eq(3L), same(body));
         }
     }
 
     @Test
-    void updateTask_clearsAttachmentsField() {
+    void updateTask_delegatesToUpdateOwnedTask() {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::getLoginIdAsLong).thenReturn(3L);
-            when(wbTaskService.update(any(WbTask.class), any())).thenReturn(true);
+            doNothing().when(wbTaskService).updateOwnedTask(eq(3L), any(WbTask.class));
 
             WbTask body = new WbTask();
             body.setTaskId(9L);
-            body.setAttachments("hack");
+            body.setTitle("demo");
             controller.updateTask(body);
-            assertEquals(3L, body.getUserId());
-            assertNull(body.getAttachments());
+            verify(wbTaskService).updateOwnedTask(eq(3L), same(body));
+        }
+    }
+
+    @Test
+    void deleteBatch_cascades() {
+        try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
+            stp.when(StpUtil::getLoginIdAsLong).thenReturn(3L);
+            doNothing().when(wbTaskService).deleteOwnedTasksCascade(eq(3L), anyList());
+            controller.deleteBatchTask(List.of(1L, 2L));
+            verify(wbTaskService).deleteOwnedTasksCascade(3L, List.of(1L, 2L));
         }
     }
 
@@ -85,20 +91,18 @@ class WbTaskControllerTest {
             statusBody.put("taskId", 9L);
             statusBody.put("attachmentId", "a1");
             statusBody.put("status", "1");
-            assertEquals(1, controller.updateAttachmentStatus(statusBody).getCode());
+            assertEquals(uploaded, controller.updateAttachmentStatus(statusBody).getData());
 
-            assertEquals(1, controller.listProjectAttachments(20L).getCode());
+            assertEquals(List.of(uploaded), controller.listProjectAttachments(20L, null).getData());
         }
     }
 
     @Test
-    void pageAndDelete_useLoginUser() {
+    void getTaskPage_ok() {
         try (MockedStatic<StpUtil> stp = mockStatic(StpUtil.class)) {
             stp.when(StpUtil::getLoginIdAsLong).thenReturn(3L);
-            when(wbTaskService.page(any(Page.class), any())).thenReturn(new Page<>());
-            when(wbTaskService.remove(any())).thenReturn(true);
-            assertEquals(1, controller.getTaskPage(1, 20).getCode());
-            assertEquals(1, controller.deleteBatchTask(List.of(1L)).getCode());
+            when(wbTaskService.page(any(), any())).thenReturn(new Page<>());
+            assertEquals(1, controller.getTaskPage(1, 20, null, null, null).getCode());
         }
     }
 }
