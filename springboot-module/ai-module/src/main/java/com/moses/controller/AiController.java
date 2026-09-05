@@ -7,6 +7,8 @@ import com.moses.model.AIConversationMeta;
 import com.moses.service.AIChatService;
 import com.moses.service.AIConversationRedisService;
 import com.moses.service.AiMeetingSummaryService;
+import com.moses.service.AiNoteConsolidateService;
+import com.moses.service.AiNoteToTasksService;
 import com.moses.service.AiPlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +27,7 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 import java.util.Map;
 
-@Tag(name = "Ai对话", description = "Ai助手对话、任务智能规划与会议整理")
+@Tag(name = "Ai对话", description = "Ai助手对话、任务智能规划、会议整理与笔记整合")
 @RestController
 @RequestMapping("/ai")
 public class AiController {
@@ -36,15 +38,21 @@ public class AiController {
     private final AIConversationRedisService conversationRedisService;
     private final AiPlanService aiPlanService;
     private final AiMeetingSummaryService aiMeetingSummaryService;
+    private final AiNoteConsolidateService aiNoteConsolidateService;
+    private final AiNoteToTasksService aiNoteToTasksService;
 
     public AiController(AIChatService chatService,
                         AIConversationRedisService conversationRedisService,
                         AiPlanService aiPlanService,
-                        AiMeetingSummaryService aiMeetingSummaryService) {
+                        AiMeetingSummaryService aiMeetingSummaryService,
+                        AiNoteConsolidateService aiNoteConsolidateService,
+                        AiNoteToTasksService aiNoteToTasksService) {
         this.chatService = chatService;
         this.conversationRedisService = conversationRedisService;
         this.aiPlanService = aiPlanService;
         this.aiMeetingSummaryService = aiMeetingSummaryService;
+        this.aiNoteConsolidateService = aiNoteConsolidateService;
+        this.aiNoteToTasksService = aiNoteToTasksService;
     }
 
     @Operation(summary = "Ai对话（流式）", description = "发送消息并接收流式响应")
@@ -118,6 +126,33 @@ public class AiController {
         }
         return ResultConfig.success(
                 aiMeetingSummaryService.summarize(StpUtil.getLoginIdAsLong(), meetingId)
+        );
+    }
+
+    @PostMapping("/note/consolidate")
+    @Operation(summary = "AI 笔记整合（多条碎片生成整理稿）")
+    @SaCheckPermission("ai:note:consolidate")
+    public ResultConfig noteConsolidate(@RequestBody Map<String, Object> body) {
+        return ResultConfig.success(
+                aiNoteConsolidateService.consolidate(StpUtil.getLoginIdAsLong(), body)
+        );
+    }
+
+    @PostMapping("/note/to-tasks/preview")
+    @Operation(summary = "AI 整理稿生成任务预览（不写库）")
+    @SaCheckPermission("ai:note:to-tasks")
+    public ResultConfig noteToTasksPreview(@RequestBody Map<String, Object> body) {
+        return ResultConfig.success(
+                aiNoteToTasksService.preview(StpUtil.getLoginIdAsLong(), body)
+        );
+    }
+
+    @PostMapping("/note/to-tasks/apply")
+    @Operation(summary = "AI 整理稿生成任务确认落板")
+    @SaCheckPermission("ai:note:to-tasks")
+    public ResultConfig noteToTasksApply(@RequestBody Map<String, Object> body) {
+        return ResultConfig.success(
+                aiNoteToTasksService.apply(StpUtil.getLoginIdAsLong(), body)
         );
     }
 }

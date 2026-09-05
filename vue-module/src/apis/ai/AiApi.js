@@ -108,3 +108,18 @@ export function planApplyApi(body) {
 export function meetingSummaryApi(meetingId) {
   return request.post('/ai/meeting/summary', { meetingId }, { timeout: 120000 })
 }
+
+/** AI 笔记整合（多条碎片 → 整理稿） */
+export function noteConsolidateApi(body) {
+  return request.post('/ai/note/consolidate', body, { timeout: 120000 })
+}
+
+/** AI 整理稿生成任务预览 */
+export function noteToTasksPreviewApi(body) {
+  return request.post('/ai/note/to-tasks/preview', body, { timeout: 120000 })
+}
+
+/** AI 整理稿生成任务落板 */
+export function noteToTasksApplyApi(body) {
+  return request.post('/ai/note/to-tasks/apply', body, { timeout: 60000 })
+}
