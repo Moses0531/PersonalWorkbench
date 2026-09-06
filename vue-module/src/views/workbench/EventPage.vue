@@ -317,8 +317,8 @@ onMounted(refreshAll)
     <div class="wb-page__inner">
       <header class="wb-header">
         <div class="wb-header__text">
-          <h1 class="wb-header__title">日程管理</h1>
-          <p class="wb-header__desc">按月查看个人日程，支持全天与每周重复。</p>
+          <h1 class="wb-header__title">日程</h1>
+          <p class="wb-header__desc">把今天的安排摆上桌面，支持全天与每周重复，需要时挂到待办。</p>
         </div>
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="refreshAll">刷新</button>
@@ -408,7 +408,7 @@ onMounted(refreshAll)
                 <div class="day-item__body">
                   <h3 class="day-item__title">{{ ev.title }}</h3>
                   <p v-if="ev.location" class="day-item__loc">{{ ev.location }}</p>
-                  <p v-if="taskTitleOf(ev.taskId)" class="day-item__task">关联任务：{{ taskTitleOf(ev.taskId) }}</p>
+                  <p v-if="taskTitleOf(ev.taskId)" class="day-item__task">关联待办：{{ taskTitleOf(ev.taskId) }}</p>
                   <p v-if="ev.remark" class="day-item__remark">{{ ev.remark }}</p>
                 </div>
                 <div class="day-item__actions">
@@ -490,7 +490,7 @@ onMounted(refreshAll)
             />
           </a-form-item>
 
-          <a-form-item label="关联任务" class="dialog-item dialog-item--full">
+          <a-form-item label="关联待办" class="dialog-item dialog-item--full">
             <a-select v-model:value="form.taskId" allow-clear placeholder="可选" style="width: 100%">
               <a-select-option v-for="t in tasks" :key="t.taskId" :value="Number(t.taskId)">
                 {{ t.title }}

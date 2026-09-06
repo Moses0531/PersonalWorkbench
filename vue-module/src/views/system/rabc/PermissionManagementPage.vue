@@ -252,7 +252,7 @@ onMounted(async () => {
   <HierarchicalManageListView
     v-model:search-query="searchQuery"
     title="权限列表"
-    desc="维护系统权限结构、路由配置与权限标识（D-目录 / M-菜单 / F-功能）"
+    desc="维护菜单、路由与功能权限标识"
     :loading="loading"
     :data="treeData"
     :columns="columns"

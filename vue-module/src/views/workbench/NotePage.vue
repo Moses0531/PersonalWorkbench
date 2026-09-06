@@ -337,7 +337,7 @@ async function runConsolidate() {
 
 function openToTasks(row) {
   if (row?.noteType !== 'digest') {
-    message.warning('仅整理稿可生成任务')
+    message.warning('仅整理稿可生成待办')
     return
   }
   toTasksNoteId.value = row.noteId
@@ -388,7 +388,7 @@ async function applyToTasks() {
       deadline: toTasksPreview.value.deadline,
     })
     toTasksOpen.value = false
-    message.success(`已生成 ${result?.data?.created ?? ''} 个任务节点`)
+    message.success(`已生成 ${result?.data?.created ?? ''} 条待办`)
     await loadNotes()
     const taskId = result?.data?.taskId || result?.data?.projectTaskId
     if (taskId) {
@@ -420,7 +420,7 @@ onMounted(() => {
       <header class="wb-header">
         <div class="wb-header__text">
           <h1 class="wb-header__title">笔记</h1>
-          <p class="wb-header__desc">随手记下零散想法，勾选后交给 AI 整理，需要时再落成任务。</p>
+          <p class="wb-header__desc">随手记下零散想法，勾选后交给 AI 整理，需要时再落成待办。</p>
         </div>
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="loadNotes">
@@ -545,7 +545,7 @@ onMounted(() => {
       <a-spin :spinning="loading">
         <div v-if="!notes.length" class="empty-panel">
           <p class="empty-panel__title">还没有笔记</p>
-          <p class="empty-panel__desc">先快速记几条碎片，再勾选交给 AI 整合成一篇可读的整理稿。</p>
+          <p class="empty-panel__desc">先快速记几条碎片，再勾选交给 AI 整合成整理稿，需要时落成待办。</p>
         </div>
 
         <ul v-else class="note-list" aria-label="笔记列表">
@@ -563,7 +563,7 @@ onMounted(() => {
                   {{ typeLabel(row) }}
                 </span>
                 <span v-if="String(row.status) === '1'" class="note-card__tag">已归档</span>
-                <span v-if="row.linkedTaskId" class="note-card__tag">已落任务</span>
+                <span v-if="row.linkedTaskId" class="note-card__tag">已落待办</span>
               </div>
               <h2 class="note-card__title">{{ row.title || '未命名' }}</h2>
               <p v-if="contentPreview(row.content)" class="note-card__summary">
@@ -588,7 +588,7 @@ onMounted(() => {
                 @click="openToTasks(row)"
               >
                 <ProjectOutlined />
-                {{ row.linkedTaskId ? '已生成' : '生成任务' }}
+                {{ row.linkedTaskId ? '已生成' : '生成待办' }}
               </button>
               <button
                 v-if="row.linkedTaskId"
@@ -596,7 +596,7 @@ onMounted(() => {
                 class="wb-btn wb-btn--ghost"
                 @click="goLinkedTask(row.linkedTaskId)"
               >
-                查看任务
+                查看待办
               </button>
               <button
                 v-permission="'note:modify'"
@@ -651,14 +651,14 @@ onMounted(() => {
             </button>
           </div>
         </a-form-item>
-        <a-form-item v-if="form.linkedTaskId" label="关联任务">
+        <a-form-item v-if="form.linkedTaskId" label="关联待办">
           <button type="button" class="wb-btn wb-btn--ghost" @click="goLinkedTask(form.linkedTaskId)">
-            打开任务 #{{ form.linkedTaskId }}
+            打开待办 #{{ form.linkedTaskId }}
           </button>
         </a-form-item>
         <a-form-item
           v-if="isEdit && form.noteType === 'digest'"
-          label="生成任务"
+          label="生成待办"
         >
           <button
             v-permission="'ai:note:to-tasks'"
@@ -668,7 +668,7 @@ onMounted(() => {
             @click="openToTasks(form)"
           >
             <ProjectOutlined />
-            {{ form.linkedTaskId ? '已生成任务' : 'AI 生成任务' }}
+            {{ form.linkedTaskId ? '已生成待办' : 'AI 生成待办' }}
           </button>
         </a-form-item>
         <a-form-item label="备注">
@@ -707,7 +707,7 @@ onMounted(() => {
 
     <a-modal
       v-model:open="toTasksOpen"
-      title="整理稿生成任务"
+      title="整理稿生成待办"
       width="640px"
       :mask-closable="false"
       :confirm-loading="toTasksApplying"

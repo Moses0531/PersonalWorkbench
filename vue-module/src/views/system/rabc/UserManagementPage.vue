@@ -168,7 +168,7 @@ onMounted(async () => {
   <FlatManageListView
     v-model:search-query="searchQuery"
     title="用户列表"
-    desc="统一管理系统用户信息与角色分配"
+    desc="管理本工作台的用户与角色"
     :loading="loading"
     :data="filteredData"
     :columns="columns"

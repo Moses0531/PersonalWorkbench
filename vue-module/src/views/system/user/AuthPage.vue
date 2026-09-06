@@ -17,7 +17,7 @@
       </header>
       <div class="stage-intro">
         <h1 class="stage-title">今天要推进的工作，都在这里</h1>
-        <p class="stage-lead">你可以把今天要做的事，收进同一张桌面。</p>
+        <p class="stage-lead">待办、笔记、日程与会议，收进同一张桌面。</p>
         <ul class="stage-features" aria-label="核心功能">
           <li v-for="item in coreFeatures" :key="item.title" class="stage-feature">
             <span class="stage-feature__dot" aria-hidden="true" />
@@ -250,9 +250,9 @@ const captchaTimestamp = ref(0)
 const isLogin = computed(() => activeTab.value === 'login')
 
 const coreFeatures = [
-  { title: '事务看板', desc: '任务与子任务同屏推进，按状态跟进' },
-  { title: '日程安排', desc: '今天的时间一眼可见，可关联任务' },
-  { title: 'AI 助手', desc: '流式对话与任务智能拆解，一键落板' },
+  { title: '待办事务', desc: '清单、阶段与待办同屏推进，按状态跟进' },
+  { title: '日程安排', desc: '今天的时间一眼可见，需要时挂到待办' },
+  { title: '桌面 AI', desc: '拆解待办、整理笔记，确认后一键落板' },
 ]
 
 const loginForm = reactive({

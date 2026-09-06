@@ -181,7 +181,7 @@ onMounted(async () => {
       <!-- 左侧会话列表 -->
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h3 class="sidebar-title">对话列表</h3>
+          <h3 class="sidebar-title">会话</h3>
           <button class="btn-new" @click="createConversation" title="新建会话">
             <PlusOutlined />
           </button>
@@ -195,11 +195,11 @@ onMounted(async () => {
               :class="{ active: item.conversationId === activeConversationId }"
               @click="selectConversation(item.conversationId)"
           >
-            <span class="conversation-title">{{ item.title || '新对话' }}</span>
+            <span class="conversation-title">{{ item.title || '新会话' }}</span>
           </div>
 
           <div v-if="conversations.length === 0" class="conversation-empty">
-            <span>暂无对话</span>
+            <span>还没有会话</span>
           </div>
         </div>
       </aside>
@@ -210,7 +210,7 @@ onMounted(async () => {
         <div class="chat-topbar">
           <div class="topbar-info">
             <div>
-              <span class="topbar-name">AI 助手</span>
+              <span class="topbar-name">桌面助手</span>
               <span class="topbar-status">
                 <span class="status-dot"></span>
                 在线
@@ -244,8 +244,8 @@ onMounted(async () => {
                 <circle cx="25" cy="75" r="2" fill="var(--color-accent)" opacity="0.18" class="empty-dot empty-dot--4" />
               </svg>
             </div>
-            <p class="empty-title">开始和 AI 对话</p>
-            <p class="empty-desc">输入你的问题，AI 助手将为你解答</p>
+            <p class="empty-title">和桌面助手聊一聊</p>
+            <p class="empty-desc">拆解待办、梳理笔记，或问问今天怎么推进</p>
           </div>
 
           <!-- 消息气泡 -->
@@ -270,7 +270,7 @@ onMounted(async () => {
                 v-model:value="message"
                 :rows="2"
                 :auto-size="{ minRows: 2, maxRows: 6 }"
-                placeholder="输入你的问题，按 Enter 发送..."
+                placeholder="说说今天要推进什么，Enter 发送…"
                 @keydown.enter.exact.prevent="sendMessage"
             />
             <div class="input-actions">

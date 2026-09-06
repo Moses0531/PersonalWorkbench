@@ -511,7 +511,7 @@ function goEvents() {
         <article class="insight insight--mix" style="--i: 0">
           <v-chart class="insight-chart" :option="statusChartOption" autoresize />
           <p class="insight-foot">
-            <span class="insight-foot__label">全部任务</span>
+            <span class="insight-foot__label">全部待办</span>
             <span class="insight-foot__val">{{ loading ? '—' : leafTasks.length }}</span>
           </p>
         </article>
@@ -544,8 +544,8 @@ function goEvents() {
               </span>
               <div>
                 <p class="pane-eyebrow">
-                  <span class="pane-eyebrow__en">Task</span>
-                  <span class="pane-eyebrow__zh">清单</span>
+                  <span class="pane-eyebrow__en">Todo</span>
+                  <span class="pane-eyebrow__zh">待办</span>
                 </p>
                 <h2 id="pane-tasks" class="pane-title">三天内截止</h2>
               </div>
@@ -564,7 +564,7 @@ function goEvents() {
               <span class="empty-row"><i class="empty-box" /><i class="empty-line empty-line--mid" /></span>
             </div>
             <p class="empty-title">没有临近截止</p>
-            <p class="empty-desc">近三天没有未完成的到期任务。</p>
+            <p class="empty-desc">近三天没有临近截止的待办。</p>
             <button type="button" class="btn-ghost" @click="goTasks">去事务</button>
           </div>
 
@@ -579,7 +579,7 @@ function goEvents() {
               <button type="button" class="card-btn" @click="goTasks">
                 <span class="card-check" aria-hidden="true" />
                 <span class="card-main">
-                  <span class="card-title">{{ task.title || '未命名任务' }}</span>
+                  <span class="card-title">{{ task.title || '未命名待办' }}</span>
                   <span class="card-meta">
                     <span class="card-badge" :class="{ 'card-badge--warn': task.overdue }">{{ dueLabel(task) }}</span>
                     <time :datetime="task.dueTime">{{ formatDue(task.dueTime) }}</time>
@@ -628,7 +628,7 @@ function goEvents() {
                 <span class="empty-clock__core" />
               </div>
               <p class="empty-title">今天暂无安排</p>
-              <p class="empty-desc">可以把时间留给手头的任务。</p>
+              <p class="empty-desc">可以把时间留给手头的待办。</p>
               <button type="button" class="btn-ghost btn-ghost--pill" @click="goEvents">去日程</button>
             </div>
 

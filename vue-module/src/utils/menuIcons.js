@@ -13,6 +13,7 @@ import {
   TeamOutlined,
   LockOutlined,
   ControlOutlined,
+  FormOutlined,
 } from '@ant-design/icons-vue'
 
 export const iconMap = {
@@ -22,7 +23,10 @@ export const iconMap = {
   日程: CalendarOutlined,
   会议: AudioOutlined,
   事务: CheckSquareOutlined,
+  待办: CheckSquareOutlined,
   任务: CheckSquareOutlined,
+  清单: CheckSquareOutlined,
+  笔记: FormOutlined,
   对话: MessageOutlined,
   助手: MessageOutlined,
   系统: SettingOutlined,

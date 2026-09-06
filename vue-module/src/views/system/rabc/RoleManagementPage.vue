@@ -272,7 +272,7 @@ onMounted(refreshAll)
   <FlatManageListView
         v-model:search-query="searchQuery"
         title="角色列表"
-        desc="管理系统访问权限的核心载体"
+        desc="决定谁能看到工作台的哪些能力"
         :loading="loading"
         :data="filteredData"
         :columns="columns"

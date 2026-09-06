@@ -61,7 +61,7 @@ function isProjectNode(t) {
 }
 
 const STATUS_COLUMNS = [
-  { key: '0', label: '待办' },
+  { key: '0', label: '未开始' },
   { key: '1', label: '进行中' },
   { key: '2', label: '已完成' },
   { key: '3', label: '已取消' },
@@ -212,7 +212,7 @@ const filterProjectName = computed(() => {
     currentProject.value?.title ||
     currentProject.value?.name ||
     projectMap.value.get(Number(filterProjectId.value)) ||
-    `任务 #${filterProjectId.value}`
+    `清单 #${filterProjectId.value}`
   )
 })
 
@@ -230,12 +230,12 @@ const headerCopy = computed(() => {
         desc ||
         (archived
           ? '已归档 · 附件只读，可下载存档'
-          : '任务组 · 阶段用父任务、步骤用子任务；看板只推进叶子任务'),
+          : '清单内 · 用阶段拆步骤，看板推进每一项待办'),
     }
   }
   return {
     title: '事务',
-    desc: '任务与子任务统一管理；可建父任务拆分子任务，看板推进叶子任务。',
+    desc: '把今天要做的事收进待办；可建清单拆阶段，看板按状态推进。',
   }
 })
 
@@ -352,7 +352,7 @@ const parentSelectOptions = computed(() => {
 const projectQuickEntries = computed(() =>
   activeProjects.value.slice(0, 8).map((p) => ({
     taskId: Number(p.taskId),
-    title: p.title || p.name || `任务 #${p.taskId}`,
+    title: p.title || p.name || `清单 #${p.taskId}`,
   })),
 )
 
@@ -718,7 +718,7 @@ async function loadTasks() {
     const result = await pageTasksApi(1, null)
     tasks.value = result?.data?.records || []
   } catch (error) {
-    message.error(error.message || '获取任务列表失败')
+    message.error(error.message || '获取待办列表失败')
   } finally {
     taskLoading.value = false
   }
@@ -797,7 +797,7 @@ async function applyPlanPreview() {
       phases: planPreview.value.phases,
     })
     const created = result?.data?.created ?? 0
-    message.success(`已落板 ${created} 条任务`)
+    message.success(`已落板 ${created} 条待办`)
     planDialogVisible.value = false
     planPreview.value = null
     await refreshTasks()
@@ -872,16 +872,16 @@ function toTaskPayload() {
 const taskDialogTitle = computed(() => {
   if (taskIsEdit.value) {
     if (taskForm.nodeType === NODE_PHASE) return '编辑阶段'
-    if (taskForm.nodeType === NODE_PROJECT) return '编辑父任务'
-    return '编辑任务'
+    if (taskForm.nodeType === NODE_PROJECT) return '编辑清单'
+    return '编辑待办'
   }
   if (taskForm.nodeType === NODE_PHASE) return '新建阶段'
-  return '新建任务'
+  return '新建待办'
 })
 
 async function submitTaskForm() {
   if (!taskForm.title?.trim()) {
-    message.warning(taskForm.nodeType === NODE_PHASE ? '请填写阶段标题' : '请填写任务标题')
+    message.warning(taskForm.nodeType === NODE_PHASE ? '请填写阶段标题' : '请填写待办标题')
     return
   }
   taskSubmitting.value = true
@@ -1063,7 +1063,7 @@ onMounted(async () => {
             </button>
             <a-popconfirm
               v-permission="'task:remove'"
-              title="确认删除该父任务及其子任务？"
+              title="确认删除该清单及其待办？"
               @confirm="removeProject(currentProject.taskId)"
             >
               <button type="button" class="wb-btn wb-btn--ghost">
@@ -1076,12 +1076,12 @@ onMounted(async () => {
         </div>
       </header>
 
-      <!-- 任务看板 -->
+      <!-- 待办看板 -->
       <div class="task-view">
         <section
           v-if="inProjectSpace"
           class="tp-charts"
-          aria-label="任务组进度"
+          aria-label="清单进度"
         >
           <article class="tp-chart-card tp-chart-card--gauge">
             <v-chart class="tp-chart" :option="projectGaugeOption" autoresize />
@@ -1093,15 +1093,15 @@ onMounted(async () => {
           <article class="tp-chart-card">
             <v-chart class="tp-chart" :option="projectStatusChartOption" autoresize />
             <p class="tp-chart-meta">
-              <span>本组 {{ taskStats.total }} 项任务</span>
+              <span>本组 {{ taskStats.total }} 项待办</span>
             </p>
           </article>
         </section>
 
-        <div class="tp-pulse" aria-label="任务概览">
+        <div class="tp-pulse" aria-label="待办概览">
           <div class="tp-pulse__hero">
             <span class="tp-pulse__value">{{ taskStats.total }}</span>
-            <span class="tp-pulse__label">{{ inProjectSpace ? '本组任务' : '全部任务' }}</span>
+            <span class="tp-pulse__label">{{ inProjectSpace ? '本组待办' : '全部待办' }}</span>
           </div>
           <div class="tp-pulse__rail" role="group" aria-label="快捷筛选">
             <button
@@ -1111,7 +1111,7 @@ onMounted(async () => {
               @click="statusTab = '0'"
             >
               <span class="tp-pulse__item-val">{{ taskStats.todo }}</span>
-              <span class="tp-pulse__item-lab">待办</span>
+              <span class="tp-pulse__item-lab">未开始</span>
             </button>
             <button
               type="button"
@@ -1137,9 +1137,9 @@ onMounted(async () => {
         <section
           v-if="!inProjectSpace && projectQuickEntries.length"
           class="project-strip"
-          aria-label="快捷进入父任务"
+          aria-label="快捷进入清单"
         >
-          <span class="project-strip__label">父任务</span>
+          <span class="project-strip__label">清单</span>
           <div class="project-strip__chips">
             <button
               v-for="p in projectQuickEntries"
@@ -1161,7 +1161,7 @@ onMounted(async () => {
             type="search"
             class="wb-search"
             placeholder="搜索标题、标签..."
-            aria-label="搜索任务"
+            aria-label="搜索待办"
           />
           <a-input-number
             v-model:value="filterPriority"
@@ -1173,11 +1173,11 @@ onMounted(async () => {
             v-if="!inProjectSpace"
             v-model:value="filterBinding"
             allow-clear
-            placeholder="任务归属"
+            placeholder="待办归属"
             class="task-view__binding"
           >
-            <a-select-option value="independent">独立（无父节点）</a-select-option>
-            <a-select-option value="bound">有父任务</a-select-option>
+            <a-select-option value="independent">独立（无清单）</a-select-option>
+            <a-select-option value="bound">已挂清单</a-select-option>
           </a-select>
           <button
             v-if="inProjectSpace"
@@ -1209,7 +1209,7 @@ onMounted(async () => {
             @click="openCreateProject"
           >
             <PlusOutlined />
-            新建父任务
+            新建清单
           </button>
           <button
             v-permission="'task:add'"
@@ -1218,7 +1218,7 @@ onMounted(async () => {
             @click="openCreateTask(statusTab)"
           >
             <PlusOutlined />
-            新建任务
+            新建待办
           </button>
         </div>
 
@@ -1285,7 +1285,7 @@ onMounted(async () => {
                     </span>
                   </div>
                   <span class="attach-review__sub">
-                    {{ file.taskTitle || `任务 #${file.taskId}` }}
+                    {{ file.taskTitle || `待办 #${file.taskId}` }}
                     <template v-if="formatFileSize(file.size)"> · {{ formatFileSize(file.size) }}</template>
                     <template v-if="file.createTime"> · {{ file.createTime }}</template>
                   </span>
@@ -1306,11 +1306,11 @@ onMounted(async () => {
                 </div>
               </li>
             </ul>
-            <p v-else class="attach-review__empty">本组任务下还没有附件</p>
+            <p v-else class="attach-review__empty">本组待办下还没有附件</p>
           </a-spin>
         </section>
 
-        <div class="status-tabs" role="tablist" aria-label="任务状态">
+        <div class="status-tabs" role="tablist" aria-label="待办状态">
           <button
             v-for="col in columnsData"
             :key="col.key"
@@ -1330,17 +1330,17 @@ onMounted(async () => {
         <a-spin :spinning="taskLoading">
           <div v-if="!taskLoading && !projectScopedTasks.length" class="wb-empty">
             <h2 class="wb-empty__title">
-              {{ inProjectSpace ? '这组任务还是空的' : '还没有叶子任务' }}
+              {{ inProjectSpace ? '这份清单还是空的' : '还没有待办' }}
             </h2>
             <p class="wb-empty__desc">
               <template v-if="inProjectSpace">
-                为本组创建阶段或子任务；阶段下的步骤会出现在下方看板。
+                为本组创建阶段或待办；阶段下的步骤会出现在下方看板。
               </template>
               <template v-else-if="projects.length">
-                看板只显示叶子任务。你已有 {{ projects.length }} 个父任务，可点上方芯片进入任务组。
+                看板展示可推进的待办。你已有 {{ projects.length }} 份清单，可点上方芯片进入。
               </template>
               <template v-else>
-                先新建一条任务，或新建父任务后再拆阶段 / 子任务。
+                先写下一条待办，或新建清单后再拆阶段与步骤。
               </template>
             </p>
             <div class="wb-empty__actions">
@@ -1350,7 +1350,7 @@ onMounted(async () => {
                 class="wb-btn wb-btn--primary"
                 @click="openCreateTask('0')"
               >
-                新建任务
+                新建待办
               </button>
               <button
                 v-if="!inProjectSpace"
@@ -1359,7 +1359,7 @@ onMounted(async () => {
                 class="wb-btn wb-btn--ghost"
                 @click="openCreateProject"
               >
-                新建父任务
+                新建清单
               </button>
             </div>
           </div>
@@ -1408,7 +1408,7 @@ onMounted(async () => {
                       </button>
                       <a-popconfirm
                         v-permission="'task:remove'"
-                        title="确认删除该任务？"
+                        title="确认删除该待办？"
                         @confirm="removeTask(task.taskId)"
                       >
                         <button type="button" class="btn-action btn-action--delete" title="删除">
@@ -1459,7 +1459,7 @@ onMounted(async () => {
               </article>
 
               <div v-if="!statusTabTasks.length" class="task-list__empty">
-                <p class="task-list__empty-title">暂无「{{ activeStatusColumn.label }}」任务</p>
+                <p class="task-list__empty-title">暂无「{{ activeStatusColumn.label }}」待办</p>
                 <p class="task-list__empty-desc">切换其它状态查看，或在此新建一条。</p>
               </div>
             </div>
@@ -1509,7 +1509,7 @@ onMounted(async () => {
               :disabled="taskIsEdit || (!inProjectSpace && taskForm.nodeType === 'task')"
               style="width: 100%"
             >
-              <a-select-option value="task">任务</a-select-option>
+              <a-select-option value="task">待办</a-select-option>
               <a-select-option v-if="inProjectSpace || taskForm.nodeType === 'phase'" value="phase">
                 阶段
               </a-select-option>
@@ -1518,14 +1518,14 @@ onMounted(async () => {
 
           <a-form-item
             v-if="taskForm.nodeType !== 'phase' || !inProjectSpace"
-            label="父节点"
+            label="所属清单"
             class="dialog-item"
           >
             <a-select
               v-model:value="taskForm.parentTaskId"
               allow-clear
               :disabled="taskForm.nodeType === 'phase'"
-              placeholder="独立任务可不选；可挂到父任务或阶段下"
+              placeholder="独立待办可不选；可挂到清单或阶段下"
               style="width: 100%"
             >
               <a-select-option
@@ -1570,10 +1570,10 @@ onMounted(async () => {
             class="dialog-item dialog-item--full"
           >
             <div class="task-attach">
-              <p v-if="!taskIsEdit" class="task-attach__hint">先创建任务，再上传附件</p>
+              <p v-if="!taskIsEdit" class="task-attach__hint">先创建待办，再上传附件</p>
               <template v-else>
                 <p v-if="taskFormAttachmentsReadonly" class="task-attach__hint">
-                  上级任务组已归档，附件只读，可下载
+                  所属清单已归档，附件只读，可下载
                 </p>
                 <ul v-if="taskAttachments.length" class="task-attach__list">
                   <li v-for="file in taskAttachments" :key="file.id" class="task-attach__item">
@@ -1634,7 +1634,7 @@ onMounted(async () => {
       @cancel="closeFilesModal"
     >
       <p v-if="filesModalReadonly" class="task-attach__hint files-modal__hint">
-        上级任务组已归档，附件只读，可预览与下载
+        所属清单已归档，附件只读，可预览与下载
       </p>
       <ul v-if="filesModalFiles.length" class="files-modal__list">
         <li
@@ -1702,7 +1702,7 @@ onMounted(async () => {
 
     <DataOperationView
       v-model="projectDialogVisible"
-      :title="projectIsEdit ? '编辑父任务' : '新建父任务'"
+      :title="projectIsEdit ? '编辑清单' : '新建清单'"
       :columns="2"
       :loading="projectSubmitting"
       :confirm-text="projectIsEdit ? '保存修改' : '确认创建'"
@@ -1738,7 +1738,7 @@ onMounted(async () => {
 
     <a-modal
       v-model:open="planDialogVisible"
-      title="AI 智能规划"
+      title="智能规划待办"
       width="640px"
       :mask-closable="false"
       :confirm-loading="planApplying"
