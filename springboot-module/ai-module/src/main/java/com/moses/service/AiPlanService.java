@@ -3,7 +3,7 @@ package com.moses.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.moses.entity.WbTask;
+import com.moses.entity.Task;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 任务组 AI 规划：预览用结构化 JSON（Map），落板走 WbTaskService。
+ * 任务组 AI 规划：预览用结构化 JSON（Map），落板走 TaskService。
  */
 @Slf4j
 @Service
@@ -32,7 +32,7 @@ public class AiPlanService {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String PLAN_SYSTEM_PROMPT = """
-            你是个人工作台的任务规划助手。根据任务主题、目标与【整组截止时间】拆解阶段与步骤。
+            你是 RemoAssistant 的任务规划助手。根据任务主题、目标与【整组截止时间】拆解阶段与步骤。
             只输出一个 JSON 对象，不要 markdown 代码块或其它文字。字段：
             summary(string), phases(array)。
             phases 元素：title, description, dueTime(yyyy-MM-dd，该阶段建议完成日), steps。
@@ -45,14 +45,14 @@ public class AiPlanService {
             """;
 
     private final ChatClient planningChatClient;
-    private final WbTaskService wbTaskService;
+    private final TaskService taskService;
     private final ObjectMapper objectMapper;
 
     public AiPlanService(@Qualifier("planningChatClient") ChatClient planningChatClient,
-                         WbTaskService wbTaskService,
+                         TaskService taskService,
                          ObjectMapper objectMapper) {
         this.planningChatClient = planningChatClient;
-        this.wbTaskService = wbTaskService;
+        this.taskService = taskService;
         this.objectMapper = objectMapper;
     }
 
@@ -61,7 +61,7 @@ public class AiPlanService {
         if (projectTaskId == null) {
             throw new RuntimeException("顶层任务 ID 不能为空");
         }
-        WbTask project = requireOwnedProject(userId, projectTaskId);
+        Task project = requireOwnedProject(userId, projectTaskId);
         if ("1".equals(String.valueOf(project.getArchived()))) {
             throw new RuntimeException("已归档，无法规划");
         }
@@ -135,7 +135,7 @@ public class AiPlanService {
         if (phases.isEmpty()) {
             throw new RuntimeException("规划阶段不能为空");
         }
-        return wbTaskService.applyPlanBatch(userId, projectTaskId, planBatchId, phases);
+        return taskService.applyPlanBatch(userId, projectTaskId, planBatchId, phases);
     }
 
     private Long resolveProjectTaskId(Map<String, Object> body) {
@@ -149,7 +149,7 @@ public class AiPlanService {
         return toLong(body.get("projectId"));
     }
 
-    private String buildUserPrompt(WbTask project, String goal, String constraints,
+    private String buildUserPrompt(Task project, String goal, String constraints,
                                    LocalDate deadline, long daysLeft, String paceHint) {
         StringBuilder sb = new StringBuilder();
         sb.append("任务名称：").append(project.getTitle()).append('\n');
@@ -275,12 +275,12 @@ public class AiPlanService {
         }
     }
 
-    private WbTask requireOwnedProject(Long userId, Long projectTaskId) {
-        WbTask project = wbTaskService.getOne(
-                new LambdaQueryWrapper<WbTask>()
-                        .eq(WbTask::getTaskId, projectTaskId)
-                        .eq(WbTask::getUserId, userId)
-                        .eq(WbTask::getNodeType, WbTask.NODE_PROJECT)
+    private Task requireOwnedProject(Long userId, Long projectTaskId) {
+        Task project = taskService.getOne(
+                new LambdaQueryWrapper<Task>()
+                        .eq(Task::getTaskId, projectTaskId)
+                        .eq(Task::getUserId, userId)
+                        .eq(Task::getNodeType, Task.NODE_PROJECT)
         );
         if (project == null) {
             throw new RuntimeException("顶层任务不存在");

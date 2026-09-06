@@ -1,6 +1,6 @@
 package com.moses.service;
 
-import com.moses.entity.WbMeeting;
+import com.moses.entity.Meeting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,7 +31,7 @@ public class AiMeetingSummaryService {
     private static final Duration FETCH_TIMEOUT = Duration.ofSeconds(12);
 
     private static final String SUMMARY_SYSTEM_PROMPT = """
-            你是个人工作台的会议纪要助手。根据会议基本信息与上传材料，整理成清晰可读的会议概要。
+            你是 RemoAssistant 的会议纪要助手。根据会议基本信息与上传材料，整理成清晰可读的会议概要。
             要求：
             - 使用中文 Markdown
             - 结构建议：会议背景 / 讨论要点 / 结论与决策 / 后续事项（若材料中无则省略对应节）
@@ -40,24 +40,24 @@ public class AiMeetingSummaryService {
             """;
 
     private final ChatClient planningChatClient;
-    private final WbMeetingService wbMeetingService;
+    private final MeetingService meetingService;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(FETCH_TIMEOUT)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
     public AiMeetingSummaryService(@Qualifier("planningChatClient") ChatClient planningChatClient,
-                                   WbMeetingService wbMeetingService) {
+                                   MeetingService meetingService) {
         this.planningChatClient = planningChatClient;
-        this.wbMeetingService = wbMeetingService;
+        this.meetingService = meetingService;
     }
 
     public Map<String, Object> summarize(Long userId, Long meetingId) {
         if (meetingId == null) {
             throw new RuntimeException("会议 ID 不能为空");
         }
-        WbMeeting meeting = wbMeetingService.requireOwnedMeeting(userId, meetingId);
-        List<Map<String, Object>> allAttachments = wbMeetingService.parseAttachments(meeting.getAttachments());
+        Meeting meeting = meetingService.requireOwnedMeeting(userId, meetingId);
+        List<Map<String, Object>> allAttachments = meetingService.parseAttachments(meeting.getAttachments());
         List<Map<String, Object>> attachments = allAttachments.stream()
                 .filter(a -> !"ai-summary".equals(String.valueOf(a.get("kind"))))
                 .toList();
@@ -89,7 +89,7 @@ public class AiMeetingSummaryService {
             }
         }
 
-        Map<String, Object> summaryFile = wbMeetingService.applyAiSummary(userId, meetingId, summary);
+        Map<String, Object> summaryFile = meetingService.applyAiSummary(userId, meetingId, summary);
 
         Map<String, Object> result = new HashMap<>();
         result.put("meetingId", meetingId);
@@ -101,7 +101,7 @@ public class AiMeetingSummaryService {
         return result;
     }
 
-    private String buildUserPrompt(WbMeeting meeting, List<Map<String, Object>> attachments) {
+    private String buildUserPrompt(Meeting meeting, List<Map<String, Object>> attachments) {
         StringBuilder sb = new StringBuilder();
         sb.append("会议标题：").append(nullToEmpty(meeting.getTitle())).append('\n');
         if (meeting.getMeetingTime() != null) {

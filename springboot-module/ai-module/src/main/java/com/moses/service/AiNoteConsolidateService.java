@@ -1,7 +1,7 @@
 package com.moses.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.moses.entity.WbNote;
+import com.moses.entity.Note;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,7 +29,7 @@ public class AiNoteConsolidateService {
     private static final int MAX_INSTRUCTION = 500;
 
     private static final String SYSTEM_PROMPT = """
-            你是个人工作台的笔记整理助手。根据用户勾选的零散碎片，整理成一篇清晰可读的整理稿。
+            你是 RemoAssistant 的笔记整理助手。根据用户勾选的零散碎片，整理成一篇清晰可读的整理稿。
             要求：
             - 使用中文 Markdown
             - 结构建议：主题概述 / 要点归纳 / 待办与线索 / 原文摘录（若材料中无则省略对应节）
@@ -39,14 +39,14 @@ public class AiNoteConsolidateService {
             """;
 
     private final ChatClient planningChatClient;
-    private final WbNoteService wbNoteService;
+    private final NoteService noteService;
     private final ObjectMapper objectMapper;
 
     public AiNoteConsolidateService(@Qualifier("planningChatClient") ChatClient planningChatClient,
-                                    WbNoteService wbNoteService,
+                                    NoteService noteService,
                                     ObjectMapper objectMapper) {
         this.planningChatClient = planningChatClient;
-        this.wbNoteService = wbNoteService;
+        this.noteService = noteService;
         this.objectMapper = objectMapper;
     }
 
@@ -56,18 +56,18 @@ public class AiNoteConsolidateService {
             throw new RuntimeException("请选择至少一条碎片笔记");
         }
 
-        List<WbNote> notes = wbNoteService.listOwnedByIds(userId, noteIds);
-        Map<Long, WbNote> byId = new LinkedHashMap<>();
-        for (WbNote n : notes) {
+        List<Note> notes = noteService.listOwnedByIds(userId, noteIds);
+        Map<Long, Note> byId = new LinkedHashMap<>();
+        for (Note n : notes) {
             byId.put(n.getNoteId(), n);
         }
-        List<WbNote> ordered = new ArrayList<>();
+        List<Note> ordered = new ArrayList<>();
         for (Long id : noteIds) {
-            WbNote n = byId.get(id);
+            Note n = byId.get(id);
             if (n == null) {
                 throw new RuntimeException("笔记不存在或无权访问: " + id);
             }
-            if (!WbNote.TYPE_SCRAP.equals(n.getNoteType())) {
+            if (!Note.TYPE_SCRAP.equals(n.getNoteType())) {
                 throw new RuntimeException("只能整合碎片笔记，请取消勾选整理稿");
             }
             ordered.add(n);
@@ -108,15 +108,15 @@ public class AiNoteConsolidateService {
                 ? titleHint
                 : extractTitle(digest, ordered);
 
-        WbNote created = new WbNote();
+        Note created = new Note();
         created.setTitle(digestTitle);
         created.setContent(digest);
-        created.setNoteType(WbNote.TYPE_DIGEST);
-        created.setStatus(WbNote.STATUS_ACTIVE);
+        created.setNoteType(Note.TYPE_DIGEST);
+        created.setStatus(Note.STATUS_ACTIVE);
         created.setSourceNoteIds(writeIdsJson(noteIds));
         created.setRemark("AI整合");
 
-        WbNote saved = wbNoteService.createOwnedNote(userId, created);
+        Note saved = noteService.createOwnedNote(userId, created);
 
         Map<String, Object> result = new HashMap<>();
         result.put("note", saved);
@@ -127,7 +127,7 @@ public class AiNoteConsolidateService {
         return result;
     }
 
-    private String buildUserPrompt(List<WbNote> notes, String titleHint, String instruction) {
+    private String buildUserPrompt(List<Note> notes, String titleHint, String instruction) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.hasText(titleHint)) {
             sb.append("期望整理稿标题：").append(titleHint).append('\n');
@@ -140,7 +140,7 @@ public class AiNoteConsolidateService {
         int budget = MAX_TOTAL_TEXT;
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         for (int i = 0; i < notes.size(); i++) {
-            WbNote n = notes.get(i);
+            Note n = notes.get(i);
             sb.append("--- 碎片 ").append(i + 1).append(" (id=").append(n.getNoteId()).append(") ---\n");
             if (StringUtils.hasText(n.getTitle())) {
                 sb.append("标题：").append(n.getTitle().trim()).append('\n');
@@ -167,7 +167,7 @@ public class AiNoteConsolidateService {
         return sb.toString();
     }
 
-    private static String extractTitle(String digest, List<WbNote> sources) {
+    private static String extractTitle(String digest, List<Note> sources) {
         for (String line : digest.split("\n")) {
             String t = line.trim();
             if (t.startsWith("#")) {

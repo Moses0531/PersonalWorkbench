@@ -1,7 +1,7 @@
 package com.moses.config;
 
 import com.moses.repository.RedisChatMemory;
-import com.moses.tool.WorkbenchTools;
+import com.moses.tool.BusinessTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -19,17 +19,17 @@ public class AIConfig {
     }
 
     /**
-     * 闲聊用：带 Redis 记忆 + 工作台 Tool。
+     * 闲聊用：带 Redis 记忆 + 业务 Tool。
      */
     @Bean
     public ChatClient chatClient(@Qualifier("deepSeekChatModel") ChatModel chatModel,
                                  ChatMemory chatMemory,
-                                 WorkbenchTools workbenchTools) {
+                                 BusinessTools businessTools) {
         return ChatClient.builder(chatModel)
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
-                .defaultTools(workbenchTools)
+                .defaultTools(businessTools)
                 .build();
     }
 

@@ -32,7 +32,7 @@
         </dependency>
         <dependency>
             <groupId>com.moses</groupId>
-            <artifactId>workbench-module</artifactId>
+            <artifactId>business-module</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

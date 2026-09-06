@@ -42,7 +42,7 @@
         <module>common-module</module>
         <module>system-module</module>
         <module>ai-module</module>
-        <module>workbench-module</module>
+        <module>business-module</module>
     </modules>
 
     <dependencyManagement>

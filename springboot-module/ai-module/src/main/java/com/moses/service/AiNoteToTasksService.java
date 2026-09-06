@@ -3,8 +3,8 @@ package com.moses.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.moses.entity.WbNote;
-import com.moses.entity.WbTask;
+import com.moses.entity.Note;
+import com.moses.entity.Task;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -35,7 +35,7 @@ public class AiNoteToTasksService {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String PLAN_SYSTEM_PROMPT = """
-            你是个人工作台的任务规划助手。根据「笔记整理稿」内容、目标与【整组截止时间】拆解阶段与步骤。
+            你是 RemoAssistant 的任务规划助手。根据「笔记整理稿」内容、目标与【整组截止时间】拆解阶段与步骤。
             只输出一个 JSON 对象，不要 markdown 代码块或其它文字。字段：
             summary(string), phases(array)。
             phases 元素：title, description, dueTime(yyyy-MM-dd，该阶段建议完成日), steps。
@@ -49,22 +49,22 @@ public class AiNoteToTasksService {
             """;
 
     private final ChatClient planningChatClient;
-    private final WbNoteService wbNoteService;
-    private final WbTaskService wbTaskService;
+    private final NoteService noteService;
+    private final TaskService taskService;
     private final ObjectMapper objectMapper;
 
     public AiNoteToTasksService(@Qualifier("planningChatClient") ChatClient planningChatClient,
-                                WbNoteService wbNoteService,
-                                WbTaskService wbTaskService,
+                                NoteService noteService,
+                                TaskService taskService,
                                 ObjectMapper objectMapper) {
         this.planningChatClient = planningChatClient;
-        this.wbNoteService = wbNoteService;
-        this.wbTaskService = wbTaskService;
+        this.noteService = noteService;
+        this.taskService = taskService;
         this.objectMapper = objectMapper;
     }
 
     public Map<String, Object> preview(Long userId, Map<String, Object> body) {
-        WbNote note = requireDigest(userId, body);
+        Note note = requireDigest(userId, body);
         LocalDate deadline = parseDeadline(body != null ? body.get("deadline") : null);
         if (deadline == null) {
             throw new RuntimeException("请填写截止时间");
@@ -121,12 +121,12 @@ public class AiNoteToTasksService {
         if (body == null) {
             throw new RuntimeException("请求体不能为空");
         }
-        WbNote note = requireDigest(userId, body);
+        Note note = requireDigest(userId, body);
         if (note.getLinkedTaskId() != null) {
-            WbTask existing = wbTaskService.getOne(
-                    new LambdaQueryWrapper<WbTask>()
-                            .eq(WbTask::getTaskId, note.getLinkedTaskId())
-                            .eq(WbTask::getUserId, userId)
+            Task existing = taskService.getOne(
+                    new LambdaQueryWrapper<Task>()
+                            .eq(Task::getTaskId, note.getLinkedTaskId())
+                            .eq(Task::getUserId, userId)
             );
             if (existing != null) {
                 throw new RuntimeException("该整理稿已生成过任务，请到事务页查看");
@@ -143,8 +143,8 @@ public class AiNoteToTasksService {
         }
 
         LocalDate deadline = parseDeadline(body.get("deadline"));
-        WbTask project = new WbTask();
-        project.setNodeType(WbTask.NODE_PROJECT);
+        Task project = new Task();
+        project.setNodeType(Task.NODE_PROJECT);
         project.setArchived("0");
         project.setParentTaskId(null);
         project.setTitle(StringUtils.hasText(note.getTitle()) ? note.getTitle() : "笔记任务");
@@ -159,12 +159,12 @@ public class AiNoteToTasksService {
             project.setDueTime(java.sql.Date.valueOf(deadline));
         }
         project.setRemark("来自笔记#" + note.getNoteId());
-        wbTaskService.createOwnedTask(userId, project);
+        taskService.createOwnedTask(userId, project);
 
-        Map<String, Object> applyResult = wbTaskService.applyPlanBatch(
+        Map<String, Object> applyResult = taskService.applyPlanBatch(
                 userId, project.getTaskId(), planBatchId, phases);
 
-        wbNoteService.linkTask(userId, note.getNoteId(), project.getTaskId());
+        noteService.linkTask(userId, note.getNoteId(), project.getTaskId());
 
         Map<String, Object> result = new HashMap<>(applyResult);
         result.put("noteId", note.getNoteId());
@@ -173,10 +173,10 @@ public class AiNoteToTasksService {
         return result;
     }
 
-    private WbNote requireDigest(Long userId, Map<String, Object> body) {
+    private Note requireDigest(Long userId, Map<String, Object> body) {
         Long noteId = toLong(body != null ? body.get("noteId") : null);
-        WbNote note = wbNoteService.requireOwnedNote(userId, noteId);
-        if (!WbNote.TYPE_DIGEST.equals(note.getNoteType())) {
+        Note note = noteService.requireOwnedNote(userId, noteId);
+        if (!Note.TYPE_DIGEST.equals(note.getNoteType())) {
             throw new RuntimeException("仅整理稿可生成任务");
         }
         if (!StringUtils.hasText(note.getContent())) {
@@ -185,7 +185,7 @@ public class AiNoteToTasksService {
         return note;
     }
 
-    private String buildUserPrompt(WbNote note, String goal, String constraints,
+    private String buildUserPrompt(Note note, String goal, String constraints,
                                    LocalDate deadline, long daysLeft, String paceHint) {
         StringBuilder sb = new StringBuilder();
         sb.append("整理稿标题：").append(nullToEmpty(note.getTitle())).append('\n');
