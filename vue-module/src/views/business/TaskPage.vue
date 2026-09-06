@@ -13,7 +13,7 @@ import {
   updateAttachmentStatusApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
-} from '@/apis/workbench/TaskApi'
+} from '@/apis/business/TaskApi'
 import { planApplyApi, planPreviewApi } from '@/apis/ai/AiApi'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import EditorView from '@/components/EditorView.vue'
@@ -22,7 +22,7 @@ import {
   countTaskStatus,
   completionGaugeOption,
   statusDoughnutOption,
-} from '@/utils/wbCharts'
+} from '@/utils/charts'
 import { openKkFileViewPreview } from '@/utils/kkFileView'
 import {
   LeftOutlined,

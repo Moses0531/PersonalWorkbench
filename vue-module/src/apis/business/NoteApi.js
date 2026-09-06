@@ -11,7 +11,7 @@ export function pageNotesApi(params = {}) {
     noteType,
     status,
   } = params
-  return request.get('/wbNote/getNotePage', {
+  return request.get('/note/getNotePage', {
     params: {
       pageNum,
       pageRows: pageRows ?? ALL_ROWS,
@@ -24,26 +24,26 @@ export function pageNotesApi(params = {}) {
 
 /** 获取单条笔记 */
 export function getNoteApi(noteId) {
-  return request.get('/wbNote/getNote', { params: { noteId } })
+  return request.get('/note/getNote', { params: { noteId } })
 }
 
 /** 新增笔记 */
 export function addNoteApi(form) {
-  return request.post('/wbNote/addNote', form)
+  return request.post('/note/addNote', form)
 }
 
 /** 更新笔记 */
 export function updateNoteApi(form) {
-  return request.post('/wbNote/updateNote', form)
+  return request.post('/note/updateNote', form)
 }
 
 /** 批量删除笔记 */
 export function deleteNotesApi(ids) {
   const list = (Array.isArray(ids) ? ids : [ids]).map(Number)
-  return request.delete('/wbNote/deleteBatchNote', { data: list })
+  return request.delete('/note/deleteBatchNote', { data: list })
 }
 
 /** 归档 / 取消归档 */
 export function archiveNoteApi(noteId, status = '1') {
-  return request.post('/wbNote/archiveNote', { noteId, status })
+  return request.post('/note/archiveNote', { noteId, status })
 }

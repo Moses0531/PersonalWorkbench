@@ -9,7 +9,7 @@ import {
   deleteNotesApi,
   pageNotesApi,
   updateNoteApi,
-} from '@/apis/workbench/NoteApi'
+} from '@/apis/business/NoteApi'
 import {
   noteConsolidateApi,
   noteToTasksApplyApi,

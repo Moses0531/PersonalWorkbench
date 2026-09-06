@@ -1,11 +1,11 @@
-﻿<template>
+<template>
   <div class="layout">
     <!-- 悬浮胶囊 Dock：图标直达，目录展开飞层 -->
     <nav class="dock" role="navigation" aria-label="主导航">
       <button
         type="button"
         class="dock-brand"
-        title="Workbench · 打开命令面板"
+        title="RemoAssistant · 打开命令面板"
         aria-label="打开命令面板"
         @click="openCmd"
       >
@@ -206,7 +206,7 @@ import { getMenuIcon } from '@/utils/menuIcons'
 import { resetDynamicRoutes } from '@/router/dynamicRoutes'
 import router from '@/router'
 
-const RECENT_KEY = 'wb_nav_recent'
+const RECENT_KEY = 'remo_nav_recent'
 const RECENT_MAX = 5
 
 const route = useRoute()

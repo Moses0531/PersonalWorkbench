@@ -5,7 +5,7 @@ const ALL_ROWS = 1000
 /** 分页查询任务（可按 nodeType / parentTaskId / archived 过滤） */
 export function pageTasksApi(pageNum = 1, pageRows = ALL_ROWS, filters = {}) {
   const { nodeType, parentTaskId, archived } = filters || {}
-  return request.get('/wbTask/getTaskPage', {
+  return request.get('/task/getTaskPage', {
     params: {
       pageNum,
       pageRows: pageRows ?? ALL_ROWS,
@@ -18,23 +18,23 @@ export function pageTasksApi(pageNum = 1, pageRows = ALL_ROWS, filters = {}) {
 
 /** 新增任务 / 阶段 / 顶层任务 */
 export function addTaskApi(form) {
-  return request.post('/wbTask/addTask', form)
+  return request.post('/task/addTask', form)
 }
 
 /** 更新任务 / 阶段 / 顶层任务 */
 export function updateTaskApi(form) {
-  return request.post('/wbTask/updateTask', form)
+  return request.post('/task/updateTask', form)
 }
 
 /** 批量删除（级联子孙） */
 export function deleteTasksApi(ids) {
   const list = (Array.isArray(ids) ? ids : [ids]).map(Number)
-  return request.delete('/wbTask/deleteBatchTask', { data: list })
+  return request.delete('/task/deleteBatchTask', { data: list })
 }
 
 /** 归档 / 恢复顶层任务 */
 export function setProjectArchivedApi(projectTaskId, archived) {
-  return request.post('/wbTask/setProjectArchived', {
+  return request.post('/task/setProjectArchived', {
     projectTaskId: Number(projectTaskId),
     archived: String(archived),
   })
@@ -44,7 +44,7 @@ export function setProjectArchivedApi(projectTaskId, archived) {
 export function uploadTaskAttachmentApi(taskId, file) {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/wbTask/uploadAttachment', formData, {
+  return request.post('/task/uploadAttachment', formData, {
     params: { taskId },
     headers: { 'Content-Type': 'multipart/form-data' },
   })
@@ -52,14 +52,14 @@ export function uploadTaskAttachmentApi(taskId, file) {
 
 /** 删除任务附件 */
 export function removeTaskAttachmentApi(taskId, attachmentId) {
-  return request.delete('/wbTask/removeAttachment', {
+  return request.delete('/task/removeAttachment', {
     data: { taskId, attachmentId },
   })
 }
 
 /** 更新任务附件处理状态（0-未处理，1-已处理，2-处理完成） */
 export function updateAttachmentStatusApi(taskId, attachmentId, status) {
-  return request.post('/wbTask/updateAttachmentStatus', {
+  return request.post('/task/updateAttachmentStatus', {
     taskId,
     attachmentId,
     status: String(status),
@@ -68,7 +68,7 @@ export function updateAttachmentStatusApi(taskId, attachmentId, status) {
 
 /** 任务组附件审查（汇总子孙任务附件；projectTaskId = 顶层任务 id） */
 export function listProjectAttachmentsApi(projectTaskId) {
-  return request.get('/wbTask/listProjectAttachments', {
+  return request.get('/task/listProjectAttachments', {
     params: { projectTaskId },
   })
 }

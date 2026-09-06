@@ -7,8 +7,8 @@ import {
   deleteEventsApi,
   pageEventsApi,
   updateEventApi,
-} from '@/apis/workbench/EventApi'
-import { pageTasksApi } from '@/apis/workbench/TaskApi'
+} from '@/apis/business/EventApi'
+import { pageTasksApi } from '@/apis/business/TaskApi'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 

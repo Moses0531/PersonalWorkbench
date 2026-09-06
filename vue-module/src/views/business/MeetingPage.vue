@@ -9,7 +9,7 @@ import {
   removeMeetingAttachmentApi,
   updateMeetingApi,
   uploadMeetingAttachmentApi,
-} from '@/apis/workbench/MeetingApi'
+} from '@/apis/business/MeetingApi'
 import { meetingSummaryApi } from '@/apis/ai/AiApi'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import {
@@ -351,7 +351,7 @@ onMounted(loadMeetings)
       <header class="wb-header">
         <div class="wb-header__text">
           <h1 class="wb-header__title">会议记录</h1>
-          <p class="wb-header__desc">上传会议材料，一键整理成概要，沉淀到今天的工作台。</p>
+          <p class="wb-header__desc">上传会议材料，一键整理成概要，沉淀到今天的备忘。</p>
         </div>
         <div class="wb-header__actions">
           <button type="button" class="wb-btn wb-btn--ghost" :disabled="loading" @click="loadMeetings">
