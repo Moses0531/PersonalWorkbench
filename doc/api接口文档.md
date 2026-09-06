@@ -1306,7 +1306,7 @@
 # 工作台-项目
 
 
-> **说明（方案 A）**：项目已并入任务树，原 `/project/*` 接口已废弃。请使用 `nodeType=project` 的 `/task/*` 管理项目根节点（以及 `phase` / `task` 子节点）。存量库请执行增量脚本 `doc/sql/migrate_project_into_task.sql`（全量 dump `remo_assistant.sql` / `remo_assistant(s).sql` 保持不变）。
+> **说明（方案 A）**：项目已并入任务树，原 `/project/*` 接口已废弃。请使用 `nodeType=project` 的 `/task/*` 管理项目根节点（以及 `phase` / `task` 子节点）。全量初始化请导入 `doc/sql/remo_assistant.sql`。
 
 
 # 角色管理

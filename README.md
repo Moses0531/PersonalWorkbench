@@ -83,27 +83,13 @@ springboot-module/
 CREATE DATABASE remo_assistant DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 ```
 
-在库中按顺序导入 SQL（结构 + 数据）：
+在库中导入 SQL（结构 + 数据）：
 
 ```text
 doc/sql/remo_assistant.sql
 ```
 
-仅结构可参考 `doc/sql/remo_assistant(s).sql`（已含 `note`）。旧库若还没有笔记模块，再执行 `doc/sql/migrate_note.sql`。
-
-**已有库升级（撤销 wb_ 表前缀）：** 备份后执行：
-
-```text
-doc/sql/migrate_drop_wb_prefix.sql
-```
-
-**已有库升级（任务树统一）：** 在备份后执行增量脚本即可，不要改全量 dump：
-
-```text
-doc/sql/migrate_project_into_task.sql
-```
-
-该脚本将旧「项目」表迁为任务树上的顶层节点（`node_type=project`），阶段/步骤挂到 `parent_task_id` 下。只应执行一次。界面不再单独暴露「项目」概念。
+仅结构可参考 `doc/sql/remo_assistant(s).sql`（已含 `note` 等业务表）。
 
 ### 3.3 配置后端
 
