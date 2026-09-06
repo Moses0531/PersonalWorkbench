@@ -29,7 +29,7 @@
 ## 新增会议
 
 
-**接口地址**:`/wbMeeting/addMeeting`
+**接口地址**:`/meeting/addMeeting`
 
 
 **请求方式**:`POST`
@@ -70,7 +70,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbMeeting|WbMeeting|body|true|WbMeeting|WbMeeting|
+|meeting|Meeting|body|true|Meeting|Meeting|
 |&emsp;&emsp;meetingId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;title|||false|string||
@@ -116,7 +116,7 @@
 ## 批量删除会议
 
 
-**接口地址**:`/wbMeeting/deleteBatchMeeting`
+**接口地址**:`/meeting/deleteBatchMeeting`
 
 
 **请求方式**:`DELETE`
@@ -178,7 +178,7 @@
 ## 获取会议分页列表
 
 
-**接口地址**:`/wbMeeting/getMeetingPage`
+**接口地址**:`/meeting/getMeetingPage`
 
 
 **请求方式**:`GET`
@@ -234,7 +234,7 @@
 ## 删除会议材料
 
 
-**接口地址**:`/wbMeeting/removeAttachment`
+**接口地址**:`/meeting/removeAttachment`
 
 
 **请求方式**:`DELETE`
@@ -286,7 +286,7 @@
 ## 修改会议
 
 
-**接口地址**:`/wbMeeting/updateMeeting`
+**接口地址**:`/meeting/updateMeeting`
 
 
 **请求方式**:`POST`
@@ -327,7 +327,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbMeeting|WbMeeting|body|true|WbMeeting|WbMeeting|
+|meeting|Meeting|body|true|Meeting|Meeting|
 |&emsp;&emsp;meetingId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;title|||false|string||
@@ -373,7 +373,7 @@
 ## 上传会议材料（阿里云 OSS）
 
 
-**接口地址**:`/wbMeeting/uploadAttachment`
+**接口地址**:`/meeting/uploadAttachment`
 
 
 **请求方式**:`POST`
@@ -431,7 +431,7 @@
 ## 新增任务
 
 
-**接口地址**:`/wbTask/addTask`
+**接口地址**:`/task/addTask`
 
 
 **请求方式**:`POST`
@@ -477,7 +477,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbTask|WbTask|body|true|WbTask|WbTask|
+|task|Task|body|true|Task|Task|
 |&emsp;&emsp;taskId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;nodeType|project / phase / task|false|string||
@@ -528,7 +528,7 @@
 ## 批量删除任务
 
 
-**接口地址**:`/wbTask/deleteBatchTask`
+**接口地址**:`/task/deleteBatchTask`
 
 
 **请求方式**:`DELETE`
@@ -590,7 +590,7 @@
 ## 归档/恢复项目根
 
 
-**接口地址**:`/wbTask/setProjectArchived`
+**接口地址**:`/task/setProjectArchived`
 
 
 **请求方式**:`POST`
@@ -633,7 +633,7 @@
 ## 获取任务分页列表
 
 
-**接口地址**:`/wbTask/getTaskPage`
+**接口地址**:`/task/getTaskPage`
 
 
 **请求方式**:`GET`
@@ -692,7 +692,7 @@
 ## 项目附件审查（汇总下属任务附件）
 
 
-**接口地址**:`/wbTask/listProjectAttachments`
+**接口地址**:`/task/listProjectAttachments`
 
 
 **请求方式**:`GET`
@@ -747,7 +747,7 @@
 ## 删除任务附件
 
 
-**接口地址**:`/wbTask/removeAttachment`
+**接口地址**:`/task/removeAttachment`
 
 
 **请求方式**:`DELETE`
@@ -799,7 +799,7 @@
 ## 更新任务附件处理状态（0-未处理，1-已处理，2-处理完成）
 
 
-**接口地址**:`/wbTask/updateAttachmentStatus`
+**接口地址**:`/task/updateAttachmentStatus`
 
 
 **请求方式**:`POST`
@@ -851,7 +851,7 @@
 ## 修改任务
 
 
-**接口地址**:`/wbTask/updateTask`
+**接口地址**:`/task/updateTask`
 
 
 **请求方式**:`POST`
@@ -897,7 +897,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbTask|WbTask|body|true|WbTask|WbTask|
+|task|Task|body|true|Task|Task|
 |&emsp;&emsp;taskId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;nodeType|project / phase / task|false|string||
@@ -948,7 +948,7 @@
 ## 上传任务附件（阿里云 OSS）
 
 
-**接口地址**:`/wbTask/uploadAttachment`
+**接口地址**:`/task/uploadAttachment`
 
 
 **请求方式**:`POST`
@@ -1006,7 +1006,7 @@
 ## 新增日程
 
 
-**接口地址**:`/wbEvent/addEvent`
+**接口地址**:`/event/addEvent`
 
 
 **请求方式**:`POST`
@@ -1049,7 +1049,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbEvent|WbEvent|body|true|WbEvent|WbEvent|
+|event|Event|body|true|Event|Event|
 |&emsp;&emsp;eventId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;taskId|||false|integer(int64)||
@@ -1097,7 +1097,7 @@
 ## 批量删除日程
 
 
-**接口地址**:`/wbEvent/deleteBatchEvent`
+**接口地址**:`/event/deleteBatchEvent`
 
 
 **请求方式**:`DELETE`
@@ -1159,7 +1159,7 @@
 ## 获取日程分页列表
 
 
-**接口地址**:`/wbEvent/getEventPage`
+**接口地址**:`/event/getEventPage`
 
 
 **请求方式**:`GET`
@@ -1215,7 +1215,7 @@
 ## 修改日程
 
 
-**接口地址**:`/wbEvent/updateEvent`
+**接口地址**:`/event/updateEvent`
 
 
 **请求方式**:`POST`
@@ -1258,7 +1258,7 @@
 
 | 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
 | -------- | -------- | ----- | -------- | -------- | ------ |
-|wbEvent|WbEvent|body|true|WbEvent|WbEvent|
+|event|Event|body|true|Event|Event|
 |&emsp;&emsp;eventId|||false|integer(int64)||
 |&emsp;&emsp;userId|||false|integer(int64)||
 |&emsp;&emsp;taskId|||false|integer(int64)||
@@ -1306,7 +1306,7 @@
 # 工作台-项目
 
 
-> **说明（方案 A）**：项目已并入任务树，原 `/wbProject/*` 接口已废弃。请使用 `nodeType=project` 的 `/wbTask/*` 管理项目根节点（以及 `phase` / `task` 子节点）。存量库请执行增量脚本 `doc/sql/migrate_project_into_task.sql`（全量 dump `personal_workbench.sql` / `personal_workbench(s).sql` 保持不变）。
+> **说明（方案 A）**：项目已并入任务树，原 `/project/*` 接口已废弃。请使用 `nodeType=project` 的 `/task/*` 管理项目根节点（以及 `phase` / `task` 子节点）。存量库请执行增量脚本 `doc/sql/migrate_project_into_task.sql`（全量 dump `remo_assistant.sql` / `remo_assistant(s).sql` 保持不变）。
 
 
 # 角色管理
