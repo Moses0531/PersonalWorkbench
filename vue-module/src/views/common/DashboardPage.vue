@@ -1,14 +1,14 @@
-﻿<script setup>
+<script setup>
 /**
- * 工作台首页
+ * RemoAssistant 首页
  * 构图对齐登录页：Outfit 品牌 + 衬线问候 + 玻璃面板 + 等距氛围。
  * 内容：问候 / 时间日签卡 / 核心指标；三天内截止 · 今日日程。
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { pageTasksApi } from '@/apis/workbench/TaskApi'
-import { pageEventsApi } from '@/apis/workbench/EventApi'
+import { pageTasksApi } from '@/apis/business/TaskApi'
+import { pageEventsApi } from '@/apis/business/EventApi'
 import { useUserStore } from '@/stores/userStore'
 import BrandMarkView from '@/components/BrandMarkView.vue'
 import {
@@ -17,7 +17,7 @@ import {
   dueBarOption,
   completionTrendSeries,
   trendLineOption,
-} from '@/utils/wbCharts'
+} from '@/utils/charts'
 
 const TASK_LIMIT = 6
 const EVENT_LIMIT = 6
@@ -326,8 +326,8 @@ function goEvents() {
             <div class="hero-brand">
               <span class="hero-brand__mark"><BrandMarkView :size="26" /></span>
               <div class="hero-brand__text">
-                <span class="hero-brand__name">Personal Workbench</span>
-                <span class="hero-brand__tag">今日工作台</span>
+                <span class="hero-brand__name">RemoAssistant</span>
+                <span class="hero-brand__tag">今日备忘</span>
               </div>
             </div>
             <p class="hero-kicker">

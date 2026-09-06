@@ -1,12 +1,12 @@
-# PersonalWorkbench · 个人工作台
+# RemoAssistant · 智能备忘助手
 项目可访问地址：http://121.40.151.202/auth
 ## 1 项目概述
 
 ### 1.1 项目介绍
 
-基于 Spring Boot 3.5 + Vue 3 的个人效率工作台，涵盖任务与子任务、日程安排、会议记录与 DeepSeek AI 助手。
+基于 Spring Boot 3.5 + Vue 3 的智能备忘助手（RemoAssistant），涵盖待办与子任务、日程安排、会议记录、笔记整理与 DeepSeek AI 助手。
 
-数据按用户隔离，不做多人协作。系统管理（RBAC）与工作台功能并存：普通用户聚焦工作台，管理员保留用户 / 角色 / 权限运维能力。
+数据按用户隔离，不做多人协作。系统管理（RBAC）与业务功能并存：普通用户聚焦备忘与日程，管理员保留用户 / 角色 / 权限运维能力。
 
 ### 1.2 技术栈
 
@@ -33,7 +33,7 @@ springboot-module/
 ├── start-module        # 启动入口 RunApplication（端口 8090）
 ├── common-module       # 通用配置、工具类、统一响应信封（ResultConfig）、全局异常处理
 ├── system-module       # 认证、用户、角色、权限（RBAC）
-├── workbench-module    # 任务 / 日程 / 会议
+├── business-module     # 待办 / 日程 / 会议 / 笔记
 └── ai-module           # AI 对话（SSE 流式）、智能规划、会议摘要
 ```
 
@@ -58,9 +58,9 @@ springboot-module/
 | --- | --- |
 | 认证与个人中心 | 登录 / 注册（图形验证码可选）、资料维护、密码修改、头像上传 |
 | 系统管理（RBAC） | 普通用户 / 管理员分表管理；角色 CRUD；权限（菜单+功能码）CRUD；角色-权限绑定；登录后菜单按角色动态下发 |
-| 工作台 · 事务 | 任务 / 子任务统一树：顶层任务可拆阶段与子任务；看板按状态推进叶子任务；附件（OSS）与处理状态；可选 AI 拆解 |
-| 工作台 · 日程 | 日程 CRUD，支持全天事件、起止时间、地点、周重复规则、可选关联任务 |
-| 工作台 · 会议 | 会议 CRUD，记录标题/时间/地点/参会人；上传会议材料（OSS），由 AI 自动整理摘要 |
+| 待办事务 | 任务 / 子任务统一树：顶层任务可拆阶段与子任务；看板按状态推进叶子任务；附件（OSS）与处理状态；可选 AI 拆解 |
+| 日程 | 日程 CRUD，支持全天事件、起止时间、地点、周重复规则、可选关联任务 |
+| 会议 | 会议 CRUD，记录标题/时间/地点/参会人；上传会议材料（OSS），由 AI 自动整理摘要 |
 | AI 对话 | DeepSeek 流式对话（SSE），多会话管理（创建/切换/删除），Redis 持久化记忆 |
 | AI 智能规划 | 输入目标 → LLM 拆解步骤预览 → 确认后批量落为任务 |
 | AI 会议整理 | 上传会议材料后，AI 自动生成结构化摘要并写回会议记录 |
@@ -80,11 +80,22 @@ springboot-module/
 创建数据库：
 
 ```sql
-CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE remo_assistant DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 ```
 
-在库中按执行SQL文件：
-一个为数据+结构，一个为仅结构
+在库中按顺序导入 SQL（结构 + 数据）：
+
+```text
+doc/sql/remo_assistant.sql
+```
+
+仅结构可参考 `doc/sql/remo_assistant(s).sql`（已含 `note`）。旧库若还没有笔记模块，再执行 `doc/sql/migrate_note.sql`。
+
+**已有库升级（撤销 wb_ 表前缀）：** 备份后执行：
+
+```text
+doc/sql/migrate_drop_wb_prefix.sql
+```
 
 **已有库升级（任务树统一）：** 在备份后执行增量脚本即可，不要改全量 dump：
 
@@ -102,7 +113,7 @@ doc/sql/migrate_project_into_task.sql
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://localhost:3306/remo_assistant?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
     password: 你的密码
   data:
@@ -161,9 +172,9 @@ pnpm build
 
 ### 3.6 首次使用
 
-- 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验工作台。
-- 种子账号见 `PersonalWorkbench-SQL.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
-- 登录后菜单由后端权限动态下发：普通用户可见首页、工作台（日程 / 事务）、个人中心、AI；系统管理菜单仅管理员可见。  
+- 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验 RemoAssistant。
+- 种子账号见 `doc/sql/remo_assistant.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
+- 登录后菜单由后端权限动态下发：普通用户可见首页、日程 / 事务、个人中心、AI；系统管理菜单仅管理员可见。  
   事务页为统一任务树：顶层任务 → 阶段（父任务）→ 子任务；看板只推进叶子任务。
 
 ## 4 生产部署（阿里云 ECS + Docker + GitHub Actions）
@@ -174,11 +185,11 @@ pnpm build
 
 1. ECS 已安装 Docker Engine 与 Compose 插件，并绑定公网 IP。
 2. 安全组入方向：放行 **TCP 80**（站点）、**TCP 22**（SSH）；不要对公网开放 3306 / 6379 / 8090。
-3. 克隆仓库到服务器（示例路径 `/opt/PersonalWorkbench`）：
+3. 克隆仓库到服务器（示例路径 `/opt/RemoAssistant`）：
 
 ```bash
-sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/PersonalWorkbench.git /opt/PersonalWorkbench
-cd /opt/PersonalWorkbench/deploy
+sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/RemoAssistant.git /opt/RemoAssistant
+cd /opt/RemoAssistant/deploy
 cp .env.example .env
 # 编辑 .env：必须设置 MYSQL_ROOT_PASSWORD、DEEPSEEK_KEY；OSS_* 按需
 nano .env
@@ -197,7 +208,7 @@ docker compose --env-file .env up -d --build
 | `SSH_USER` | SSH 用户名（如 `root`） |
 | `SSH_PRIVATE_KEY` | 对应私钥全文 |
 | `SSH_PORT` | 可选，默认 `22` |
-| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
+| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/RemoAssistant` |
 | `DEEPSEEK_KEY` | **必填**：写入服务器 `.env` 并注入后端容器 |
 | `MYSQL_ROOT_PASSWORD` | 建议填写，与服务器 `.env` 中数据库密码一致 |
 | `OSS_ACCESS_KEY_ID` | **头像/附件上传必填**：写入服务器 `.env` 并注入后端容器 |
@@ -214,7 +225,7 @@ git push origin master
 ## 5 项目结构
 
 ```
-PersonalWorkbench/
+RemoAssistant/
 ├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis / kkFileView）
 ├── .github/workflows/      # CI + 自动部署
 ├── doc/                    # SQL 脚本
@@ -222,7 +233,7 @@ PersonalWorkbench/
 │   ├── start-module/       # 启动入口 + application.yml
 │   ├── common-module/      # 通用配置与工具
 │   ├── system-module/      # RBAC 认证授权
-│   ├── workbench-module/   # 工作台业务
+│   ├── business-module/    # 业务（待办/日程/会议/笔记）
 │   └── ai-module/          # AI 能力
 └── vue-module/             # 前端 Vue 3 项目
     ├── src/

@@ -11,13 +11,13 @@
           <BrandMarkView :size="32" />
         </span>
         <div class="stage-brand__text">
-          <p class="stage-brand__en">Personal Workbench</p>
-          <p class="stage-brand__zh">个人工作台</p>
+          <p class="stage-brand__en">RemoAssistant</p>
+          <p class="stage-brand__zh">智能备忘助手</p>
         </div>
       </header>
       <div class="stage-intro">
-        <h1 class="stage-title">今天要推进的工作，都在这里</h1>
-        <p class="stage-lead">待办、笔记、日程与会议，收进同一张桌面。</p>
+        <h1 class="stage-title">记住、整理、推进，都在这里</h1>
+        <p class="stage-lead">待办、笔记、日程与 AI，收进同一份备忘助手。</p>
         <ul class="stage-features" aria-label="核心功能">
           <li v-for="item in coreFeatures" :key="item.title" class="stage-feature">
             <span class="stage-feature__dot" aria-hidden="true" />
@@ -35,7 +35,7 @@
         <Transition name="auth-slide-up" mode="out-in">
           <div :key="activeTab" class="auth-panel">
             <header class="auth-head">
-              <h2 class="auth-title">{{ isLogin ? '欢迎回来' : '创建工作台' }}</h2>
+              <h2 class="auth-title">{{ isLogin ? '欢迎回来' : '创建账号' }}</h2>
               <p class="auth-sub">
                 {{ isLogin ? '用账号继续今天的安排' : '三步注册，马上开工' }}
               </p>
@@ -173,7 +173,7 @@
                   @click="handleLogin"
                 >
                   <span v-if="!loginLoading" class="btn-content">
-                    <span>进入工作台</span>
+                    <span>进入 RemoAssistant</span>
                     <ArrowRightOutlined class="btn-arrow" />
                   </span>
                   <span v-else>正在登录...</span>
