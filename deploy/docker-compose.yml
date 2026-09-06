@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: personal_workbench
+      MYSQL_DATABASE: remo_assistant
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
@@ -13,7 +13,7 @@ services:
       - --default-authentication-plugin=mysql_native_password
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../doc/sql/personal_workbench.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../doc/sql/remo_assistant.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
@@ -49,7 +49,7 @@ services:
       - .env
     environment:
       # 与 application.yml 默认 JDBC 参数保持一致，仅 host=mysql（开发环境为 localhost）
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/remo_assistant?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: root
       # Require non-empty so an empty shell export cannot silently wipe JDBC auth
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in deploy/.env}

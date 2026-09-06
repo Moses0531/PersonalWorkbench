@@ -5,7 +5,7 @@
  Source Server Type    : MySQL
  Source Server Version : 80043 (8.0.43)
  Source Host           : localhost:3306
- Source Schema         : personal_workbench
+ Source Schema         : remo_assistant
 
  Target Server Type    : MySQL
  Target Server Version : 80043 (8.0.43)
@@ -102,13 +102,13 @@ CREATE TABLE `sys_user`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for wb_event
+-- Table structure for event
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_event`;
-CREATE TABLE `wb_event`  (
+DROP TABLE IF EXISTS `event`;
+CREATE TABLE `event`  (
   `event_id` bigint NOT NULL AUTO_INCREMENT COMMENT '日程ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
-  `task_id` bigint NULL DEFAULT NULL COMMENT '关联任务ID（可选；逻辑关联 wb_task.task_id）',
+  `task_id` bigint NULL DEFAULT NULL COMMENT '关联任务ID（可选；逻辑关联 task.task_id）',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
   `location` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '地点',
   `start_time` datetime NOT NULL COMMENT '开始时间（重复日程表示当日时段起点）',
@@ -121,16 +121,16 @@ CREATE TABLE `wb_event`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`event_id`) USING BTREE,
-  INDEX `idx_wb_event_user_range`(`user_id` ASC, `start_time` ASC, `end_time` ASC) USING BTREE,
-  INDEX `idx_wb_event_user_repeat`(`user_id` ASC, `repeat_type` ASC) USING BTREE,
-  INDEX `idx_wb_event_task`(`task_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-日程表' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_event_user_range`(`user_id` ASC, `start_time` ASC, `end_time` ASC) USING BTREE,
+  INDEX `idx_event_user_repeat`(`user_id` ASC, `repeat_type` ASC) USING BTREE,
+  INDEX `idx_event_task`(`task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-日程表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for wb_meeting
+-- Table structure for meeting
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_meeting`;
-CREATE TABLE `wb_meeting`  (
+DROP TABLE IF EXISTS `meeting`;
+CREATE TABLE `meeting`  (
   `meeting_id` bigint NOT NULL AUTO_INCREMENT COMMENT '会议ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '会议标题',
@@ -144,14 +144,35 @@ CREATE TABLE `wb_meeting`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`meeting_id`) USING BTREE,
-  INDEX `idx_wb_meeting_user_time`(`user_id` ASC, `meeting_time` DESC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-会议记录表' ROW_FORMAT = Dynamic;
+  INDEX `idx_meeting_user_time`(`user_id` ASC, `meeting_time` DESC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-会议记录表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Table structure for wb_project
+-- Table structure for note
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_project`;
-CREATE TABLE `wb_project`  (
+DROP TABLE IF EXISTS `note`;
+CREATE TABLE `note`  (
+  `note_id` bigint NOT NULL AUTO_INCREMENT COMMENT '笔记ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '标题（碎片可空）',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '正文（纯文本/Markdown）',
+  `note_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'scrap' COMMENT '类型：scrap-碎片 / digest-整理稿',
+  `status` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '0-活跃，1-已归档',
+  `source_note_ids` json NULL COMMENT '整理稿来源碎片 ID 列表',
+  `linked_task_id` bigint NULL DEFAULT NULL COMMENT '生成待办后挂接的顶层清单 ID',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`note_id`) USING BTREE,
+  INDEX `idx_note_user_update`(`user_id` ASC, `update_time` DESC) USING BTREE,
+  INDEX `idx_note_user_type_status`(`user_id` ASC, `note_type` ASC, `status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-笔记' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for project
+-- ----------------------------
+DROP TABLE IF EXISTS `project`;
+CREATE TABLE `project`  (
   `project_id` bigint NOT NULL AUTO_INCREMENT COMMENT '项目ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '项目名称',
@@ -162,19 +183,19 @@ CREATE TABLE `wb_project`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`project_id`) USING BTREE,
-  INDEX `idx_wb_project_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_wb_project_user_order`(`user_id` ASC, `display_order` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-项目表' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_project_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_project_user_order`(`user_id` ASC, `display_order` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-项目表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for wb_task
+-- Table structure for task
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_task`;
-CREATE TABLE `wb_task`  (
+DROP TABLE IF EXISTS `task`;
+CREATE TABLE `task`  (
   `task_id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
-  `project_id` bigint NULL DEFAULT NULL COMMENT '所属项目ID（空=独立任务；逻辑关联 wb_project.project_id）',
-  `parent_task_id` bigint NULL DEFAULT NULL COMMENT '父任务ID（逻辑关联 wb_task.task_id，可选子步骤）',
+  `project_id` bigint NULL DEFAULT NULL COMMENT '所属项目ID（空=独立任务；逻辑关联 project.project_id）',
+  `parent_task_id` bigint NULL DEFAULT NULL COMMENT '父任务ID（逻辑关联 task.task_id，可选子步骤）',
   `plan_batch_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'AI规划批次号（同批落板/撤销）',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
   `description` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '描述',
@@ -188,11 +209,11 @@ CREATE TABLE `wb_task`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`task_id`) USING BTREE,
-  INDEX `idx_wb_task_user_due`(`user_id` ASC, `due_time` ASC) USING BTREE,
-  INDEX `idx_wb_task_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_wb_task_project_status_order`(`project_id` ASC, `status` ASC, `display_order` ASC) USING BTREE,
-  INDEX `idx_wb_task_plan_batch`(`user_id` ASC, `plan_batch_id` ASC) USING BTREE,
-  INDEX `idx_wb_task_parent`(`parent_task_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-任务表（独立任务或项目子任务）' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_task_user_due`(`user_id` ASC, `due_time` ASC) USING BTREE,
+  INDEX `idx_task_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_task_project_status_order`(`project_id` ASC, `status` ASC, `display_order` ASC) USING BTREE,
+  INDEX `idx_task_plan_batch`(`user_id` ASC, `plan_batch_id` ASC) USING BTREE,
+  INDEX `idx_task_parent`(`parent_task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-任务表（独立任务或项目子任务）' ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;

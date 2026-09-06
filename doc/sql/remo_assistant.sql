@@ -5,7 +5,7 @@
  Source Server Type    : MySQL
  Source Server Version : 80043 (8.0.43)
  Source Host           : localhost:3306
- Source Schema         : personal_workbench
+ Source Schema         : remo_assistant
 
  Target Server Type    : MySQL
  Target Server Version : 80043 (8.0.43)
@@ -152,6 +152,27 @@ INSERT INTO `role_permission` VALUES (166, 2, 332);
 INSERT INTO `role_permission` VALUES (167, 2, 333);
 INSERT INTO `role_permission` VALUES (168, 2, 334);
 INSERT INTO `role_permission` VALUES (169, 2, 335);
+INSERT INTO `role_permission` VALUES (170, 0, 340);
+INSERT INTO `role_permission` VALUES (171, 0, 341);
+INSERT INTO `role_permission` VALUES (172, 0, 342);
+INSERT INTO `role_permission` VALUES (173, 0, 343);
+INSERT INTO `role_permission` VALUES (174, 0, 344);
+INSERT INTO `role_permission` VALUES (175, 0, 345);
+INSERT INTO `role_permission` VALUES (176, 0, 346);
+INSERT INTO `role_permission` VALUES (177, 1, 340);
+INSERT INTO `role_permission` VALUES (178, 1, 341);
+INSERT INTO `role_permission` VALUES (179, 1, 342);
+INSERT INTO `role_permission` VALUES (180, 1, 343);
+INSERT INTO `role_permission` VALUES (181, 1, 344);
+INSERT INTO `role_permission` VALUES (182, 1, 345);
+INSERT INTO `role_permission` VALUES (183, 1, 346);
+INSERT INTO `role_permission` VALUES (184, 2, 340);
+INSERT INTO `role_permission` VALUES (185, 2, 341);
+INSERT INTO `role_permission` VALUES (186, 2, 342);
+INSERT INTO `role_permission` VALUES (187, 2, 343);
+INSERT INTO `role_permission` VALUES (188, 2, 344);
+INSERT INTO `role_permission` VALUES (189, 2, 345);
+INSERT INTO `role_permission` VALUES (190, 2, 346);
 INSERT INTO `role_permission` VALUES (49, 5, 256);
 
 -- ----------------------------
@@ -229,6 +250,13 @@ INSERT INTO `sys_permission` VALUES (332, '删除会议', 330, 'F', '0', 'meetin
 INSERT INTO `sys_permission` VALUES (333, '编辑会议', 330, 'F', '0', 'meeting:modify', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
 INSERT INTO `sys_permission` VALUES (334, '查看会议', 330, 'F', '0', 'meeting:query', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
 INSERT INTO `sys_permission` VALUES (335, 'AI会议整理', 330, 'F', '0', 'ai:meeting:summary', '', '根据会议材料生成概要', NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
+INSERT INTO `sys_permission` VALUES (340, '笔记', 0, 'M', '0', 'note', '', '零散想法，整理后可落成待办', 'NotePage', 3, '/note', 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (341, '新增笔记', 340, 'F', '0', 'note:add', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (342, '删除笔记', 340, 'F', '0', 'note:remove', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (343, '编辑笔记', 340, 'F', '0', 'note:modify', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (344, '查看笔记', 340, 'F', '0', 'note:query', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (345, 'AI笔记整合', 340, 'F', '0', 'ai:note:consolidate', '', '多条碎片整合为整理稿', NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
+INSERT INTO `sys_permission` VALUES (346, 'AI 笔记生成待办', 340, 'F', '0', 'ai:note:to-tasks', '', '整理稿拆解为待办树并落板', NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -289,13 +317,13 @@ INSERT INTO `sys_user` VALUES (3, 'admin', '$2b$12$kvyLSAyBVTlCz4GNP3XBI.19PoQXF
 INSERT INTO `sys_user` VALUES (4, 'root', '$2a$10$TOqMXc7qBBtvQA5OJ5VADOMvYwcK8xSWvmiWpedidXNyz.lp807TS', '0', 0, 'ROOT', NULL, 'root@root.com', '超级管理员', '0', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/69b5e539-179c-4a7c-b51d-469e49769d65.png', '2025-10-14 00:00:00', '2026-07-18 22:21:53', '2026-07-12 23:59:09', '2026-07-18 22:21:53');
 
 -- ----------------------------
--- Table structure for wb_event
+-- Table structure for event
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_event`;
-CREATE TABLE `wb_event`  (
+DROP TABLE IF EXISTS `event`;
+CREATE TABLE `event`  (
   `event_id` bigint NOT NULL AUTO_INCREMENT COMMENT '日程ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
-  `task_id` bigint NULL DEFAULT NULL COMMENT '关联任务ID（可选；逻辑关联 wb_task.task_id）',
+  `task_id` bigint NULL DEFAULT NULL COMMENT '关联任务ID（可选；逻辑关联 task.task_id）',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
   `location` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '地点',
   `start_time` datetime NOT NULL COMMENT '开始时间（重复日程表示当日时段起点）',
@@ -308,22 +336,22 @@ CREATE TABLE `wb_event`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`event_id`) USING BTREE,
-  INDEX `idx_wb_event_user_range`(`user_id` ASC, `start_time` ASC, `end_time` ASC) USING BTREE,
-  INDEX `idx_wb_event_user_repeat`(`user_id` ASC, `repeat_type` ASC) USING BTREE,
-  INDEX `idx_wb_event_task`(`task_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-日程表' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_event_user_range`(`user_id` ASC, `start_time` ASC, `end_time` ASC) USING BTREE,
+  INDEX `idx_event_user_repeat`(`user_id` ASC, `repeat_type` ASC) USING BTREE,
+  INDEX `idx_event_task`(`task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-日程表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of wb_event
+-- Records of event
 -- ----------------------------
-INSERT INTO `wb_event` VALUES (1, 4, NULL, '周工作例会', '', '2026-07-06 09:00:00', '2026-07-06 10:00:00', 0, '1', '1', 0, '', '2026-07-16 23:54:30', '2026-07-16 23:54:30');
-INSERT INTO `wb_event` VALUES (2, 2, NULL, '组会', '', '2026-07-17 09:00:00', '2026-07-17 10:00:00', 0, '1', '', 0, '', '2026-07-17 22:48:37', '2026-07-17 22:48:37');
+INSERT INTO `event` VALUES (1, 4, NULL, '周工作例会', '', '2026-07-06 09:00:00', '2026-07-06 10:00:00', 0, '1', '1', 0, '', '2026-07-16 23:54:30', '2026-07-16 23:54:30');
+INSERT INTO `event` VALUES (2, 2, NULL, '组会', '', '2026-07-17 09:00:00', '2026-07-17 10:00:00', 0, '1', '', 0, '', '2026-07-17 22:48:37', '2026-07-17 22:48:37');
 
 -- ----------------------------
--- Table structure for wb_meeting
+-- Table structure for meeting
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_meeting`;
-CREATE TABLE `wb_meeting`  (
+DROP TABLE IF EXISTS `meeting`;
+CREATE TABLE `meeting`  (
   `meeting_id` bigint NOT NULL AUTO_INCREMENT COMMENT '会议ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '会议标题',
@@ -337,19 +365,44 @@ CREATE TABLE `wb_meeting`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`meeting_id`) USING BTREE,
-  INDEX `idx_wb_meeting_user_time`(`user_id` ASC, `meeting_time` DESC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-会议记录表' ROW_FORMAT = Dynamic;
+  INDEX `idx_meeting_user_time`(`user_id` ASC, `meeting_time` DESC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-会议记录表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Records of wb_meeting
+-- Records of meeting
 -- ----------------------------
-INSERT INTO `wb_meeting` VALUES (2, 4, '教务系统功能方案设计', '2026-07-18 22:35:33', '会议室', '张三 李四', '[{\"id\": \"9d278d7b5251485582441f948c9ebc0c\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/4c7d376b-8771-4ebf-9f49-5652c6cbf5fb.md\", \"mime\": \"text/markdown\", \"name\": \"li.md\", \"size\": 1340, \"createTime\": \"2026-07-18 22:36:12\"}, {\"id\": \"66fb8cb5ac964fc89e4a0199f14683f8\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/abb9e048-8b7d-4fbf-b642-3bf55ca39ff6.md\", \"mime\": \"text/markdown\", \"name\": \"z.md\", \"size\": 2077, \"createTime\": \"2026-07-18 22:36:26\"}, {\"id\": \"0e7b29be316042379a075edcddfa6faf\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/0e938e78-c994-4878-84f1-bbdd9aa94106.md\", \"kind\": \"ai-summary\", \"mime\": \"text/markdown\", \"name\": \"教务系统功能方案设计-会议纪要.md\", \"size\": 2409, \"createTime\": \"2026-07-18 22:36:39\"}]', '### 会议概要\n\n#### 会议背景\n本次会议围绕教务系统的功能方案设计展开，由张三、李四两位参会人共同讨论。会上提供了两份设计方案：一份为基础版教务管理系统（设计一），另一份为增强型智能教务服务平台（设计二），旨在对比两者模块、流程与技术架构的差异，并确定后续开发方向。\n\n#### 讨论要点\n- **模块划分对比**：\n  - 设计一（简易版）包含用户管理、学生管理、课程管理、成绩管理、系统设置五大核心模块。\n  - 设计二（增强版）在继承设计一基础模块（优化批量导入导出）上，新增在线选课系统（含冲突检测）、通知与消息推送、数据分析报表、移动端支持（小程序/APP）等功能。\n- **核心流程扩展**：\n  - 设计一流程包括学生选课（管理员发布→学生选课→生成课表）、成绩录入（教师录入→系统计算总分→学生查看）、数据维护。\n  - 设计二新增智能推荐（基于历史选课数据）、教师评价（学生匿名评分）、数据大屏（实时展示关键指标）等流程。\n- **技术架构差异**：\n  - 设计一采用Web界面，侧重权限控制与数据加密。\n  - 设计二升级为响应式设计（适配PC+移动端），数据库使用MySQL + Redis（缓存热点数据），并集成简单推荐算法（基于协同过滤）。\n- **数据流动方向**：设计二强调“教师录入成绩 → 系统计算总分 → 学生查看成绩”，与设计一类似但更注重新增流程中的数据实时反馈。\n\n#### 结论与决策\n- 会议认可设计二（智能教务服务平台）作为后续开发基础，因其在功能丰富性、移动支持与智能化方面优于设计一。\n- 设计一的模块（如基础用户、课程、成绩管理）可作为系统的底层核心直接被继承，设计二在此基础上进行增强。\n- 需明确技术架构升级细节，例如Redis缓存的具体应用场景、推荐算法的冷启动问题等，但未在本次会议中深入讨论。\n\n#### 后续事项\n- 张三负责整理设计二中的模块优先级，提交开发排期建议。\n- 李四负责评估移动端支持的实现方案（小程序或APP），并列出技术选型对比。\n- 双方约定下次会议前完成对新流程（智能推荐、教师评价）的用户故事定义。', '1', '', '2026-07-18 22:35:52', '2026-07-18 22:36:39');
+INSERT INTO `meeting` VALUES (2, 4, '教务系统功能方案设计', '2026-07-18 22:35:33', '会议室', '张三 李四', '[{\"id\": \"9d278d7b5251485582441f948c9ebc0c\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/4c7d376b-8771-4ebf-9f49-5652c6cbf5fb.md\", \"mime\": \"text/markdown\", \"name\": \"li.md\", \"size\": 1340, \"createTime\": \"2026-07-18 22:36:12\"}, {\"id\": \"66fb8cb5ac964fc89e4a0199f14683f8\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/abb9e048-8b7d-4fbf-b642-3bf55ca39ff6.md\", \"mime\": \"text/markdown\", \"name\": \"z.md\", \"size\": 2077, \"createTime\": \"2026-07-18 22:36:26\"}, {\"id\": \"0e7b29be316042379a075edcddfa6faf\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/0e938e78-c994-4878-84f1-bbdd9aa94106.md\", \"kind\": \"ai-summary\", \"mime\": \"text/markdown\", \"name\": \"教务系统功能方案设计-会议纪要.md\", \"size\": 2409, \"createTime\": \"2026-07-18 22:36:39\"}]', '### 会议概要\n\n#### 会议背景\n本次会议围绕教务系统的功能方案设计展开，由张三、李四两位参会人共同讨论。会上提供了两份设计方案：一份为基础版教务管理系统（设计一），另一份为增强型智能教务服务平台（设计二），旨在对比两者模块、流程与技术架构的差异，并确定后续开发方向。\n\n#### 讨论要点\n- **模块划分对比**：\n  - 设计一（简易版）包含用户管理、学生管理、课程管理、成绩管理、系统设置五大核心模块。\n  - 设计二（增强版）在继承设计一基础模块（优化批量导入导出）上，新增在线选课系统（含冲突检测）、通知与消息推送、数据分析报表、移动端支持（小程序/APP）等功能。\n- **核心流程扩展**：\n  - 设计一流程包括学生选课（管理员发布→学生选课→生成课表）、成绩录入（教师录入→系统计算总分→学生查看）、数据维护。\n  - 设计二新增智能推荐（基于历史选课数据）、教师评价（学生匿名评分）、数据大屏（实时展示关键指标）等流程。\n- **技术架构差异**：\n  - 设计一采用Web界面，侧重权限控制与数据加密。\n  - 设计二升级为响应式设计（适配PC+移动端），数据库使用MySQL + Redis（缓存热点数据），并集成简单推荐算法（基于协同过滤）。\n- **数据流动方向**：设计二强调“教师录入成绩 → 系统计算总分 → 学生查看成绩”，与设计一类似但更注重新增流程中的数据实时反馈。\n\n#### 结论与决策\n- 会议认可设计二（智能教务服务平台）作为后续开发基础，因其在功能丰富性、移动支持与智能化方面优于设计一。\n- 设计一的模块（如基础用户、课程、成绩管理）可作为系统的底层核心直接被继承，设计二在此基础上进行增强。\n- 需明确技术架构升级细节，例如Redis缓存的具体应用场景、推荐算法的冷启动问题等，但未在本次会议中深入讨论。\n\n#### 后续事项\n- 张三负责整理设计二中的模块优先级，提交开发排期建议。\n- 李四负责评估移动端支持的实现方案（小程序或APP），并列出技术选型对比。\n- 双方约定下次会议前完成对新流程（智能推荐、教师评价）的用户故事定义。', '1', '', '2026-07-18 22:35:52', '2026-07-18 22:36:39');
 
 -- ----------------------------
--- Table structure for wb_project
+-- Table structure for note
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_project`;
-CREATE TABLE `wb_project`  (
+DROP TABLE IF EXISTS `note`;
+CREATE TABLE `note`  (
+  `note_id` bigint NOT NULL AUTO_INCREMENT COMMENT '笔记ID',
+  `user_id` bigint NOT NULL COMMENT '所属用户ID',
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '标题（碎片可空）',
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '正文（纯文本/Markdown）',
+  `note_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'scrap' COMMENT '类型：scrap-碎片 / digest-整理稿',
+  `status` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '0-活跃，1-已归档',
+  `source_note_ids` json NULL COMMENT '整理稿来源碎片 ID 列表',
+  `linked_task_id` bigint NULL DEFAULT NULL COMMENT '生成待办后挂接的顶层清单 ID',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`note_id`) USING BTREE,
+  INDEX `idx_note_user_update`(`user_id` ASC, `update_time` DESC) USING BTREE,
+  INDEX `idx_note_user_type_status`(`user_id` ASC, `note_type` ASC, `status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-笔记' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of note
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for project
+-- ----------------------------
+DROP TABLE IF EXISTS `project`;
+CREATE TABLE `project`  (
   `project_id` bigint NOT NULL AUTO_INCREMENT COMMENT '项目ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '项目名称',
@@ -360,24 +413,24 @@ CREATE TABLE `wb_project`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`project_id`) USING BTREE,
-  INDEX `idx_wb_project_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_wb_project_user_order`(`user_id` ASC, `display_order` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-项目表' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_project_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_project_user_order`(`user_id` ASC, `display_order` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-项目表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of wb_project
+-- Records of project
 -- ----------------------------
-INSERT INTO `wb_project` VALUES (1, 2, '开发福建大学教务系统', '给福建大学开发一个完整的教务系统', '0', 0, '', '2026-07-17 00:31:39', '2026-07-17 00:51:33');
+INSERT INTO `project` VALUES (1, 2, '开发福建大学教务系统', '给福建大学开发一个完整的教务系统', '0', 0, '', '2026-07-17 00:31:39', '2026-07-17 00:51:33');
 
 -- ----------------------------
--- Table structure for wb_task
+-- Table structure for task
 -- ----------------------------
-DROP TABLE IF EXISTS `wb_task`;
-CREATE TABLE `wb_task`  (
+DROP TABLE IF EXISTS `task`;
+CREATE TABLE `task`  (
   `task_id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务ID',
   `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
-  `project_id` bigint NULL DEFAULT NULL COMMENT '所属项目ID（空=独立任务；逻辑关联 wb_project.project_id）',
-  `parent_task_id` bigint NULL DEFAULT NULL COMMENT '父任务ID（逻辑关联 wb_task.task_id，可选子步骤）',
+  `project_id` bigint NULL DEFAULT NULL COMMENT '所属项目ID（空=独立任务；逻辑关联 project.project_id）',
+  `parent_task_id` bigint NULL DEFAULT NULL COMMENT '父任务ID（逻辑关联 task.task_id，可选子步骤）',
   `plan_batch_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'AI规划批次号（同批落板/撤销）',
   `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
   `description` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '描述',
@@ -391,23 +444,23 @@ CREATE TABLE `wb_task`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`task_id`) USING BTREE,
-  INDEX `idx_wb_task_user_due`(`user_id` ASC, `due_time` ASC) USING BTREE,
-  INDEX `idx_wb_task_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_wb_task_project_status_order`(`project_id` ASC, `status` ASC, `display_order` ASC) USING BTREE,
-  INDEX `idx_wb_task_plan_batch`(`user_id` ASC, `plan_batch_id` ASC) USING BTREE,
-  INDEX `idx_wb_task_parent`(`parent_task_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '工作台-任务表（独立任务或项目子任务）' ROW_FORMAT = DYNAMIC;
+  INDEX `idx_task_user_due`(`user_id` ASC, `due_time` ASC) USING BTREE,
+  INDEX `idx_task_user_status`(`user_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_task_project_status_order`(`project_id` ASC, `status` ASC, `display_order` ASC) USING BTREE,
+  INDEX `idx_task_plan_batch`(`user_id` ASC, `plan_batch_id` ASC) USING BTREE,
+  INDEX `idx_task_parent`(`parent_task_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-任务表（独立任务或项目子任务）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of wb_task
+-- Records of task
 -- ----------------------------
-INSERT INTO `wb_task` VALUES (1, 2, 1, NULL, NULL, '与甲方沟通明确项目所需功能', '', '2', 0, '2026-07-20 10:00:37', '', 0, '', NULL, '2026-07-17 00:38:53', '2026-07-17 00:48:36');
-INSERT INTO `wb_task` VALUES (2, 2, NULL, NULL, NULL, '完成周工作总结', '', '0', 0, '2026-07-19 08:00:32', '', 0, '', '[{\"id\": \"5ed2518b654c440e9294eade894eaa07\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/29c4d38c-adb7-429f-81ba-2b95fff4e723.sql\", \"mime\": \"application/octet-stream\", \"name\": \"datdabase.sql\", \"size\": 5584, \"createTime\": \"2026-07-17 23:34:12\"}, {\"id\": \"c0108f6e2c5a43c7b22f4a241ebb1f35\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/715171ff-4cf7-4eb0-bdeb-3a32b8cdc91e.sql\", \"mime\": \"application/octet-stream\", \"name\": \"_localhost-2026_05_18_23_17_31-dump.sql\", \"size\": 10338, \"createTime\": \"2026-07-18 00:26:16\"}]', '2026-07-17 00:52:46', '2026-07-18 00:26:17');
-INSERT INTO `wb_task` VALUES (28, 2, 1, NULL, '2ea4899466bb454394cdb8f0b2e32297', '核心功能开发', '完成教务系统必备的登录与成绩查询模块，确保主干流程可用。', '0', 0, '2026-07-25 00:00:00', '', 0, 'AI规划·阶段', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
-INSERT INTO `wb_task` VALUES (29, 2, 1, 28, '2ea4899466bb454394cdb8f0b2e32297', '登录模块开发', '实现学生/教师身份认证，包括账号密码验证与session管理。', '0', 1, '2026-07-22 00:00:00', '', 0, 'AI规划·步骤', '[{\"id\": \"568dfb2fea254ef0bc5131d2c46b2fed\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/524e6f85-7096-4125-9b4f-a2b454c6b478.sql\", \"mime\": \"application/octet-stream\", \"name\": \"_localhost-2026_05_18_23_17_31-dump.sql\", \"size\": 10338, \"status\": \"2\", \"createTime\": \"2026-07-18 20:48:00\"}]', '2026-07-18 01:03:49', '2026-07-18 20:48:11');
-INSERT INTO `wb_task` VALUES (30, 2, 1, 28, '2ea4899466bb454394cdb8f0b2e32297', '成绩查询模块开发', '实现按学期/课程查询成绩，并显示成绩列表数据。', '0', 1, '2026-07-25 00:00:00', '', 1, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
-INSERT INTO `wb_task` VALUES (31, 2, 1, NULL, '2ea4899466bb454394cdb8f0b2e32297', '极简集成与部署', '合并代码、快速联调并上线到测试环境，确保可演示。', '0', 0, '2026-08-01 00:00:00', '', 1, 'AI规划·阶段', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
-INSERT INTO `wb_task` VALUES (32, 2, 1, 31, '2ea4899466bb454394cdb8f0b2e32297', '前后端联调与修复', '将前后端对接，修复核心流程的阻塞问题。', '0', 1, '2026-07-29 00:00:00', '', 0, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
-INSERT INTO `wb_task` VALUES (33, 2, 1, 31, '2ea4899466bb454394cdb8f0b2e32297', '部署与验收', '部署到服务器，完成冒烟测试并交付演示。', '0', 1, '2026-08-01 00:00:00', '', 1, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
+INSERT INTO `task` VALUES (1, 2, 1, NULL, NULL, '与甲方沟通明确项目所需功能', '', '2', 0, '2026-07-20 10:00:37', '', 0, '', NULL, '2026-07-17 00:38:53', '2026-07-17 00:48:36');
+INSERT INTO `task` VALUES (2, 2, NULL, NULL, NULL, '完成周工作总结', '', '0', 0, '2026-07-19 08:00:32', '', 0, '', '[{\"id\": \"5ed2518b654c440e9294eade894eaa07\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/29c4d38c-adb7-429f-81ba-2b95fff4e723.sql\", \"mime\": \"application/octet-stream\", \"name\": \"datdabase.sql\", \"size\": 5584, \"createTime\": \"2026-07-17 23:34:12\"}, {\"id\": \"c0108f6e2c5a43c7b22f4a241ebb1f35\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/715171ff-4cf7-4eb0-bdeb-3a32b8cdc91e.sql\", \"mime\": \"application/octet-stream\", \"name\": \"_localhost-2026_05_18_23_17_31-dump.sql\", \"size\": 10338, \"createTime\": \"2026-07-18 00:26:16\"}]', '2026-07-17 00:52:46', '2026-07-18 00:26:17');
+INSERT INTO `task` VALUES (28, 2, 1, NULL, '2ea4899466bb454394cdb8f0b2e32297', '核心功能开发', '完成教务系统必备的登录与成绩查询模块，确保主干流程可用。', '0', 0, '2026-07-25 00:00:00', '', 0, 'AI规划·阶段', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
+INSERT INTO `task` VALUES (29, 2, 1, 28, '2ea4899466bb454394cdb8f0b2e32297', '登录模块开发', '实现学生/教师身份认证，包括账号密码验证与session管理。', '0', 1, '2026-07-22 00:00:00', '', 0, 'AI规划·步骤', '[{\"id\": \"568dfb2fea254ef0bc5131d2c46b2fed\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/524e6f85-7096-4125-9b4f-a2b454c6b478.sql\", \"mime\": \"application/octet-stream\", \"name\": \"_localhost-2026_05_18_23_17_31-dump.sql\", \"size\": 10338, \"status\": \"2\", \"createTime\": \"2026-07-18 20:48:00\"}]', '2026-07-18 01:03:49', '2026-07-18 20:48:11');
+INSERT INTO `task` VALUES (30, 2, 1, 28, '2ea4899466bb454394cdb8f0b2e32297', '成绩查询模块开发', '实现按学期/课程查询成绩，并显示成绩列表数据。', '0', 1, '2026-07-25 00:00:00', '', 1, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
+INSERT INTO `task` VALUES (31, 2, 1, NULL, '2ea4899466bb454394cdb8f0b2e32297', '极简集成与部署', '合并代码、快速联调并上线到测试环境，确保可演示。', '0', 0, '2026-08-01 00:00:00', '', 1, 'AI规划·阶段', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
+INSERT INTO `task` VALUES (32, 2, 1, 31, '2ea4899466bb454394cdb8f0b2e32297', '前后端联调与修复', '将前后端对接，修复核心流程的阻塞问题。', '0', 1, '2026-07-29 00:00:00', '', 0, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
+INSERT INTO `task` VALUES (33, 2, 1, 31, '2ea4899466bb454394cdb8f0b2e32297', '部署与验收', '部署到服务器，完成冒烟测试并交付演示。', '0', 1, '2026-08-01 00:00:00', '', 1, 'AI规划·步骤', NULL, '2026-07-18 01:03:49', '2026-07-18 01:03:49');
 
 SET FOREIGN_KEY_CHECKS = 1;
