@@ -5,7 +5,7 @@
       <button
         type="button"
         class="dock-brand"
-        title="RemoAssistant · 打开命令面板"
+        title="PersonalWorkbench · 打开命令面板"
         aria-label="打开命令面板"
         @click="openCmd"
       >

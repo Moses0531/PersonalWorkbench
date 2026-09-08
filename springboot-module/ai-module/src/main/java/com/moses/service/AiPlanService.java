@@ -32,7 +32,7 @@ public class AiPlanService {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String PLAN_SYSTEM_PROMPT = """
-            你是 RemoAssistant 的任务规划助手。根据任务主题、目标与【整组截止时间】拆解阶段与步骤。
+            你是 PersonalWorkbench 的任务规划助手。根据任务主题、目标与【整组截止时间】拆解阶段与步骤。
             只输出一个 JSON 对象，不要 markdown 代码块或其它文字。字段：
             summary(string), phases(array)。
             phases 元素：title, description, dueTime(yyyy-MM-dd，该阶段建议完成日), steps。

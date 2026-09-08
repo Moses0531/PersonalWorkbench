@@ -31,7 +31,7 @@ public class AiMeetingSummaryService {
     private static final Duration FETCH_TIMEOUT = Duration.ofSeconds(12);
 
     private static final String SUMMARY_SYSTEM_PROMPT = """
-            你是 RemoAssistant 的会议纪要助手。根据会议基本信息与上传材料，整理成清晰可读的会议概要。
+            你是 PersonalWorkbench 的会议纪要助手。根据会议基本信息与上传材料，整理成清晰可读的会议概要。
             要求：
             - 使用中文 Markdown
             - 结构建议：会议背景 / 讨论要点 / 结论与决策 / 后续事项（若材料中无则省略对应节）

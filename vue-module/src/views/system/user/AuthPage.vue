@@ -11,8 +11,8 @@
           <BrandMarkView :size="32" />
         </span>
         <div class="stage-brand__text">
-          <p class="stage-brand__en">RemoAssistant</p>
-          <p class="stage-brand__zh">智能备忘助手</p>
+          <p class="stage-brand__en">PersonalWorkbench</p>
+          <p class="stage-brand__zh">个人工作台</p>
         </div>
       </header>
       <div class="stage-intro">
@@ -173,7 +173,7 @@
                   @click="handleLogin"
                 >
                   <span v-if="!loginLoading" class="btn-content">
-                    <span>进入 RemoAssistant</span>
+                    <span>进入 PersonalWorkbench</span>
                     <ArrowRightOutlined class="btn-arrow" />
                   </span>
                   <span v-else>正在登录...</span>

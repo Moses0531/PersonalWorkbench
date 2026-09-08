@@ -29,7 +29,7 @@ public class AiNoteConsolidateService {
     private static final int MAX_INSTRUCTION = 500;
 
     private static final String SYSTEM_PROMPT = """
-            你是 RemoAssistant 的笔记整理助手。根据用户勾选的零散碎片，整理成一篇清晰可读的整理稿。
+            你是 PersonalWorkbench 的笔记整理助手。根据用户勾选的零散碎片，整理成一篇清晰可读的整理稿。
             要求：
             - 使用中文 Markdown
             - 结构建议：主题概述 / 要点归纳 / 待办与线索 / 原文摘录（若材料中无则省略对应节）

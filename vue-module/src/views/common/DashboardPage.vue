@@ -1,6 +1,6 @@
 <script setup>
 /**
- * RemoAssistant 首页
+ * PersonalWorkbench 首页
  * 构图对齐登录页：Outfit 品牌 + 衬线问候 + 玻璃面板 + 等距氛围。
  * 内容：问候 / 时间日签卡 / 核心指标；三天内截止 · 今日日程。
  */
@@ -326,7 +326,7 @@ function goEvents() {
             <div class="hero-brand">
               <span class="hero-brand__mark"><BrandMarkView :size="26" /></span>
               <div class="hero-brand__text">
-                <span class="hero-brand__name">RemoAssistant</span>
+                <span class="hero-brand__name">PersonalWorkbench</span>
                 <span class="hero-brand__tag">今日备忘</span>
               </div>
             </div>

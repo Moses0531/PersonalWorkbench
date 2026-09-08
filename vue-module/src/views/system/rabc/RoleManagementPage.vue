@@ -272,7 +272,7 @@ onMounted(refreshAll)
   <FlatManageListView
         v-model:search-query="searchQuery"
         title="角色列表"
-        desc="决定谁能看到 RemoAssistant 的哪些能力"
+        desc="决定谁能看到 PersonalWorkbench 的哪些能力"
         :loading="loading"
         :data="filteredData"
         :columns="columns"

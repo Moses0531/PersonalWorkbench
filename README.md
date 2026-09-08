@@ -1,10 +1,10 @@
-# RemoAssistant · 智能备忘助手
+# PersonalWorkbench · 个人工作台
 项目可访问地址：http://121.40.151.202/auth
 ## 1 项目概述
 
 ### 1.1 项目介绍
 
-基于 Spring Boot 3.5 + Vue 3 的智能备忘助手（RemoAssistant），涵盖待办与子任务、日程安排、会议记录、笔记整理与 DeepSeek AI 助手。
+基于 Spring Boot 3.5 + Vue 3 的智能备忘助手（PersonalWorkbench），涵盖待办与子任务、日程安排、会议记录、笔记整理与 DeepSeek AI 助手。
 
 数据按用户隔离，不做多人协作。系统管理（RBAC）与业务功能并存：普通用户聚焦备忘与日程，管理员保留用户 / 角色 / 权限运维能力。
 
@@ -80,16 +80,16 @@ springboot-module/
 创建数据库：
 
 ```sql
-CREATE DATABASE remo_assistant DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 ```
 
 在库中导入 SQL（结构 + 数据）：
 
 ```text
-doc/sql/remo_assistant.sql
+doc/sql/personal_workbench.sql
 ```
 
-仅结构可参考 `doc/sql/remo_assistant(s).sql`（已含 `note` 等业务表）。
+仅结构可参考 `doc/sql/personal_workbench(s).sql`（已含 `note` 等业务表）。
 
 ### 3.3 配置后端
 
@@ -99,7 +99,7 @@ doc/sql/remo_assistant.sql
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/remo_assistant?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://localhost:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
     password: 你的密码
   data:
@@ -158,8 +158,8 @@ pnpm build
 
 ### 3.6 首次使用
 
-- 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验 RemoAssistant。
-- 种子账号见 `doc/sql/remo_assistant.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
+- 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验 PersonalWorkbench。
+- 种子账号见 `doc/sql/personal_workbench.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
 - 登录后菜单由后端权限动态下发：普通用户可见首页、日程 / 事务、个人中心、AI；系统管理菜单仅管理员可见。  
   事务页为统一任务树：顶层任务 → 阶段（父任务）→ 子任务；看板只推进叶子任务。
 
@@ -171,11 +171,11 @@ pnpm build
 
 1. ECS 已安装 Docker Engine 与 Compose 插件，并绑定公网 IP。
 2. 安全组入方向：放行 **TCP 80**（站点）、**TCP 22**（SSH）；不要对公网开放 3306 / 6379 / 8090。
-3. 克隆仓库到服务器（示例路径 `/opt/RemoAssistant`）：
+3. 克隆仓库到服务器（示例路径 `/opt/PersonalWorkbench`）：
 
 ```bash
-sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/RemoAssistant.git /opt/RemoAssistant
-cd /opt/RemoAssistant/deploy
+sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/PersonalWorkbench.git /opt/PersonalWorkbench
+cd /opt/PersonalWorkbench/deploy
 cp .env.example .env
 # 编辑 .env：必须设置 MYSQL_ROOT_PASSWORD、DEEPSEEK_KEY；OSS_* 按需
 nano .env
@@ -194,7 +194,7 @@ docker compose --env-file .env up -d --build
 | `SSH_USER` | SSH 用户名（如 `root`） |
 | `SSH_PRIVATE_KEY` | 对应私钥全文 |
 | `SSH_PORT` | 可选，默认 `22` |
-| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/RemoAssistant` |
+| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
 | `DEEPSEEK_KEY` | **必填**：写入服务器 `.env` 并注入后端容器 |
 | `MYSQL_ROOT_PASSWORD` | 建议填写，与服务器 `.env` 中数据库密码一致 |
 | `OSS_ACCESS_KEY_ID` | **头像/附件上传必填**：写入服务器 `.env` 并注入后端容器 |
@@ -211,7 +211,7 @@ git push origin master
 ## 5 项目结构
 
 ```
-RemoAssistant/
+PersonalWorkbench/
 ├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis / kkFileView）
 ├── .github/workflows/      # CI + 自动部署
 ├── doc/                    # SQL 脚本

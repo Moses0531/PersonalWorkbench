@@ -168,7 +168,7 @@ onMounted(async () => {
   <FlatManageListView
     v-model:search-query="searchQuery"
     title="用户列表"
-    desc="管理 RemoAssistant 的用户与角色"
+    desc="管理 PersonalWorkbench 的用户与角色"
     :loading="loading"
     :data="filteredData"
     :columns="columns"
