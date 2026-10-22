@@ -1184,7 +1184,7 @@ onMounted(async () => {
           </el-select>
           <button
             v-if="inProjectSpace"
-            v-permission="'task:add'"
+            v-permission="'ai:plan'"
             type="button"
             class="wb-btn wb-btn--ghost"
             :disabled="projectAttachmentsReadonly"
