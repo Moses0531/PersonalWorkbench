@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { computed, onMounted, reactive, ref, nextTick } from 'vue'
-import { message } from 'ant-design-vue'
+import { ElMessage } from 'element-plus'
 import {
   deleteRoleApi,
   pageRolesApi,
@@ -15,13 +15,12 @@ import { buildPermissionTree, filterCheckedLeafIds, permissionTypeOf } from '@/u
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import {
-  PlusOutlined,
-  LockOutlined,
-  EditOutlined,
-  SafetyOutlined,
-  DeleteOutlined,
-  RightOutlined,
-} from '@ant-design/icons-vue'
+  Plus,
+  Lock,
+  Edit,
+  Stamp,
+  Delete,
+} from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -38,6 +37,7 @@ const showPermTree = ref(false)
 const treeCheckedKeys = ref([])
 const treeHalfCheckedKeys = ref([])
 const treeExpandedKeys = ref([])
+const permTreeRef = ref(null)
 const permForm = reactive({ roleId: null, permissionIds: [] })
 
 const selectedPermCount = computed(() => {
@@ -58,12 +58,22 @@ function collectTreeKeys(nodes = [], acc = []) {
   return acc
 }
 
+function setTreeExpanded(keys) {
+  treeExpandedKeys.value = keys
+  const map = permTreeRef.value?.store?.nodesMap
+  if (!map) return
+  const keySet = new Set(keys.map(String))
+  Object.values(map).forEach((node) => {
+    node.expanded = keySet.has(String(node.key))
+  })
+}
+
 function expandAllPermTree() {
-  treeExpandedKeys.value = collectTreeKeys(menuTreeData.value)
+  setTreeExpanded(collectTreeKeys(menuTreeData.value))
 }
 
 function collapseAllPermTree() {
-  treeExpandedKeys.value = []
+  setTreeExpanded([])
 }
 
 function getPermNodeType(type) {
@@ -111,7 +121,7 @@ async function loadRoles() {
     tableData.value = data.records || []
     applyFilter()
   } catch (_error) {
-    message.error('获取角色列表失败')
+    ElMessage.error('获取角色列表失败')
   } finally {
     loading.value = false
   }
@@ -157,7 +167,7 @@ function openCreate() {
 
 function openEdit(row) {
   if (!canEditRole(row)) {
-    message.warning('该角色受保护，无法编辑')
+    ElMessage.warning('该角色受保护，无法编辑')
     return
   }
   isEdit.value = true
@@ -169,25 +179,34 @@ async function submitForm() {
   try {
     if (isEdit.value) await updateRoleApi(form)
     else await saveRoleApi(form)
-    message.success('操作成功')
+    ElMessage.success('操作成功')
     dialogVisible.value = false
     refreshAll()
   } catch (error) {
-    message.error(error.message || '操作失败')
+    ElMessage.error(error.message || '操作失败')
   }
 }
 
 async function removeRole(roleId) {
   try {
     await deleteRoleApi(roleId)
-    message.success('删除成功')
+    ElMessage.success('删除成功')
     refreshAll()
   } catch (_error) {
-    message.error('删除失败')
+    ElMessage.error('删除失败')
   }
 }
 
 async function syncPermTreeChecks() {
+  await applyPermTreeChecks()
+}
+
+function onPermTreeCheck(_data, ctx) {
+  treeCheckedKeys.value = ctx?.checkedKeys || []
+  treeHalfCheckedKeys.value = ctx?.halfCheckedKeys || []
+}
+
+async function applyPermTreeChecks() {
   await nextTick()
   const leafKeys = filterCheckedLeafIds(permFlatList.value, permForm.permissionIds)
   treeCheckedKeys.value = leafKeys
@@ -195,16 +214,12 @@ async function syncPermTreeChecks() {
   treeHalfCheckedKeys.value = permForm.permissionIds
     .map(Number)
     .filter((id) => !Number.isNaN(id) && !leafSet.has(id))
-}
-
-function onPermTreeCheck(checkedKeys, e) {
-  treeCheckedKeys.value = checkedKeys
-  treeHalfCheckedKeys.value = e?.halfCheckedKeys || []
+  permTreeRef.value?.setCheckedKeys(leafKeys)
 }
 
 async function openPermissionAssign(row) {
   if (!canEditRole(row)) {
-    message.warning('该角色受保护，无法修改权限')
+    ElMessage.warning('该角色受保护，无法修改权限')
     return
   }
   showPermTree.value = false
@@ -228,7 +243,7 @@ async function openPermissionAssign(row) {
     menuTreeData.value = buildPermissionTree(list)
     treeExpandedKeys.value = collectTreeKeys(menuTreeData.value)
     if (!menuTreeData.value.length) {
-      message.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
+      ElMessage.warning(list.length ? '权限树构建失败' : '未获取到权限数据，请检查后端接口与数据库 display_order 字段')
     }
     showPermTree.value = true
     await syncPermTreeChecks()
@@ -236,7 +251,7 @@ async function openPermissionAssign(row) {
     menuTreeData.value = []
     permFlatList.value = []
     treeExpandedKeys.value = []
-    message.error(error.message || '加载权限树失败')
+    ElMessage.error(error.message || '加载权限树失败')
   } finally {
     permLoading.value = false
   }
@@ -247,11 +262,11 @@ async function submitRoleMenusWithTree() {
   try {
     const keys = [...treeCheckedKeys.value, ...treeHalfCheckedKeys.value]
     await saveRolePermissionsApi(permForm.roleId, keys.length ? keys : permForm.permissionIds)
-    message.success('权限保存成功')
+    ElMessage.success('权限保存成功')
     permDialogVisible.value = false
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (_error) {
-    message.error('保存失败')
+    ElMessage.error('保存失败')
   } finally {
     permLoading.value = false
   }
@@ -284,7 +299,7 @@ onMounted(refreshAll)
       >
         <template #toolbar-actions>
           <button v-permission="'role:add'" type="button" class="mlv-btn-primary" @click="openCreate">
-            <PlusOutlined />
+            <Plus />
             新增角色
           </button>
         </template>
@@ -309,7 +324,7 @@ onMounted(refreshAll)
 
         <template #cell-status="{ row }">
           <span v-if="isRoleProtected(row)" class="status-tag status-tag--protected">
-            <LockOutlined />
+            <Lock />
             受保护
           </span>
           <span v-else class="status-tag status-tag--normal">
@@ -332,7 +347,7 @@ onMounted(refreshAll)
               title="编辑"
               @click="openEdit(row)"
             >
-              <EditOutlined />
+              <Edit />
             </button>
             <button
               v-permission="'role:modify'"
@@ -342,18 +357,18 @@ onMounted(refreshAll)
               title="权限"
               @click="openPermissionAssign(row)"
             >
-              <SafetyOutlined />
+              <Stamp />
             </button>
-            <a-popconfirm
+            <el-popconfirm
               v-permission="'role:remove'"
               title="确定删除该角色？"
               :disabled="!canDeleteRole(row)"
               @confirm="removeRole(row.roleId)"
             >
-              <button type="button" class="btn-action btn-action--delete" :disabled="!canDeleteRole(row)" title="删除">
-                <DeleteOutlined />
-              </button>
-            </a-popconfirm>
+          <template #reference><button type="button" class="btn-action btn-action--delete" :disabled="!canDeleteRole(row)" title="删除">
+                <Delete />
+              </button></template>
+        </el-popconfirm>
           </div>
         </template>
   </FlatManageListView>
@@ -365,22 +380,22 @@ onMounted(refreshAll)
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
-    <a-form layout="vertical" :model="form" class="dialog-form">
+    <el-form label-position="top" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <a-form-item label="角色名称" class="dialog-item">
-          <a-input v-model:value="form.roleName" placeholder="请输入角色名称" />
-        </a-form-item>
-        <a-form-item label="角色编码" class="dialog-item">
-          <a-input v-model:value="form.roleCode" placeholder="如 ADMIN" />
-        </a-form-item>
-        <a-form-item label="层级（数值越小等级越高）" class="dialog-item dialog-item--full">
-          <a-input-number v-model:value="form.level" :min="0" placeholder="请输入层级" style="width: 100%" />
-        </a-form-item>
-        <a-form-item label="描述" class="dialog-item dialog-item--full">
-          <a-textarea v-model:value="form.description" :rows="2" placeholder="选填，描述角色用途" />
-        </a-form-item>
+        <el-form-item label="角色名称" class="dialog-item">
+          <el-input v-model="form.roleName" placeholder="请输入角色名称" />
+        </el-form-item>
+        <el-form-item label="角色编码" class="dialog-item">
+          <el-input v-model="form.roleCode" placeholder="如 ADMIN" />
+        </el-form-item>
+        <el-form-item label="层级（数值越小等级越高）" class="dialog-item dialog-item--full">
+          <el-input-number v-model="form.level" :min="0" placeholder="请输入层级" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="描述" class="dialog-item dialog-item--full">
+          <el-input type="textarea" v-model="form.description" :rows="2" placeholder="选填，描述角色用途" />
+        </el-form-item>
       </div>
-    </a-form>
+    </el-form>
   </DataOperationView>
 
   <DataOperationView
@@ -415,50 +430,39 @@ onMounted(refreshAll)
         </div>
       </div>
 
-      <a-spin :spinning="permLoading">
+      <div v-loading="permLoading">
         <div class="perm-tree-wrap">
-          <a-tree
+          <el-tree
             v-if="showPermTree && menuTreeData.length"
             :key="`role-perm-${permForm.roleId}`"
-            v-model:expandedKeys="treeExpandedKeys"
-            checkable
-            block-node
-            :selectable="false"
-            :tree-data="menuTreeData"
-            :checked-keys="treeCheckedKeys"
-            :field-names="{ children: 'children', title: 'name', key: 'permissionId' }"
+            ref="permTreeRef"
+            node-key="permissionId"
+            show-checkbox
+            :data="menuTreeData"
+            :props="{ label: 'name', children: 'children' }"
+            :default-expanded-keys="treeExpandedKeys"
+            :expand-on-click-node="false"
             class="perm-tree"
             @check="onPermTreeCheck"
           >
-            <template #switcherIcon="{ expanded, isLeaf }">
-              <span v-if="isLeaf" class="perm-tree-leaf-gap" />
-              <span
-                v-else
-                class="perm-tree-chevron"
-                :class="{ 'perm-tree-chevron--open': expanded }"
-                aria-hidden="true"
-              >
-                <RightOutlined />
-              </span>
-            </template>
-            <template #title="node">
+            <template #default="{ data }">
               <span
                 class="perm-tree-node"
-                :class="`perm-tree-node--${getPermNodeType(node.type).cls}`"
+                :class="`perm-tree-node--${getPermNodeType(data.type).cls}`"
               >
                 <i
                   class="perm-tree-dot"
-                  :class="`perm-tree-dot--${getPermNodeType(node.type).cls}`"
-                  :title="getPermNodeType(node.type).label"
+                  :class="`perm-tree-dot--${getPermNodeType(data.type).cls}`"
+                  :title="getPermNodeType(data.type).label"
                 />
-                <span class="perm-tree-label">{{ node.name || node.title }}</span>
-                <span v-if="node.code" class="perm-tree-code">{{ node.code }}</span>
+                <span class="perm-tree-label">{{ data.name }}</span>
+                <span v-if="data.code" class="perm-tree-code">{{ data.code }}</span>
               </span>
             </template>
-          </a-tree>
+          </el-tree>
           <div v-else-if="!permLoading" class="perm-tree-empty">暂无权限数据</div>
         </div>
-      </a-spin>
+      </div>
     </div>
   </DataOperationView>
 </template>

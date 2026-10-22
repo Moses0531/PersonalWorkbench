@@ -1,43 +1,37 @@
-/** 菜单名称关键词 → Ant Design Vue 图标组件（用于轨道 / 命令面板）
+/** 菜单名称关键词 → Element Plus 图标组件（用于轨道 / 命令面板）
  * 同长度时按声明顺序先匹配；更具体的词放在通用词（如「管理」）前面。
  */
 import {
-  HomeOutlined,
-  AppstoreOutlined,
-  MessageOutlined,
-  CalendarOutlined,
-  CheckSquareOutlined,
-  AudioOutlined,
-  SettingOutlined,
-  UserOutlined,
-  TeamOutlined,
-  LockOutlined,
-  ControlOutlined,
-  FormOutlined,
-} from '@ant-design/icons-vue'
+  HomeFilled,
+  Grid,
+  ChatDotRound,
+  Checked,
+  Setting,
+  User,
+  UserFilled,
+  Lock,
+  Tools,
+} from '@element-plus/icons-vue'
 
 export const iconMap = {
-  首页: HomeOutlined,
-  仪表盘: AppstoreOutlined,
-  AI对话: MessageOutlined,
-  日程: CalendarOutlined,
-  会议: AudioOutlined,
-  事务: CheckSquareOutlined,
-  待办: CheckSquareOutlined,
-  任务: CheckSquareOutlined,
-  清单: CheckSquareOutlined,
-  笔记: FormOutlined,
-  对话: MessageOutlined,
-  助手: MessageOutlined,
-  系统: SettingOutlined,
-  用户: UserOutlined,
-  角色: TeamOutlined,
-  权限: LockOutlined,
-  管理: ControlOutlined,
-  个人: UserOutlined,
+  首页: HomeFilled,
+  仪表盘: Grid,
+  AI对话: ChatDotRound,
+  事务: Checked,
+  待办: Checked,
+  任务: Checked,
+  清单: Checked,
+  对话: ChatDotRound,
+  助手: ChatDotRound,
+  系统: Setting,
+  用户: User,
+  角色: UserFilled,
+  权限: Lock,
+  管理: Tools,
+  个人: User,
 }
 
-export const defaultIcon = AppstoreOutlined
+export const defaultIcon = Grid
 
 /** @deprecated 使用 getMenuIcon；保留别名以免外部旧引用报错 */
 export function getMenuIconSvg(name) {

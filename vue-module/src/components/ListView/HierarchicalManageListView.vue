@@ -2,12 +2,12 @@
 /** 树形层级管理列表：展开折叠、搜索过滤后扁平化渲染 */
 import { computed, ref, useSlots, watch, TransitionGroup } from 'vue'
 import {
-  SearchOutlined,
-  ReloadOutlined,
-  FolderOutlined,
-  FileOutlined,
-  RightOutlined,
-} from '@ant-design/icons-vue'
+  Search,
+  Refresh,
+  Folder,
+  Document,
+  ArrowRight,
+} from '@element-plus/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -261,7 +261,7 @@ function isTreeCell(column) {
               {{ allExpanded ? '全部折叠' : '全部展开' }}
             </button>
             <div v-if="showSearch" class="management-list-view__search">
-              <SearchOutlined class="management-list-view__search-icon" />
+              <Search class="management-list-view__search-icon" />
               <input
                 :value="searchQuery"
                 type="text"
@@ -278,7 +278,7 @@ function isTreeCell(column) {
               :disabled="loading"
               @click="emit('refresh')"
             >
-              <ReloadOutlined :class="{ 'mlv-spin': loading }" />
+              <Refresh :class="{ 'mlv-spin': loading }" />
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -312,7 +312,7 @@ function isTreeCell(column) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <FolderOutlined style="font-size: 40px" />
+                      <Folder style="font-size: 40px" />
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>
@@ -358,7 +358,7 @@ function isTreeCell(column) {
                       :title="item.expanded ? '折叠' : '展开'"
                       @click="toggleExpand(item.row)"
                     >
-                      <RightOutlined />
+                      <ArrowRight />
                     </button>
                     <span v-else class="hierarchical-table__toggle-placeholder" />
 
@@ -366,8 +366,8 @@ function isTreeCell(column) {
                       class="hierarchical-table__node-icon"
                       :class="item.hasChildren ? 'hierarchical-table__node-icon--folder' : 'hierarchical-table__node-icon--leaf'"
                     >
-                      <FolderOutlined v-if="item.hasChildren" />
-                      <FileOutlined v-else />
+                      <Folder v-if="item.hasChildren" />
+                      <Document v-else />
                     </span>
 
                     <slot

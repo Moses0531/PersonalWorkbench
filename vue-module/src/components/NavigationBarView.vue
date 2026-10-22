@@ -55,7 +55,7 @@
           @click="handleLogout"
         >
           <span class="dock-icon-wrap">
-            <LogoutOutlined class="dock-icon" />
+            <SwitchButton class="dock-icon" />
           </span>
           <span class="dock-label">退出</span>
         </button>
@@ -103,7 +103,7 @@
         <div v-else class="topbar-crumb topbar-crumb--empty" aria-hidden="true" />
 
         <button type="button" class="cmd-trigger" @click="openCmd">
-          <SearchOutlined class="cmd-trigger-icon" />
+          <Search class="cmd-trigger-icon" />
           <span class="cmd-trigger-text">跳转菜单、搜索…</span>
           <kbd class="cmd-trigger-kbd">
             <span class="cmd-trigger-mod">{{ modKey }}</span>K
@@ -112,7 +112,7 @@
 
         <div class="topbar-right">
           <button type="button" class="topbar-icon" title="通知" aria-label="通知">
-            <BellOutlined />
+            <Bell />
           </button>
         </div>
       </header>
@@ -129,7 +129,7 @@
       <div v-if="cmdOpen" class="cmd-overlay" @click.self="closeCmd">
         <div class="cmd-palette" role="dialog" aria-label="命令面板" aria-modal="true">
           <div class="cmd-input-wrap">
-            <SearchOutlined />
+            <Search />
             <input
               ref="cmdInputRef"
               v-model="cmdQuery"
@@ -191,10 +191,10 @@ import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter, isNavigationFailure, NavigationFailureType } from 'vue-router'
 import BrandMarkView from './BrandMarkView.vue'
 import {
-  LogoutOutlined,
-  SearchOutlined,
-  BellOutlined,
-} from '@ant-design/icons-vue'
+  SwitchButton,
+  Search,
+  Bell,
+} from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/userStore'
 import {
   MENU_TYPE,

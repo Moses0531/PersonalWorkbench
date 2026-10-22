@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import {
   addTaskApi,
@@ -25,16 +25,16 @@ import {
 } from '@/utils/charts'
 import { openKkFileViewPreview } from '@/utils/kkFileView'
 import {
-  LeftOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  FolderOutlined,
-  PaperClipOutlined,
-  ClockCircleOutlined,
-  InboxOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons-vue'
+  ArrowLeft,
+  Plus,
+  Edit,
+  Delete,
+  Folder,
+  Paperclip,
+  Clock,
+  Box,
+  Lightning,
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -602,7 +602,7 @@ function openAttachmentUrl(url) {
 
 function previewAttachment(file) {
   if (!file?.url) {
-    message.warning('文件地址无效')
+    ElMessage.warning('文件地址无效')
     return
   }
   openKkFileViewPreview(file.url)
@@ -661,7 +661,7 @@ async function handleAttachmentUpload(file) {
     throw new Error('未选择有效文件')
   }
   await uploadTaskAttachmentApi(taskForm.taskId, file)
-  message.success('附件已上传')
+  ElMessage.success('附件已上传')
   await loadTasks()
   syncAttachmentViews(taskForm.taskId)
   if (inProjectSpace.value) await loadProjectAttachments()
@@ -683,12 +683,12 @@ async function removeAttachment(attachmentId, ctx = {}) {
   if (!taskId || isTaskAttachmentsReadonly(resolveReadonlyTask(ctx))) return
   try {
     await removeTaskAttachmentApi(taskId, attachmentId)
-    message.success('已删除附件')
+    ElMessage.success('已删除附件')
     await loadTasks()
     syncAttachmentViews(taskId)
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
-    message.error(error.message || '删除失败')
+    ElMessage.error(error.message || '删除失败')
   }
 }
 
@@ -703,12 +703,12 @@ async function setAttachmentStatus(file, status, ctx = {}) {
   try {
     await updateAttachmentStatusApi(taskId, attachmentId, next)
     const label = ATTACH_STATUS.find((x) => x.key === next)?.label || next
-    message.success(`已标记为${label}`)
+    ElMessage.success(`已标记为${label}`)
     await loadTasks()
     syncAttachmentViews(taskId)
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
-    message.error(error.message || '更新失败')
+    ElMessage.error(error.message || '更新失败')
   }
 }
 
@@ -718,7 +718,7 @@ async function loadTasks() {
     const result = await pageTasksApi(1, null)
     tasks.value = result?.data?.records || []
   } catch (error) {
-    message.error(error.message || '获取待办列表失败')
+    ElMessage.error(error.message || '获取待办列表失败')
   } finally {
     taskLoading.value = false
   }
@@ -750,7 +750,7 @@ const planPreview = ref(null)
 function openPlanDialog() {
   if (!inProjectSpace.value || projectAttachmentsReadonly.value) return
   planForm.goal = (currentProject.value?.description || '').trim()
-  planForm.deadline = dayjs().add(14, 'day')
+  planForm.deadline = dayjs().add(14, 'day').format('YYYY-MM-DD')
   planForm.constraints = ''
   planPreview.value = null
   planDialogVisible.value = true
@@ -759,11 +759,11 @@ function openPlanDialog() {
 async function runPlanPreview() {
   if (!filterProjectId.value) return
   if (!planForm.deadline) {
-    message.warning('请先选择截止时间')
+    ElMessage.warning('请先选择截止时间')
     return
   }
   if (dayjs(planForm.deadline).isBefore(dayjs(), 'day')) {
-    message.warning('截止时间不能早于今天')
+    ElMessage.warning('截止时间不能早于今天')
     return
   }
   planPreviewing.value = true
@@ -776,10 +776,10 @@ async function runPlanPreview() {
     })
     planPreview.value = result?.data || null
     if (!planPreview.value?.phases?.length) {
-      message.warning('未生成有效阶段，请补充目标后重试')
+      ElMessage.warning('未生成有效阶段，请补充目标后重试')
     }
   } catch (error) {
-    message.error(error.message || 'AI 规划失败')
+    ElMessage.error(error.message || 'AI 规划失败')
   } finally {
     planPreviewing.value = false
   }
@@ -797,12 +797,12 @@ async function applyPlanPreview() {
       phases: planPreview.value.phases,
     })
     const created = result?.data?.created ?? 0
-    message.success(`已落板 ${created} 条待办`)
+    ElMessage.success(`已落板 ${created} 条待办`)
     planDialogVisible.value = false
     planPreview.value = null
     await refreshTasks()
   } catch (error) {
-    message.error(error.message || '落板失败')
+    ElMessage.error(error.message || '落板失败')
     return Promise.reject(error)
   } finally {
     planApplying.value = false
@@ -844,7 +844,7 @@ function openEditTask(row) {
     description: row.description || '',
     status: row.status != null ? String(row.status) : '0',
     priority: row.priority != null ? Number(row.priority) : 0,
-    dueTime: row.dueTime ? dayjs(row.dueTime) : null,
+    dueTime: row.dueTime ? dayjs(row.dueTime).format('YYYY-MM-DD HH:mm:ss') : null,
     tags: row.tags || '',
     displayOrder: row.displayOrder ?? 0,
     remark: row.remark || '',
@@ -881,7 +881,7 @@ const taskDialogTitle = computed(() => {
 
 async function submitTaskForm() {
   if (!taskForm.title?.trim()) {
-    message.warning(taskForm.nodeType === NODE_PHASE ? '请填写阶段标题' : '请填写待办标题')
+    ElMessage.warning(taskForm.nodeType === NODE_PHASE ? '请填写阶段标题' : '请填写待办标题')
     return
   }
   taskSubmitting.value = true
@@ -889,11 +889,11 @@ async function submitTaskForm() {
     const payload = toTaskPayload()
     if (taskIsEdit.value) await updateTaskApi(payload)
     else await addTaskApi(payload)
-    message.success('操作成功')
+    ElMessage.success('操作成功')
     taskDialogVisible.value = false
     await loadTasks()
   } catch (error) {
-    message.error(error.message || '操作失败')
+    ElMessage.error(error.message || '操作失败')
   } finally {
     taskSubmitting.value = false
   }
@@ -902,10 +902,10 @@ async function submitTaskForm() {
 async function removeTask(id) {
   try {
     await deleteTasksApi(id)
-    message.success('删除成功')
+    ElMessage.success('删除成功')
     await loadTasks()
   } catch (error) {
-    message.error(error.message || '删除失败')
+    ElMessage.error(error.message || '删除失败')
   }
 }
 
@@ -956,7 +956,7 @@ function openEditProject(row) {
 
 async function submitProjectForm() {
   if (!projectForm.title?.trim()) {
-    message.warning('请填写标题')
+    ElMessage.warning('请填写标题')
     return
   }
   projectSubmitting.value = true
@@ -974,11 +974,11 @@ async function submitProjectForm() {
     }
     if (projectIsEdit.value) await updateTaskApi(payload)
     else await addTaskApi(payload)
-    message.success('操作成功')
+    ElMessage.success('操作成功')
     projectDialogVisible.value = false
     await loadTasks()
   } catch (error) {
-    message.error(error.message || '操作失败')
+    ElMessage.error(error.message || '操作失败')
   } finally {
     projectSubmitting.value = false
   }
@@ -987,13 +987,13 @@ async function submitProjectForm() {
 async function removeProject(id) {
   try {
     await deleteTasksApi(id)
-    message.success('删除成功')
+    ElMessage.success('删除成功')
     if (filterProjectId.value != null && Number(filterProjectId.value) === Number(id)) {
       leaveProjectSpace()
     }
     await loadTasks()
   } catch (error) {
-    message.error(error.message || '删除失败')
+    ElMessage.error(error.message || '删除失败')
   }
 }
 
@@ -1002,10 +1002,10 @@ async function toggleArchive(row) {
   const next = String(row.archived) === '1' ? '0' : '1'
   try {
     await setProjectArchivedApi(row.taskId, next)
-    message.success(next === '1' ? '已归档' : '已恢复进行中')
+    ElMessage.success(next === '1' ? '已归档' : '已恢复进行中')
     await loadTasks()
   } catch (error) {
-    message.error(error.message || '状态更新失败')
+    ElMessage.error(error.message || '状态更新失败')
   }
 }
 
@@ -1033,7 +1033,7 @@ onMounted(async () => {
             class="space-back"
             @click="leaveProjectSpace"
           >
-            <LeftOutlined />
+            <ArrowLeft />
             返回
           </button>
           <h1 class="wb-header__title" :class="{ 'wb-header__title--space': inProjectSpace }">
@@ -1049,7 +1049,7 @@ onMounted(async () => {
               class="wb-btn wb-btn--ghost"
               @click="openEditProject(currentProject)"
             >
-              <EditOutlined />
+              <Edit />
               编辑
             </button>
             <button
@@ -1058,19 +1058,21 @@ onMounted(async () => {
               class="wb-btn wb-btn--ghost"
               @click="toggleArchive(currentProject)"
             >
-              <InboxOutlined />
+              <Box />
               {{ String(currentProject.archived) === '1' ? '恢复' : '归档' }}
             </button>
-            <a-popconfirm
+            <el-popconfirm
               v-permission="'task:remove'"
               title="确认删除该清单及其待办？"
               @confirm="removeProject(currentProject.taskId)"
             >
-              <button type="button" class="wb-btn wb-btn--ghost">
-                <DeleteOutlined />
-                删除
-              </button>
-            </a-popconfirm>
+              <template #reference>
+                <button type="button" class="wb-btn wb-btn--ghost">
+                  <Delete />
+                  删除
+                </button>
+              </template>
+            </el-popconfirm>
           </template>
           <button type="button" class="wb-btn wb-btn--ghost" @click="refreshCurrent">刷新</button>
         </div>
@@ -1149,7 +1151,7 @@ onMounted(async () => {
               :title="`${projectProgressOf(p.taskId).rate}% · ${projectProgressOf(p.taskId).done}/${projectProgressOf(p.taskId).eligible}`"
               @click="viewProjectTasks(p.taskId)"
             >
-              <FolderOutlined />
+              <Folder />
               {{ p.title }}
             </button>
           </div>
@@ -1163,22 +1165,23 @@ onMounted(async () => {
             placeholder="搜索标题、标签..."
             aria-label="搜索待办"
           />
-          <a-input-number
-            v-model:value="filterPriority"
+          <el-input-number
+            v-model="filterPriority"
             placeholder="优先级"
             class="task-view__prio"
             :precision="0"
+            controls-position="right"
           />
-          <a-select
+          <el-select
             v-if="!inProjectSpace"
-            v-model:value="filterBinding"
-            allow-clear
+            v-model="filterBinding"
+            clearable
             placeholder="待办归属"
             class="task-view__binding"
           >
-            <a-select-option value="independent">独立（无清单）</a-select-option>
-            <a-select-option value="bound">已挂清单</a-select-option>
-          </a-select>
+            <el-option value="independent" label="独立（无清单）" />
+            <el-option value="bound" label="已挂清单" />
+          </el-select>
           <button
             v-if="inProjectSpace"
             v-permission="'task:add'"
@@ -1187,7 +1190,7 @@ onMounted(async () => {
             :disabled="projectAttachmentsReadonly"
             @click="openPlanDialog"
           >
-            <ThunderboltOutlined />
+            <Lightning />
             智能规划
           </button>
           <button
@@ -1198,7 +1201,7 @@ onMounted(async () => {
             :disabled="projectAttachmentsReadonly"
             @click="openCreatePhase"
           >
-            <PlusOutlined />
+            <Plus />
             新建阶段
           </button>
           <button
@@ -1208,7 +1211,7 @@ onMounted(async () => {
             class="wb-btn wb-btn--ghost"
             @click="openCreateProject"
           >
-            <PlusOutlined />
+            <Plus />
             新建清单
           </button>
           <button
@@ -1217,7 +1220,7 @@ onMounted(async () => {
             class="wb-btn wb-btn--primary"
             @click="openCreateTask(statusTab)"
           >
-            <PlusOutlined />
+            <Plus />
             新建待办
           </button>
         </div>
@@ -1240,7 +1243,7 @@ onMounted(async () => {
                   title="编辑阶段"
                   @click="openEditTask(phase)"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </div>
               <ul v-if="phase.steps.length" class="phase-tree__steps">
@@ -1267,7 +1270,7 @@ onMounted(async () => {
               <template v-if="projectAttachmentsReadonly"> · 已归档只读</template>
             </span>
           </div>
-          <a-spin :spinning="projectAttachmentLoading">
+          <div v-loading="projectAttachmentLoading">
             <ul v-if="projectAttachmentList.length" class="attach-review__list">
               <li
                 v-for="file in projectAttachmentList"
@@ -1307,7 +1310,7 @@ onMounted(async () => {
               </li>
             </ul>
             <p v-else class="attach-review__empty">本组待办下还没有附件</p>
-          </a-spin>
+          </div>
         </section>
 
         <div class="status-tabs" role="tablist" aria-label="待办状态">
@@ -1327,7 +1330,7 @@ onMounted(async () => {
           </button>
         </div>
 
-        <a-spin :spinning="taskLoading">
+        <div v-loading="taskLoading">
           <div v-if="!taskLoading && !projectScopedTasks.length" class="wb-empty">
             <h2 class="wb-empty__title">
               {{ inProjectSpace ? '这份清单还是空的' : '还没有待办' }}
@@ -1404,17 +1407,19 @@ onMounted(async () => {
                         title="编辑"
                         @click="openEditTask(task)"
                       >
-                        <EditOutlined />
+                        <Edit />
                       </button>
-                      <a-popconfirm
+                      <el-popconfirm
                         v-permission="'task:remove'"
                         title="确认删除该待办？"
                         @confirm="removeTask(task.taskId)"
                       >
-                        <button type="button" class="btn-action btn-action--delete" title="删除">
-                          <DeleteOutlined />
-                        </button>
-                      </a-popconfirm>
+                        <template #reference>
+                          <button type="button" class="btn-action btn-action--delete" title="删除">
+                            <Delete />
+                          </button>
+                        </template>
+                      </el-popconfirm>
                     </div>
                   </div>
 
@@ -1431,7 +1436,7 @@ onMounted(async () => {
                   class="task-card__meta"
                 >
                   <span v-if="!inProjectSpace && projectNameOf(task)" class="meta-chip meta-chip--project">
-                    <FolderOutlined />
+                    <Folder />
                     {{ projectNameOf(task) }}
                   </span>
                   <span v-if="inProjectSpace && phaseTitleOf(task)" class="meta-chip meta-chip--phase">
@@ -1444,7 +1449,7 @@ onMounted(async () => {
                     title="查看附件"
                     @click="openFilesModal(task)"
                   >
-                    <PaperClipOutlined />
+                    <Paperclip />
                     {{ attachmentCount(task) }} 附件
                   </button>
                   <span
@@ -1452,7 +1457,7 @@ onMounted(async () => {
                     class="meta-chip meta-chip--due"
                     :class="{ 'is-overdue': isOverdue(task) }"
                   >
-                    <ClockCircleOutlined />
+                    <Clock />
                     {{ formatDue(task.dueTime) }}
                   </span>
                 </footer>
@@ -1464,7 +1469,7 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-        </a-spin>
+        </div>
       </div>
     </div>
 
@@ -1476,95 +1481,95 @@ onMounted(async () => {
       :confirm-text="taskIsEdit ? '保存修改' : '确认创建'"
       @confirm="submitTaskForm"
     >
-      <a-form layout="vertical" :model="taskForm" class="dialog-form">
+      <el-form label-position="top" :model="taskForm" class="dialog-form">
         <div class="dialog-grid">
-          <a-form-item label="标题" class="dialog-item dialog-item--full" required>
-            <a-input
-              v-model:value.trim="taskForm.title"
+          <el-form-item label="标题" class="dialog-item dialog-item--full" required>
+            <el-input
+              v-model.trim="taskForm.title"
               :placeholder="taskForm.nodeType === 'phase' ? '阶段名称' : '要完成什么？'"
               :maxlength="120"
               size="large"
             />
-          </a-form-item>
+          </el-form-item>
 
-          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="状态" class="dialog-item">
-            <a-select v-model:value="taskForm.status" style="width: 100%">
-              <a-select-option v-for="col in STATUS_COLUMNS" :key="col.key" :value="col.key">
-                {{ col.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+          <el-form-item v-if="taskForm.nodeType !== 'phase'" label="状态" class="dialog-item">
+            <el-select v-model="taskForm.status" style="width: 100%">
+              <el-option v-for="col in STATUS_COLUMNS" :key="col.key" :value="col.key" :label="col.label" />
+            </el-select>
+          </el-form-item>
 
-          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="优先级" class="dialog-item">
-            <a-input-number v-model:value="taskForm.priority" :precision="0" style="width: 100%" />
-          </a-form-item>
+          <el-form-item v-if="taskForm.nodeType !== 'phase'" label="优先级" class="dialog-item">
+            <el-input-number v-model="taskForm.priority" :precision="0" style="width: 100%" controls-position="right" />
+          </el-form-item>
 
-          <a-form-item
+          <el-form-item
             v-if="inProjectSpace || taskIsEdit"
             label="节点类型"
             class="dialog-item"
           >
-            <a-select
-              v-model:value="taskForm.nodeType"
+            <el-select
+              v-model="taskForm.nodeType"
               :disabled="taskIsEdit || (!inProjectSpace && taskForm.nodeType === 'task')"
               style="width: 100%"
             >
-              <a-select-option value="task">待办</a-select-option>
-              <a-select-option v-if="inProjectSpace || taskForm.nodeType === 'phase'" value="phase">
-                阶段
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+              <el-option value="task" label="待办" />
+              <el-option
+                v-if="inProjectSpace || taskForm.nodeType === 'phase'"
+                value="phase"
+                label="阶段"
+              />
+            </el-select>
+          </el-form-item>
 
-          <a-form-item
+          <el-form-item
             v-if="taskForm.nodeType !== 'phase' || !inProjectSpace"
             label="所属清单"
             class="dialog-item"
           >
-            <a-select
-              v-model:value="taskForm.parentTaskId"
-              allow-clear
+            <el-select
+              v-model="taskForm.parentTaskId"
+              clearable
               :disabled="taskForm.nodeType === 'phase'"
               placeholder="独立待办可不选；可挂到清单或阶段下"
               style="width: 100%"
             >
-              <a-select-option
+              <el-option
                 v-for="opt in parentSelectOptions"
                 :key="opt.value"
                 :value="opt.value"
-              >
-                {{ opt.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+                :label="opt.label"
+              />
+            </el-select>
+          </el-form-item>
 
-          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="截止时间" class="dialog-item">
-            <a-date-picker
-              v-model:value="taskForm.dueTime"
-              show-time
+          <el-form-item v-if="taskForm.nodeType !== 'phase'" label="截止时间" class="dialog-item">
+            <el-date-picker
+              v-model="taskForm.dueTime"
+              type="datetime"
               format="YYYY-MM-DD HH:mm"
+              value-format="YYYY-MM-DD HH:mm:ss"
               style="width: 100%"
               placeholder="选填"
             />
-          </a-form-item>
+          </el-form-item>
 
-          <a-form-item v-if="taskForm.nodeType !== 'phase'" label="标签" class="dialog-item">
-            <a-input v-model:value.trim="taskForm.tags" placeholder="逗号分隔，如：设计,本周" />
-          </a-form-item>
+          <el-form-item v-if="taskForm.nodeType !== 'phase'" label="标签" class="dialog-item">
+            <el-input v-model.trim="taskForm.tags" placeholder="逗号分隔，如：设计,本周" />
+          </el-form-item>
 
-          <a-form-item label="显示顺序" class="dialog-item">
-            <a-input-number v-model:value="taskForm.displayOrder" :min="0" style="width: 100%" />
-          </a-form-item>
+          <el-form-item label="显示顺序" class="dialog-item">
+            <el-input-number v-model="taskForm.displayOrder" :min="0" style="width: 100%" controls-position="right" />
+          </el-form-item>
 
-          <a-form-item label="描述" class="dialog-item">
-            <a-textarea v-model:value.trim="taskForm.description" :rows="2" placeholder="补充上下文" />
-          </a-form-item>
+          <el-form-item label="描述" class="dialog-item">
+            <el-input v-model.trim="taskForm.description" type="textarea" :rows="2" placeholder="补充上下文" />
+          </el-form-item>
 
-          <a-form-item label="备注" class="dialog-item">
-            <a-textarea v-model:value.trim="taskForm.remark" :rows="2" placeholder="选填" />
-          </a-form-item>
+          <el-form-item label="备注" class="dialog-item">
+            <el-input v-model.trim="taskForm.remark" type="textarea" :rows="2" placeholder="选填" />
+          </el-form-item>
 
-          <a-form-item
+          <el-form-item
             v-if="taskForm.nodeType !== 'phase'"
             label="附件"
             class="dialog-item dialog-item--full"
@@ -1596,13 +1601,15 @@ onMounted(async () => {
                     >
                       <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
                     </select>
-                    <a-popconfirm
+                    <el-popconfirm
                       v-if="!taskFormAttachmentsReadonly"
                       title="确认删除该附件？"
                       @confirm="removeAttachment(file.id)"
                     >
-                      <button v-permission="'task:modify'" type="button" class="task-attach__del">移除</button>
-                    </a-popconfirm>
+                      <template #reference>
+                        <button v-permission="'task:modify'" type="button" class="task-attach__del">移除</button>
+                      </template>
+                    </el-popconfirm>
                   </li>
                 </ul>
                 <p v-else class="task-attach__hint">暂无附件</p>
@@ -1619,9 +1626,9 @@ onMounted(async () => {
                 </div>
               </template>
             </div>
-          </a-form-item>
+          </el-form-item>
         </div>
-      </a-form>
+      </el-form>
     </DataOperationView>
 
     <DataOperationView
@@ -1680,15 +1687,17 @@ onMounted(async () => {
             >
               <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
             </select>
-            <a-popconfirm
+            <el-popconfirm
               v-if="!filesModalReadonly"
               title="确认移除该附件？"
               @confirm="removeFilesModalAttachment(file.id)"
             >
-              <button v-permission="'task:modify'" type="button" class="files-modal__act files-modal__act--danger">
-                移除
-              </button>
-            </a-popconfirm>
+              <template #reference>
+                <button v-permission="'task:modify'" type="button" class="files-modal__act files-modal__act--danger">
+                  移除
+                </button>
+              </template>
+            </el-popconfirm>
           </div>
         </li>
       </ul>
@@ -1708,117 +1717,125 @@ onMounted(async () => {
       :confirm-text="projectIsEdit ? '保存修改' : '确认创建'"
       @confirm="submitProjectForm"
     >
-      <a-form layout="vertical" :model="projectForm" class="dialog-form">
+      <el-form label-position="top" :model="projectForm" class="dialog-form">
         <div class="dialog-grid">
-          <a-form-item label="标题" class="dialog-item dialog-item--full" required>
-            <a-input v-model:value.trim="projectForm.title" placeholder="例如：个人知识库改版" :maxlength="100" />
-          </a-form-item>
+          <el-form-item label="标题" class="dialog-item dialog-item--full" required>
+            <el-input v-model.trim="projectForm.title" placeholder="例如：个人知识库改版" :maxlength="100" />
+          </el-form-item>
 
-          <a-form-item label="归档状态" class="dialog-item">
-            <a-select v-model:value="projectForm.archived" style="width: 100%">
-              <a-select-option value="0">进行中</a-select-option>
-              <a-select-option value="1">已归档</a-select-option>
-            </a-select>
-          </a-form-item>
+          <el-form-item label="归档状态" class="dialog-item">
+            <el-select v-model="projectForm.archived" style="width: 100%">
+              <el-option value="0" label="进行中" />
+              <el-option value="1" label="已归档" />
+            </el-select>
+          </el-form-item>
 
-          <a-form-item label="显示顺序" class="dialog-item">
-            <a-input-number v-model:value="projectForm.displayOrder" :min="0" style="width: 100%" placeholder="越小越靠前" />
-          </a-form-item>
+          <el-form-item label="显示顺序" class="dialog-item">
+            <el-input-number v-model="projectForm.displayOrder" :min="0" style="width: 100%" placeholder="越小越靠前" controls-position="right" />
+          </el-form-item>
 
-          <a-form-item label="描述" class="dialog-item dialog-item--full">
-            <a-textarea v-model:value.trim="projectForm.description" :rows="3" placeholder="一句话说明要做什么" :maxlength="500" />
-          </a-form-item>
+          <el-form-item label="描述" class="dialog-item dialog-item--full">
+            <el-input v-model.trim="projectForm.description" type="textarea" :rows="3" placeholder="一句话说明要做什么" :maxlength="500" />
+          </el-form-item>
 
-          <a-form-item label="备注" class="dialog-item dialog-item--full">
-            <a-textarea v-model:value.trim="projectForm.remark" :rows="2" placeholder="选填" />
-          </a-form-item>
+          <el-form-item label="备注" class="dialog-item dialog-item--full">
+            <el-input v-model.trim="projectForm.remark" type="textarea" :rows="2" placeholder="选填" />
+          </el-form-item>
         </div>
-      </a-form>
+      </el-form>
     </DataOperationView>
 
-    <a-modal
-      v-model:open="planDialogVisible"
+    <el-dialog
+      v-model="planDialogVisible"
       title="智能规划待办"
       width="640px"
-      :mask-closable="false"
-      :confirm-loading="planApplying"
-      :ok-button-props="{ disabled: !planPreview?.phases?.length || planPreviewing }"
-      ok-text="确认落板"
-      cancel-text="关闭"
-      @ok="applyPlanPreview"
+      :close-on-click-modal="false"
     >
-      <a-spin :spinning="planPreviewing">
-        <div class="plan-dialog">
-          <p class="plan-dialog__hint">
-            必须指定整组截止时间：两周与两个月会按不同节奏拆阶段；预览确认后再写入看板。
-          </p>
-          <a-form layout="vertical" class="dialog-form">
-            <a-form-item label="截止时间" required>
-              <a-date-picker
-                v-model:value="planForm.deadline"
-                format="YYYY-MM-DD"
-                style="width: 100%"
-                placeholder="整组要在哪天完成"
-                :disabled-date="(current) => current && current < dayjs().startOf('day')"
-              />
-              <p v-if="planDeadlineHint" class="plan-dialog__deadline-hint">{{ planDeadlineHint }}</p>
-            </a-form-item>
-            <a-form-item label="规划目标">
-              <a-textarea
-                v-model:value="planForm.goal"
-                :rows="3"
-                :maxlength="2000"
-                show-count
-                placeholder="要达成什么？默认使用描述"
-              />
-            </a-form-item>
-            <a-form-item label="其它约束（可选）">
-              <a-textarea
-                v-model:value="planForm.constraints"
-                :rows="2"
-                :maxlength="1000"
-                show-count
-                placeholder="如人数、技术栈、必须包含的交付物等"
-              />
-            </a-form-item>
-          </a-form>
-          <div class="plan-dialog__actions">
-            <button
-              type="button"
-              class="wb-btn wb-btn--primary"
-              :disabled="planPreviewing || !planForm.deadline"
-              @click="runPlanPreview"
-            >
-              <ThunderboltOutlined />
-              {{ planPreview ? '重新生成' : '生成预览' }}
-            </button>
-          </div>
-
-          <div v-if="planPreview" class="plan-preview">
-            <p v-if="planPreview.daysLeft != null" class="plan-preview__meta">
-              截止 {{ planPreview.deadline }} · 剩 {{ planPreview.daysLeft }} 天
-            </p>
-            <p v-if="planPreview.summary" class="plan-preview__summary">{{ planPreview.summary }}</p>
-            <ol class="plan-preview__phases">
-              <li v-for="(phase, pi) in planPreview.phases" :key="`${pi}-${phase.title}`" class="plan-preview__phase">
-                <div class="plan-preview__phase-title">
-                  {{ phase.title }}
-                  <span v-if="phase.dueTime" class="plan-preview__due">{{ phase.dueTime }}</span>
-                </div>
-                <p v-if="phase.description" class="plan-preview__phase-desc">{{ phase.description }}</p>
-                <ul v-if="phase.steps?.length" class="plan-preview__steps">
-                  <li v-for="(step, si) in phase.steps" :key="`${pi}-${si}-${step.title}`">
-                    <span class="plan-preview__step-title">{{ step.title }}</span>
-                    <span v-if="step.dueTime" class="plan-preview__due"> {{ step.dueTime }}</span>
-                    <span v-if="step.description" class="plan-preview__step-desc"> — {{ step.description }}</span>
-                  </li>
-                </ul>
-              </li>
-            </ol>
-          </div>
+      <div v-loading="planPreviewing" class="plan-dialog">
+        <p class="plan-dialog__hint">
+          必须指定整组截止时间：两周与两个月会按不同节奏拆阶段；预览确认后再写入看板。
+        </p>
+        <el-form label-position="top" class="dialog-form">
+          <el-form-item label="截止时间" required>
+            <el-date-picker
+              v-model="planForm.deadline"
+              type="date"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
+              style="width: 100%"
+              placeholder="整组要在哪天完成"
+              :disabled-date="(date) => dayjs(date).isBefore(dayjs().startOf('day'))"
+            />
+            <p v-if="planDeadlineHint" class="plan-dialog__deadline-hint">{{ planDeadlineHint }}</p>
+          </el-form-item>
+          <el-form-item label="规划目标">
+            <el-input
+              v-model="planForm.goal"
+              type="textarea"
+              :rows="3"
+              :maxlength="2000"
+              show-word-limit
+              placeholder="要达成什么？默认使用描述"
+            />
+          </el-form-item>
+          <el-form-item label="其它约束（可选）">
+            <el-input
+              v-model="planForm.constraints"
+              type="textarea"
+              :rows="2"
+              :maxlength="1000"
+              show-word-limit
+              placeholder="如人数、技术栈、必须包含的交付物等"
+            />
+          </el-form-item>
+        </el-form>
+        <div class="plan-dialog__actions">
+          <button
+            type="button"
+            class="wb-btn wb-btn--primary"
+            :disabled="planPreviewing || !planForm.deadline"
+            @click="runPlanPreview"
+          >
+            <Lightning />
+            {{ planPreview ? '重新生成' : '生成预览' }}
+          </button>
         </div>
-      </a-spin>
-    </a-modal>
+
+        <div v-if="planPreview" class="plan-preview">
+          <p v-if="planPreview.daysLeft != null" class="plan-preview__meta">
+            截止 {{ planPreview.deadline }} · 剩 {{ planPreview.daysLeft }} 天
+          </p>
+          <p v-if="planPreview.summary" class="plan-preview__summary">{{ planPreview.summary }}</p>
+          <ol class="plan-preview__phases">
+            <li v-for="(phase, pi) in planPreview.phases" :key="`${pi}-${phase.title}`" class="plan-preview__phase">
+              <div class="plan-preview__phase-title">
+                {{ phase.title }}
+                <span v-if="phase.dueTime" class="plan-preview__due">{{ phase.dueTime }}</span>
+              </div>
+              <p v-if="phase.description" class="plan-preview__phase-desc">{{ phase.description }}</p>
+              <ul v-if="phase.steps?.length" class="plan-preview__steps">
+                <li v-for="(step, si) in phase.steps" :key="`${pi}-${si}-${step.title}`">
+                  <span class="plan-preview__step-title">{{ step.title }}</span>
+                  <span v-if="step.dueTime" class="plan-preview__due"> {{ step.dueTime }}</span>
+                  <span v-if="step.description" class="plan-preview__step-desc"> — {{ step.description }}</span>
+                </li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="planDialogVisible = false">关闭</el-button>
+        <el-button
+          type="primary"
+          :loading="planApplying"
+          :disabled="!planPreview?.phases?.length || planPreviewing"
+          @click="applyPlanPreview"
+        >
+          确认落板
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

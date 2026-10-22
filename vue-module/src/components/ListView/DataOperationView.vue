@@ -28,7 +28,7 @@ const resolvedWidth = computed(() => {
   return isTwoCol.value ? 960 : 520
 })
 
-const wrapClassName = computed(() =>
+const dialogClass = computed(() =>
   ['form-dialog', 'data-operation-view', isTwoCol.value ? 'is-cols-2' : 'is-cols-1']
     .join(' '),
 )
@@ -52,16 +52,15 @@ function onOpenChange(open) {
 </script>
 
 <template>
-  <a-modal
-    :open="modelValue"
+  <el-dialog
+    :model-value="modelValue"
     :title="title"
     :width="resolvedWidth"
-    :wrap-class-name="wrapClassName"
-    :centered="centered"
-    :mask-closable="closeOnClickModal"
+    :class="dialogClass"
+    :align-center="centered"
+    :close-on-click-modal="closeOnClickModal"
     :destroy-on-close="destroyOnClose"
-    :footer="null"
-    @update:open="onOpenChange"
+    @update:model-value="onOpenChange"
   >
     <div
       class="dop-body"
@@ -71,26 +70,25 @@ function onOpenChange(open) {
       <slot />
     </div>
 
-    <slot name="footer">
-      <div class="dialog-footer dop-footer">
-        <button type="button" class="btn-ghost-sm" :disabled="loading" @click="onCancel">
-          {{ cancelText }}
-        </button>
-        <button type="button" class="btn-primary-sm" :disabled="loading" @click="onConfirm">
-          {{ loading ? '保存中...' : confirmText }}
-        </button>
-      </div>
-    </slot>
-  </a-modal>
+    <template #footer>
+      <slot name="footer">
+        <div class="dialog-footer dop-footer">
+          <button type="button" class="btn-ghost-sm" :disabled="loading" @click="onCancel">
+            {{ cancelText }}
+          </button>
+          <button type="button" class="btn-primary-sm" :disabled="loading" @click="onConfirm">
+            {{ loading ? '保存中...' : confirmText }}
+          </button>
+        </div>
+      </slot>
+    </template>
+  </el-dialog>
 </template>
 
 <style>
 /* 跟组件同文件加载，避免依赖外链 CSS 是否命中 teleport 节点 */
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal {
+.el-dialog.form-dialog.data-operation-view {
   max-width: calc(100vw - 48px);
-}
-
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal-content {
   border-radius: var(--radius-panel, 18px);
   overflow: hidden;
   box-shadow:
@@ -98,26 +96,30 @@ function onOpenChange(open) {
     0 2px 8px rgba(15, 40, 60, 0.06);
 }
 
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal-header {
+.el-dialog.form-dialog.data-operation-view .el-dialog__header {
   padding: 22px 28px 0;
-  margin-bottom: 0;
+  margin-right: 0;
   border-bottom: none;
 }
 
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal-title {
+.el-dialog.form-dialog.data-operation-view .el-dialog__title {
   font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
 }
 
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal-body {
+.el-dialog.form-dialog.data-operation-view .el-dialog__body {
   padding: 14px 28px 4px;
 }
 
-.ant-modal-wrap.form-dialog.data-operation-view .ant-modal-close {
+.el-dialog.form-dialog.data-operation-view .el-dialog__headerbtn {
   top: 18px;
-  inset-inline-end: 18px;
+  right: 18px;
+}
+
+.el-dialog.form-dialog.data-operation-view .el-dialog__footer {
+  padding: 0 28px;
 }
 
 .dop-body--2 .dialog-grid {
@@ -132,7 +134,7 @@ function onOpenChange(open) {
   grid-column: 1 / -1 !important;
 }
 
-.dop-body--2 .dialog-form .ant-form-item {
+.dop-body--2 .dialog-form .el-form-item {
   margin-bottom: 12px;
 }
 

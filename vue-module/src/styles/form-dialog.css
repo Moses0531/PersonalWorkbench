@@ -12,66 +12,57 @@
   grid-column: 1 / -1;
 }
 
-.dialog-form .ant-form-item {
+.dialog-form .el-form-item {
   margin-bottom: 12px;
 }
 
-.dialog-form .ant-form-item-label {
+.dialog-form .el-form-item__label {
   padding-bottom: 4px;
-}
-
-.dialog-form .ant-form-item-label > label {
   font-size: var(--text-sm, 12px);
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--color-text-body);
+  line-height: 1.4;
 }
 
-.dialog-form .ant-input,
-.dialog-form .ant-input-affix-wrapper,
-.dialog-form .ant-input-number,
-.dialog-form .ant-picker,
-.dialog-form .ant-select-selector {
+.dialog-form .el-input__wrapper,
+.dialog-form .el-input-number,
+.dialog-form .el-date-editor,
+.dialog-form .el-select__wrapper {
   background: var(--color-input-bg) !important;
-  border: 1px solid var(--color-border) !important;
+  box-shadow: 0 0 0 1px var(--color-border) inset !important;
   border-radius: var(--radius-control, 10px) !important;
-  box-shadow: none !important;
   transition: all var(--transition-normal, 200ms ease);
 }
 
-.dialog-form .ant-input:hover,
-.dialog-form .ant-input-affix-wrapper:hover,
-.dialog-form .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
-  border-color: var(--color-border-strong) !important;
+.dialog-form .el-input__wrapper:hover,
+.dialog-form .el-select:not(.is-disabled) .el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-border-strong) inset !important;
 }
 
-.dialog-form .ant-input:focus,
-.dialog-form .ant-input-affix-wrapper-focused,
-.dialog-form .ant-input-number-focused,
-.dialog-form .ant-select-focused .ant-select-selector {
-  border-color: var(--color-accent) !important;
-  box-shadow: 0 0 0 3px var(--color-accent-soft) !important;
+.dialog-form .el-input__wrapper.is-focus,
+.dialog-form .el-input-number.is-focus .el-input__wrapper,
+.dialog-form .el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--color-accent) inset, 0 0 0 3px var(--color-accent-soft) !important;
 }
 
-.dialog-form .ant-input-textarea textarea {
+.dialog-form .el-textarea__inner {
   background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
+  box-shadow: 0 0 0 1px var(--color-border) inset;
   border-radius: var(--radius-control, 10px);
-  box-shadow: none;
   padding: 10px 14px;
   transition: all var(--transition-normal, 200ms ease);
 }
 
-.dialog-form .ant-input-textarea textarea:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
+.dialog-form .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--color-accent) inset, 0 0 0 3px var(--color-accent-soft);
 }
 
-.dialog-form .ant-input-number {
+.dialog-form .el-input-number {
   width: 100%;
 }
 
-.dialog-form .ant-select {
+.dialog-form .el-select {
   width: 100%;
 }
 
@@ -150,4 +141,3 @@
   cursor: not-allowed;
   transform: none;
 }
-

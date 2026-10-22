@@ -1,13 +1,13 @@
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { message as antMessage } from 'ant-design-vue'
+import { ElMessage } from 'element-plus'
 import {
   chatWithAiStream,
   deleteAiConversationApi,
   getAiHistoryApi,
   listAiConversationsApi
 } from '@/apis/ai/AiApi'
-import { PlusOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons-vue'
+import { Plus, Delete, Promotion } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const clearLoading = ref(false)
@@ -119,7 +119,7 @@ async function sendMessage() {
           scrollToBottom()
         },
         (error) => {
-          antMessage.error(error?.message || '发送失败')
+          ElMessage.error(error?.message || '发送失败')
           if (streamingMessageIndex.value >= 0 && streamingMessageIndex.value < messages.value.length) {
             if (!messages.value[streamingMessageIndex.value].content) {
               messages.value[streamingMessageIndex.value].content = '抱歉，本次回答失败，请稍后重试。'
@@ -132,7 +132,7 @@ async function sendMessage() {
         }
     )
   } catch (err) {
-    antMessage.error(err?.message || '发送失败')
+    ElMessage.error(err?.message || '发送失败')
     messages.value.push({
       role: 'assistant',
       content: '抱歉，本次回答失败，请稍后重试。',
@@ -151,9 +151,9 @@ async function clearHistory() {
     activeConversationId.value = ''
     messages.value = []
     await refreshConversationsAndHistory()
-    antMessage.success('对话已删除')
+    ElMessage.success('对话已删除')
   } catch (err) {
-    antMessage.error(err?.message || '删除失败')
+    ElMessage.error(err?.message || '删除失败')
   } finally {
     clearLoading.value = false
   }
@@ -183,7 +183,7 @@ onMounted(async () => {
         <div class="sidebar-header">
           <h3 class="sidebar-title">会话</h3>
           <button class="btn-new" @click="createConversation" title="新建会话">
-            <PlusOutlined />
+            <Plus />
           </button>
         </div>
 
@@ -224,7 +224,7 @@ onMounted(async () => {
                 @click="clearHistory"
                 title="删除当前会话"
             >
-              <DeleteOutlined />
+              <Delete />
             </button>
           </div>
         </div>
@@ -245,7 +245,7 @@ onMounted(async () => {
               </svg>
             </div>
             <p class="empty-title">和桌面助手聊一聊</p>
-            <p class="empty-desc">拆解待办、梳理笔记，或问问今天怎么推进</p>
+            <p class="empty-desc">拆解待办，或问问今天怎么推进</p>
           </div>
 
           <!-- 消息气泡 -->
@@ -266,10 +266,11 @@ onMounted(async () => {
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-wrap">
-            <a-textarea
-                v-model:value="message"
+            <el-input
+                type="textarea"
+                v-model="message"
                 :rows="2"
-                :auto-size="{ minRows: 2, maxRows: 6 }"
+                :autosize="{ minRows: 2, maxRows: 6 }"
                 placeholder="说说今天要推进什么，Enter 发送…"
                 @keydown.enter.exact.prevent="sendMessage"
             />
@@ -281,7 +282,7 @@ onMounted(async () => {
                   :disabled="!message.trim() || loading"
                   @click="sendMessage"
               >
-                <SendOutlined v-if="!loading" />
+                <Promotion v-if="!loading" />
                 <span v-if="loading" class="send-spinner"></span>
               </button>
             </div>
@@ -635,7 +636,7 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
-.input-wrap :deep(.ant-input) {
+.input-wrap :deep(.el-input) {
   background: transparent;
   border: none;
   box-shadow: none;
@@ -646,10 +647,10 @@ onMounted(async () => {
   line-height: var(--leading-relaxed);
   resize: none;
 }
-.input-wrap :deep(.ant-input::placeholder) {
+.input-wrap :deep(.el-input::placeholder) {
   color: var(--color-text-dim);
 }
-.input-wrap :deep(.ant-input:focus) {
+.input-wrap :deep(.el-input:focus) {
   box-shadow: none;
 }
 

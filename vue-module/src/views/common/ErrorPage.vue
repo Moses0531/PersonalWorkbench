@@ -112,18 +112,18 @@
         <p class="subtitle-hint">您可以通过下方按钮返回已开放的功能</p>
 
         <div class="actions">
-          <a-button type="primary" class="btn-primary" @click="goHome">
+          <el-button type="primary" class="btn-primary" @click="goHome">
             <span class="btn-icon">
-              <HomeOutlined />
+              <HomeFilled />
             </span>
             返回首页
-          </a-button>
-          <a-button class="btn-ghost" @click="goBack">
+          </el-button>
+          <el-button class="btn-ghost" @click="goBack">
             <span class="btn-icon">
-              <ArrowLeftOutlined />
+              <ArrowLeft />
             </span>
             返回上页
-          </a-button>
+          </el-button>
         </div>
       </div>
     </div>
@@ -133,7 +133,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { HomeFilled, ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const sceneRef = ref(null)

@@ -1,16 +1,16 @@
 <script setup>
 /** 个人中心：资料修改、头像上传与密码变更 */
 import { onMounted, reactive, ref, watch, computed } from 'vue'
-import { message } from 'ant-design-vue'
+import { ElMessage } from 'element-plus'
 import {
-  EditOutlined,
-  CopyOutlined,
-  LockOutlined,
-  MailOutlined,
-  MobileOutlined,
-  PhoneOutlined,
-  UserOutlined,
-} from '@ant-design/icons-vue'
+  Edit,
+  CopyDocument,
+  Lock,
+  Message,
+  Iphone,
+  Phone,
+  User,
+} from '@element-plus/icons-vue'
 import {
   getCurrentUserProfileApi,
   updateUserProfileApi,
@@ -176,7 +176,7 @@ async function loadUserInfo() {
     })
     syncStoredUser()
     closeFieldDialog()
-  } catch (e) { message.error(e.message || '获取用户信息失败') }
+  } catch (e) { ElMessage.error(e.message || '获取用户信息失败') }
   finally { loading.value = false }
 }
 
@@ -196,19 +196,19 @@ function closeFieldDialog() {
 
 function validateField(field, value) {
   if (field === 'username' && !String(value).trim()) {
-    message.warning('请输入昵称')
+    ElMessage.warning('请输入昵称')
     return false
   }
   if (field === 'realName' && !String(value).trim()) {
-    message.warning('请输入真实姓名')
+    ElMessage.warning('请输入真实姓名')
     return false
   }
   if (field === 'phone') {
-    if (!String(value).trim()) { message.warning('请输入手机号'); return false }
-    if (!/^1\d{10}$/.test(String(value).trim())) { message.warning('请输入正确的手机号'); return false }
+    if (!String(value).trim()) { ElMessage.warning('请输入手机号'); return false }
+    if (!/^1\d{10}$/.test(String(value).trim())) { ElMessage.warning('请输入正确的手机号'); return false }
   }
   if (field === 'email' && String(value).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim())) {
-    message.warning('请输入正确的邮箱格式')
+    ElMessage.warning('请输入正确的邮箱格式')
     return false
   }
   return true
@@ -223,10 +223,10 @@ async function confirmFieldEdit() {
     userInfo[field] = fieldDraft.value
     await updateUserProfileApi(buildProfilePayload())
     syncStoredUser()
-    message.success('保存成功')
+    ElMessage.success('保存成功')
     closeFieldDialog()
   } catch (e) {
-    message.error(e.message || '保存失败')
+    ElMessage.error(e.message || '保存失败')
     await loadUserInfo()
   } finally {
     savingField.value = false
@@ -239,7 +239,7 @@ async function handleAvatarUpload(file) {
   const r = await uploadAvatarApi(file)
   userInfo.avatar = r?.data ?? r
   syncStoredUser()
-  message.success('头像更新成功')
+  ElMessage.success('头像更新成功')
   await loadUserInfo()
   return { url: r?.data ?? '' }
 }
@@ -251,26 +251,26 @@ function openPasswordDialog() {
 
 /** 改密成功后强制回登录页，避免旧 token 继续可用 */
 async function changePassword() {
-  if (!passwordForm.oldPassword) { message.warning('请输入原密码'); return }
-  if (!passwordForm.newPassword) { message.warning('请输入新密码'); return }
-  if (passwordForm.newPassword.length < 6) { message.warning('新密码长度不能少于6位'); return }
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) { message.warning('两次输入的密码不一致'); return }
+  if (!passwordForm.oldPassword) { ElMessage.warning('请输入原密码'); return }
+  if (!passwordForm.newPassword) { ElMessage.warning('请输入新密码'); return }
+  if (passwordForm.newPassword.length < 6) { ElMessage.warning('新密码长度不能少于6位'); return }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) { ElMessage.warning('两次输入的密码不一致'); return }
   try {
     await changePasswordApi({ oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
-    message.success('密码修改成功，请重新登录')
+    ElMessage.success('密码修改成功，请重新登录')
     passwordDialogVisible.value = false
     Object.assign(passwordForm, { oldPassword: '', newPassword: '', confirmPassword: '' })
     setTimeout(() => { window.location.href = '/auth' }, 1500)
-  } catch (e) { message.error(e.message || '密码修改失败') }
+  } catch (e) { ElMessage.error(e.message || '密码修改失败') }
 }
 
 async function copyAccountId() {
   if (userInfo.userId == null) return
   try {
     await navigator.clipboard.writeText(String(userInfo.userId))
-    message.success('已复制账号 ID')
+    ElMessage.success('已复制账号 ID')
   } catch {
-    message.error('复制失败，请手动复制')
+    ElMessage.error('复制失败，请手动复制')
   }
 }
 
@@ -278,7 +278,7 @@ onMounted(loadUserInfo)
 </script>
 
 <template>
-  <a-spin :spinning="loading"><div class="profile-page">
+  <div v-loading="loading"><div class="profile-page">
     <header class="profile-page__header">
       <h1 class="profile-page__title">个人中心</h1>
       <p class="profile-page__desc">查看与更新账号资料、联系方式及安全选项</p>
@@ -306,7 +306,7 @@ onMounted(loadUserInfo)
                 @error="avatarError = true"
               />
               <div v-else class="avatar-upload__placeholder" aria-hidden="true">
-                <UserOutlined style="font-size: 52px" />
+                <User style="font-size: 52px" />
               </div>
               <span class="avatar-upload__hint">更换头像</span>
             </div>
@@ -321,7 +321,7 @@ onMounted(loadUserInfo)
                 @error="avatarError = true"
               />
               <div v-else class="avatar-upload__placeholder" aria-hidden="true">
-                <UserOutlined style="font-size: 52px" />
+                <User style="font-size: 52px" />
               </div>
             </div>
           </div>
@@ -340,7 +340,7 @@ onMounted(loadUserInfo)
                   title="修改昵称"
                   @click="openFieldDialog('username', 'displayName')"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </dd>
             </div>
@@ -356,7 +356,7 @@ onMounted(loadUserInfo)
                   title="复制账号 ID"
                   @click="copyAccountId"
                 >
-                  <CopyOutlined />
+                  <CopyDocument />
                 </button>
               </dd>
             </div>
@@ -372,7 +372,7 @@ onMounted(loadUserInfo)
                   title="修改安全手机号"
                   @click="openFieldDialog('phone')"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </dd>
             </div>
@@ -396,7 +396,7 @@ onMounted(loadUserInfo)
                     title="修改安全邮箱"
                     @click="openFieldDialog('email')"
                   >
-                    <EditOutlined />
+                    <Edit />
                   </button>
                 </template>
                 <template v-else>
@@ -424,7 +424,7 @@ onMounted(loadUserInfo)
                   title="修改性别"
                   @click="openFieldDialog('sex')"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </dd>
             </div>
@@ -447,7 +447,7 @@ onMounted(loadUserInfo)
                   title="修改真实姓名"
                   @click="openFieldDialog('realName')"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </dd>
             </div>
@@ -463,7 +463,7 @@ onMounted(loadUserInfo)
                   title="修改生日"
                   @click="openFieldDialog('birthday')"
                 >
-                  <EditOutlined />
+                  <Edit />
                 </button>
               </dd>
             </div>
@@ -492,7 +492,7 @@ onMounted(loadUserInfo)
       <ul class="security-list">
         <li class="security-item">
           <div class="security-item__icon security-item__icon--primary" aria-hidden="true">
-            <LockOutlined />
+            <Lock />
           </div>
           <div class="security-item__body">
             <h3 class="security-item__title">登录密码</h3>
@@ -510,7 +510,7 @@ onMounted(loadUserInfo)
 
         <li class="security-item">
           <div class="security-item__icon security-item__icon--email" aria-hidden="true">
-            <MailOutlined />
+            <Message />
           </div>
           <div class="security-item__body">
             <h3 class="security-item__title">
@@ -534,7 +534,7 @@ onMounted(loadUserInfo)
 
         <li class="security-item">
           <div class="security-item__icon security-item__icon--phone" aria-hidden="true">
-            <MobileOutlined />
+            <Iphone />
           </div>
           <div class="security-item__body">
             <h3 class="security-item__title">
@@ -558,7 +558,7 @@ onMounted(loadUserInfo)
 
         <li class="security-item">
           <div class="security-item__icon security-item__icon--login" aria-hidden="true">
-            <PhoneOutlined />
+            <Phone />
           </div>
           <div class="security-item__body">
             <h3 class="security-item__title">手机号登录</h3>
@@ -579,36 +579,44 @@ onMounted(loadUserInfo)
     </section>
 
     <!-- 字段编辑弹窗 -->
-    <a-modal v-model:open="fieldDialogVisible" :title="null" width="420px" class="field-dialog" :mask-closable="false" :footer="null" @after-close="closeFieldDialog">
+    <el-dialog v-model="fieldDialogVisible" title="" width="420px" class="field-dialog" :show-close="true" :close-on-click-modal="false" @closed="closeFieldDialog">
       <div class="field-dialog__header">
         <h3>{{ fieldDialogTitle }}</h3>
       </div>
       <div class="field-dialog__body">
-        <a-input
+        <el-input
           v-if="editingField === 'email'"
-          v-model:value="fieldDraft"
+          v-model="fieldDraft"
           placeholder="请输入邮箱"
         />
-        <a-input
+        <el-input
           v-else-if="editingField === 'phone'"
-          v-model:value="fieldDraft"
+          v-model="fieldDraft"
           placeholder="请输入手机号"
           maxlength="11"
         />
-        <a-input
+        <el-input
           v-else-if="editingField === 'username'"
-          v-model:value="fieldDraft"
+          v-model="fieldDraft"
           placeholder="请输入昵称"
         />
-        <a-input
+        <el-input
           v-else-if="editingField === 'realName'"
-          v-model:value="fieldDraft"
+          v-model="fieldDraft"
           placeholder="请输入真实姓名"
         />
-        <a-select v-else-if="editingField === 'sex'" v-model:value="fieldDraft" style="width: 100%" :options="sexOptions" />
-        <a-date-picker
+        <el-select v-else-if="editingField === 'sex'" v-model="fieldDraft" style="width: 100%">
+          <el-option
+            v-for="opt in sexOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+        <el-date-picker
           v-else-if="editingField === 'birthday'"
-          v-model:value="fieldDraft"
+          v-model="fieldDraft"
+          type="date"
           placeholder="选择日期"
           format="YYYY-MM-DD"
           value-format="YYYY-MM-DD"
@@ -620,30 +628,30 @@ onMounted(loadUserInfo)
           <button type="button" class="btn btn--outline" :disabled="savingField" @click="closeFieldDialog">取消</button>
           <button type="button" class="btn btn--primary" :disabled="savingField" @click="confirmFieldEdit">保存</button>
         </div>
-      </a-modal>
+      </el-dialog>
 
     <!-- 密码弹窗 -->
-    <a-modal v-model:open="passwordDialogVisible" :title="null" width="420px" class="password-dialog" :mask-closable="false" :footer="null">
+    <el-dialog v-model="passwordDialogVisible" title="" width="420px" class="password-dialog" :close-on-click-modal="false">
       <div class="password-dialog__header">
         <div class="password-dialog__icon">
-          <LockOutlined />
+          <Lock />
         </div>
         <h3>修改密码</h3>
         <p>为了您的账户安全，修改密码后需要重新登录</p>
       </div>
-      <a-form :model="passwordForm" layout="vertical" class="password-form">
-        <a-form-item label="原密码"><a-input-password v-model:value="passwordForm.oldPassword" placeholder="请输入当前密码" /></a-form-item>
-        <a-form-item label="新密码"><a-input-password v-model:value="passwordForm.newPassword" placeholder="至少6位" /></a-form-item>
-        <a-form-item label="确认新密码"><a-input-password v-model:value="passwordForm.confirmPassword" placeholder="请再次输入新密码" /></a-form-item>
-      </a-form>
+      <el-form :model="passwordForm" label-position="top" class="password-form">
+        <el-form-item label="原密码"><el-input type="password" show-password v-model="passwordForm.oldPassword" placeholder="请输入当前密码" /></el-form-item>
+        <el-form-item label="新密码"><el-input type="password" show-password v-model="passwordForm.newPassword" placeholder="至少6位" /></el-form-item>
+        <el-form-item label="确认新密码"><el-input type="password" show-password v-model="passwordForm.confirmPassword" placeholder="请再次输入新密码" /></el-form-item>
+      </el-form>
       
         <div class="password-dialog__footer">
           <button type="button" class="btn btn--outline" @click="passwordDialogVisible = false">取消</button>
           <button type="button" class="btn btn--primary" @click="changePassword">确认修改</button>
         </div>
-      </a-modal>
+      </el-dialog>
   </div>
-</a-spin>
+</div>
 </template>
 
 <style scoped>
@@ -713,8 +721,8 @@ onMounted(loadUserInfo)
   flex-shrink: 0;
 }
 
-.avatar-upload :deep(.ant-upload),
-.avatar-upload :deep(.rich-editor__upload .ant-upload) {
+.avatar-upload :deep(.el-upload),
+.avatar-upload :deep(.rich-editor__upload .el-upload) {
   display: block;
 }
 
@@ -1056,19 +1064,19 @@ onMounted(loadUserInfo)
   color: var(--color-text-primary);
 }
 
-.field-dialog :deep(.ant-modal-content),
-.password-dialog :deep(.ant-modal-content) {
+.field-dialog :deep(.el-dialog),
+.password-dialog :deep(.el-dialog) {
   border-radius: var(--profile-radius);
   overflow: hidden;
 }
 
-.field-dialog :deep(.ant-modal-header),
-.password-dialog :deep(.ant-modal-header) {
+.field-dialog :deep(.el-dialog__header),
+.password-dialog :deep(.el-dialog__header) {
   display: none;
 }
 
-.field-dialog :deep(.ant-modal-body),
-.password-dialog :deep(.ant-modal-body) {
+.field-dialog :deep(.el-dialog__body),
+.password-dialog :deep(.el-dialog__body) {
   padding: 0;
 }
 
@@ -1087,9 +1095,9 @@ onMounted(loadUserInfo)
   padding: 20px 32px 8px;
 }
 
-.field-dialog__body :deep(.ant-input-affix-wrapper),
-.field-dialog__body :deep(.ant-input),
-.field-dialog__body :deep(.ant-select-selector) {
+.field-dialog__body :deep(.el-input__wrapper),
+.field-dialog__body :deep(.el-input),
+.field-dialog__body :deep(.el-select__wrapper) {
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 1px var(--color-border) inset;
 }
@@ -1141,14 +1149,14 @@ onMounted(loadUserInfo)
   padding: 16px 32px 0;
 }
 
-.password-form :deep(.ant-form-item-label > label) {
+.password-form :deep(.el-form-item__label) {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-body);
   padding-bottom: 6px;
 }
 
-.password-form :deep(.ant-input-affix-wrapper), :deep(.ant-input) {
+.password-form :deep(.el-input__wrapper), :deep(.el-input) {
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 1px var(--color-border) inset;
 }

@@ -17,7 +17,7 @@
       </header>
       <div class="stage-intro">
         <h1 class="stage-title">记住、整理、推进，都在这里</h1>
-        <p class="stage-lead">待办、笔记、日程与 AI，收进同一份备忘助手。</p>
+        <p class="stage-lead">待办与 AI 规划，收进同一份工作台。</p>
         <ul class="stage-features" aria-label="核心功能">
           <li v-for="item in coreFeatures" :key="item.title" class="stage-feature">
             <span class="stage-feature__dot" aria-hidden="true" />
@@ -41,44 +41,49 @@
               </p>
             </header>
 
-            <a-form
+            <el-form
               v-if="isLogin"
               ref="loginFormRef"
               class="auth-form"
               :model="loginForm"
               :rules="loginRules"
-              layout="vertical"
+              label-position="top"
               size="large"
               @submit.prevent="handleLogin"
             >
-              <a-form-item name="account">
+              <el-form-item prop="account">
                 <template #label><span class="label-text">账号 / 手机号 / 邮箱</span></template>
-                <a-input
-                  v-model:value.trim="loginForm.account"
+                <el-input
+                  v-model.trim="loginForm.account"
                   placeholder="请输入账号、手机号或邮箱"
-                  allow-clear
+                  clearable
                 >
-                  <template #prefix><UserOutlined /></template>
-                </a-input>
-              </a-form-item>
+                  <template #prefix><el-icon><User /></el-icon></template>
+                </el-input>
+              </el-form-item>
 
-              <a-form-item name="password">
+              <el-form-item prop="password">
                 <template #label><span class="label-text">密码</span></template>
-                <a-input-password v-model:value.trim="loginForm.password" placeholder="请输入密码">
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
+                <el-input
+                  v-model.trim="loginForm.password"
+                  type="password"
+                  show-password
+                  placeholder="请输入密码"
+                >
+                  <template #prefix><el-icon><Lock /></el-icon></template>
+                </el-input>
+              </el-form-item>
 
-              <a-form-item v-if="captchaOnLogin" class="form-item-last">
+              <el-form-item v-if="captchaOnLogin" class="form-item-last">
                 <template #label><span class="label-text">验证码</span></template>
                 <div class="captcha-row">
-                  <a-input
-                    v-model:value.trim="loginForm.captcha"
+                  <el-input
+                    v-model.trim="loginForm.captcha"
                     placeholder="请输入验证码"
-                    allow-clear
+                    clearable
                   >
-                    <template #prefix><CheckCircleOutlined /></template>
-                  </a-input>
+                    <template #prefix><el-icon><CircleCheck /></el-icon></template>
+                  </el-input>
                   <button
                     type="button"
                     class="captcha-box"
@@ -89,62 +94,68 @@
                     <span v-else class="captcha-fallback">刷新</span>
                   </button>
                 </div>
-              </a-form-item>
-            </a-form>
+              </el-form-item>
+            </el-form>
 
-            <a-form
+            <el-form
               v-else-if="registerEnabled"
               class="auth-form"
               :model="registerForm"
-              layout="vertical"
+              label-position="top"
               size="large"
               @submit.prevent="handleRegister"
             >
-              <a-form-item>
+              <el-form-item>
                 <template #label><span class="label-text">手机号 / 邮箱</span></template>
-                <a-input
-                  v-model:value.trim="registerForm.contact"
+                <el-input
+                  v-model.trim="registerForm.contact"
                   placeholder="请输入手机号或邮箱"
-                  allow-clear
+                  clearable
                 >
                   <template #prefix>
-                    <MobileOutlined v-if="looksLikePhone(registerForm.contact)" />
-                    <MailOutlined v-else-if="looksLikeEmail(registerForm.contact)" />
-                    <UserOutlined v-else />
+                    <el-icon>
+                      <Iphone v-if="looksLikePhone(registerForm.contact)" />
+                      <Message v-else-if="looksLikeEmail(registerForm.contact)" />
+                      <User v-else />
+                    </el-icon>
                   </template>
-                </a-input>
-              </a-form-item>
+                </el-input>
+              </el-form-item>
 
-              <a-form-item>
+              <el-form-item>
                 <template #label><span class="label-text">密码</span></template>
-                <a-input-password
-                  v-model:value.trim="registerForm.password"
+                <el-input
+                  v-model.trim="registerForm.password"
+                  type="password"
+                  show-password
                   placeholder="至少 6 位"
                 >
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
+                  <template #prefix><el-icon><Lock /></el-icon></template>
+                </el-input>
+              </el-form-item>
 
-              <a-form-item>
+              <el-form-item>
                 <template #label><span class="label-text">确认密码</span></template>
-                <a-input-password
-                  v-model:value.trim="registerForm.confirmPassword"
+                <el-input
+                  v-model.trim="registerForm.confirmPassword"
+                  type="password"
+                  show-password
                   placeholder="请再次输入密码"
                 >
-                  <template #prefix><LockOutlined /></template>
-                </a-input-password>
-              </a-form-item>
+                  <template #prefix><el-icon><Lock /></el-icon></template>
+                </el-input>
+              </el-form-item>
 
-              <a-form-item v-if="captchaOnRegister" class="form-item-last">
+              <el-form-item v-if="captchaOnRegister" class="form-item-last">
                 <template #label><span class="label-text">验证码</span></template>
                 <div class="captcha-row">
-                  <a-input
-                    v-model:value.trim="registerForm.captcha"
+                  <el-input
+                    v-model.trim="registerForm.captcha"
                     placeholder="请输入验证码"
-                    allow-clear
+                    clearable
                   >
-                    <template #prefix><CheckCircleOutlined /></template>
-                  </a-input>
+                    <template #prefix><el-icon><CircleCheck /></el-icon></template>
+                  </el-input>
                   <button
                     type="button"
                     class="captcha-box"
@@ -155,18 +166,18 @@
                     <span v-else class="captcha-fallback">刷新</span>
                   </button>
                 </div>
-              </a-form-item>
-            </a-form>
+              </el-form-item>
+            </el-form>
 
             <div class="auth-foot">
               <div v-if="isLogin" class="auth-actions">
                 <div class="option-row">
-                  <a-checkbox v-model:checked="rememberMe">
+                  <el-checkbox v-model="rememberMe">
                     <span class="check-label">记住我</span>
-                  </a-checkbox>
+                  </el-checkbox>
                   <span class="link link--muted" title="功能即将开放">忘记密码？</span>
                 </div>
-                <a-button
+                <el-button
                   class="submit-btn"
                   type="primary"
                   :loading="loginLoading"
@@ -174,10 +185,10 @@
                 >
                   <span v-if="!loginLoading" class="btn-content">
                     <span>进入 PersonalWorkbench</span>
-                    <ArrowRightOutlined class="btn-arrow" />
+                    <el-icon class="btn-arrow"><ArrowRight /></el-icon>
                   </span>
                   <span v-else>正在登录...</span>
-                </a-button>
+                </el-button>
                 <p v-if="registerEnabled" class="switch-line">
                   还没有账号？
                   <a class="link" href="javascript:void(0)" @click="switchMode('register')">去注册</a>
@@ -185,7 +196,7 @@
               </div>
 
               <div v-else-if="registerEnabled" class="auth-actions">
-                <a-button
+                <el-button
                   class="submit-btn"
                   type="primary"
                   :loading="registerLoading"
@@ -193,10 +204,10 @@
                 >
                   <span v-if="!registerLoading" class="btn-content">
                     <span>立即注册</span>
-                    <ArrowRightOutlined class="btn-arrow" />
+                    <el-icon class="btn-arrow"><ArrowRight /></el-icon>
                   </span>
                   <span v-else>正在注册...</span>
-                </a-button>
+                </el-button>
                 <p class="switch-line">
                   已有账号？
                   <a class="link" href="javascript:void(0)" @click="switchMode('login')">去登录</a>
@@ -214,15 +225,15 @@
 /** 登录/注册页：左插画 + 右同色纯底表单区 */
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { ElMessage } from 'element-plus'
 import {
-  UserOutlined,
-  LockOutlined,
-  MobileOutlined,
-  MailOutlined,
-  CheckCircleOutlined,
-  ArrowRightOutlined,
-} from '@ant-design/icons-vue'
+  User,
+  Lock,
+  Iphone,
+  Message,
+  CircleCheck,
+  ArrowRight,
+} from '@element-plus/icons-vue'
 import { loginApi, registerApi, fetchAuthConfigApi } from '@/apis/system/user/AuthApi'
 import { fetchCaptchaBase64Api } from '@/apis/common/CaptchaApi'
 import { useUserStore } from '@/stores/userStore'
@@ -251,8 +262,7 @@ const isLogin = computed(() => activeTab.value === 'login')
 
 const coreFeatures = [
   { title: '待办事务', desc: '清单、阶段与待办同屏推进，按状态跟进' },
-  { title: '日程安排', desc: '今天的时间一眼可见，需要时挂到待办' },
-  { title: '桌面 AI', desc: '拆解待办、整理笔记，确认后一键落板' },
+  { title: '桌面 AI', desc: '拆解目标为阶段和待办，确认后一键落板' },
 ]
 
 const loginForm = reactive({
@@ -326,7 +336,7 @@ async function refreshCaptcha() {
     captchaToken.value = result.data.token
     captchaTimestamp.value = result.data.timestamp
   } catch (error) {
-    message.error(error.message || '获取验证码失败')
+    ElMessage.error(error.message || '获取验证码失败')
     captchaBase64.value = ''
   }
 }
@@ -387,7 +397,7 @@ async function completeLogin(data, successMsg = '登录成功') {
     throw new Error('登录成功但未获取到可用菜单，请联系管理员分配权限')
   }
 
-  message.success(successMsg)
+  ElMessage.success(successMsg)
   const target = resolveSafeRedirect()
   await nextTick()
   await router.replace(target)
@@ -395,7 +405,7 @@ async function completeLogin(data, successMsg = '登录成功') {
 
 async function handleLogin() {
   if (captchaOnLogin.value && !loginForm.captcha?.trim()) {
-    message.warning('请输入验证码')
+    ElMessage.warning('请输入验证码')
     return
   }
 
@@ -410,7 +420,7 @@ async function handleLogin() {
     })
     await completeLogin(result?.data || {})
   } catch (error) {
-    message.error(error.message || '登录失败')
+    ElMessage.error(error.message || '登录失败')
     if (captchaOnLogin.value) {
       refreshCaptcha()
       loginForm.captcha = ''
@@ -423,23 +433,23 @@ async function handleLogin() {
 async function handleRegister() {
   const contact = resolveRegisterContact()
   if (contact.error) {
-    message.warning(contact.error)
+    ElMessage.warning(contact.error)
     return
   }
   if (!registerForm.password?.trim()) {
-    message.warning('请输入密码')
+    ElMessage.warning('请输入密码')
     return
   }
   if (registerForm.password.length < 6 || registerForm.password.length > 20) {
-    message.warning('密码长度需在 6-20 位之间')
+    ElMessage.warning('密码长度需在 6-20 位之间')
     return
   }
   if (registerForm.password !== registerForm.confirmPassword) {
-    message.warning('两次输入密码不一致')
+    ElMessage.warning('两次输入密码不一致')
     return
   }
   if (captchaOnRegister.value && !registerForm.captcha?.trim()) {
-    message.warning('请输入验证码')
+    ElMessage.warning('请输入验证码')
     return
   }
 
@@ -461,7 +471,7 @@ async function handleRegister() {
     }
     await completeLogin(data, `注册成功，已自动登录（账号：${data.account}）`)
   } catch (error) {
-    message.error(error.message || '注册失败')
+    ElMessage.error(error.message || '注册失败')
     if (captchaOnRegister.value) {
       refreshCaptcha()
       registerForm.captcha = ''
@@ -483,7 +493,7 @@ async function loadAuthConfig() {
       router.replace({ path: '/auth', query: { ...route.query, tab: 'login' } })
     }
   } catch (error) {
-    message.error(error.message || '加载认证配置失败')
+    ElMessage.error(error.message || '加载认证配置失败')
   }
 }
 
@@ -732,20 +742,18 @@ onMounted(async () => {
   margin: 0;
 }
 
-.form-card :deep(.ant-form-item) {
+.form-card :deep(.el-form-item) {
   margin-bottom: 16px;
 }
 
-.form-card :deep(.ant-form-item.form-item-last) {
+.form-card :deep(.el-form-item.form-item-last) {
   margin-bottom: 0;
 }
 
-.form-card :deep(.ant-form-item-label) {
+.form-card :deep(.el-form-item__label) {
   padding: 0 0 6px !important;
-}
-
-.form-card :deep(.ant-form-item-label > label) {
   height: auto;
+  line-height: 1.4;
 }
 
 .label-text {
@@ -761,7 +769,7 @@ onMounted(async () => {
   width: 100%;
 }
 
-.captcha-row :deep(.ant-input-affix-wrapper) {
+.captcha-row :deep(.el-input) {
   flex: 1;
   min-width: 0;
 }
@@ -853,8 +861,7 @@ onMounted(async () => {
   color: var(--auth-text-dim);
 }
 
-.form-card :deep(.ant-input-affix-wrapper),
-.form-card :deep(.ant-input) {
+.form-card :deep(.el-input__wrapper) {
   background: var(--auth-input-bg);
   border: 1px solid var(--auth-border);
   box-shadow: none;
@@ -864,28 +871,13 @@ onMounted(async () => {
     box-shadow 150ms ease;
 }
 
-.form-card :deep(.ant-input-affix-wrapper .ant-input),
-.form-card :deep(.ant-input-password .ant-input) {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 0;
-}
-
-.form-card :deep(.ant-input-affix-wrapper-focused),
-.form-card :deep(.ant-input-affix-wrapper:focus-within),
-.form-card :deep(.ant-input:focus) {
+.form-card :deep(.el-input__wrapper.is-focus),
+.form-card :deep(.el-input__wrapper:focus-within) {
   border-color: var(--auth-accent);
   box-shadow: 0 0 0 3px var(--auth-accent-soft);
 }
 
-.form-card :deep(.ant-input-affix-wrapper .ant-input:focus),
-.form-card :deep(.ant-input-password .ant-input:focus) {
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.form-card :deep(.ant-btn.submit-btn) {
+.form-card :deep(.el-button.submit-btn) {
   width: 100%;
   height: 44px;
   border: none;
@@ -906,18 +898,18 @@ onMounted(async () => {
     background 150ms ease;
 }
 
-.form-card :deep(.ant-btn.submit-btn:hover) {
+.form-card :deep(.el-button.submit-btn:hover) {
   color: var(--auth-text-inverse);
   background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-deep)) !important;
   transform: translateY(-1px);
   box-shadow: 0 10px 22px rgba(8, 145, 178, 0.4);
 }
 
-.form-card :deep(.ant-btn.submit-btn:active) {
+.form-card :deep(.el-button.submit-btn:active) {
   transform: scale(0.98);
 }
 
-.form-card :deep(.ant-btn.submit-btn:focus-visible) {
+.form-card :deep(.el-button.submit-btn:focus-visible) {
   outline: 2px solid var(--auth-accent);
   outline-offset: 3px;
 }
@@ -932,7 +924,7 @@ onMounted(async () => {
   transition: transform 150ms ease;
 }
 
-.form-card :deep(.ant-btn.submit-btn:hover) .btn-arrow {
+.form-card :deep(.el-button.submit-btn:hover) .btn-arrow {
   transform: translateX(2px);
 }
 

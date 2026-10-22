@@ -176,8 +176,8 @@
 .management-list-view .role-assign-empty { margin: 8px 0 0; font-size: 12px; color: var(--color-text-dim); }
 
 /* ── 角色「分配权限」弹窗 ── */
-.ant-modal.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body,
-.ant-modal-wrap.form-dialog.data-operation-view.perm-assign-dialog .ant-modal-body {
+.el-dialog.form-dialog.data-operation-view.perm-assign-dialog .el-dialog__body,
+.el-overlay-dialog.form-dialog.data-operation-view.perm-assign-dialog .el-dialog__body {
   padding: 0;
 }
 
@@ -327,7 +327,7 @@
   border-radius: var(--radius-full);
 }
 
-.perm-tree.ant-tree {
+.perm-tree.el-tree {
   --perm-tree-row-h: 30px;
   --perm-tree-indent: 18px;
   background: transparent;
@@ -335,43 +335,49 @@
   font-size: var(--text-base, 13px);
 }
 
-.perm-tree.ant-tree .ant-tree-list-holder-inner {
+.perm-tree.el-tree .el-tree-node__children {
   align-items: stretch;
 }
 
-.perm-tree.ant-tree .ant-tree-indent-unit {
-  width: var(--perm-tree-indent);
-}
-
-.perm-tree.ant-tree .ant-tree-treenode {
+.perm-tree.el-tree .el-tree-node {
   height: auto !important;
   min-height: var(--perm-tree-row-h);
-  padding: 0 8px 0 6px;
   margin: 0;
   width: 100%;
-  align-items: center;
   border-radius: 0;
   transition: background var(--transition-fast);
 }
 
-.perm-tree.ant-tree .ant-tree-treenode:hover {
-  background: rgba(8, 145, 178, 0.045);
+.perm-tree.el-tree .el-tree-node__content {
+  height: auto !important;
+  min-height: var(--perm-tree-row-h);
+  padding: 0 8px 0 6px;
+  align-items: center;
+  border-radius: 0;
+  background: transparent !important;
 }
 
-.perm-tree.ant-tree .ant-tree-switcher {
+.perm-tree.el-tree .el-tree-node__content:hover {
+  background: rgba(8, 145, 178, 0.045) !important;
+}
+
+.perm-tree.el-tree .el-tree-node__expand-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: var(--perm-tree-row-h);
   margin: 0;
+  padding: 0;
   line-height: 1;
   align-self: center;
   background: transparent !important;
+  color: var(--color-text-dim);
 }
 
-.perm-tree.ant-tree .ant-tree-switcher-noop {
+.perm-tree.el-tree .el-tree-node__expand-icon.is-leaf {
   width: 18px;
+  color: transparent;
 }
 
 .perm-tree-leaf-gap {
@@ -399,17 +405,17 @@
   transform: rotate(90deg);
 }
 
-.perm-tree.ant-tree .ant-tree-treenode:hover .perm-tree-chevron {
+.perm-tree.el-tree .el-tree-node__content:hover .perm-tree-chevron {
   color: var(--color-accent-deep);
 }
 
-.perm-tree.ant-tree .ant-tree-checkbox {
+.perm-tree.el-tree .el-checkbox {
   margin: 0 10px 0 2px;
-  top: 0;
+  height: auto;
   align-self: center;
 }
 
-.perm-tree.ant-tree .ant-tree-checkbox .ant-tree-checkbox-inner {
+.perm-tree.el-tree .el-checkbox .el-checkbox__inner {
   width: 15px;
   height: 15px;
   border-radius: 4px;
@@ -418,53 +424,38 @@
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
-.perm-tree.ant-tree .ant-tree-checkbox:hover .ant-tree-checkbox-inner {
+.perm-tree.el-tree .el-checkbox:hover .el-checkbox__inner {
   border-color: var(--color-accent);
 }
 
-.perm-tree.ant-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner,
-.perm-tree.ant-tree .ant-tree-checkbox-indeterminate .ant-tree-checkbox-inner {
+.perm-tree.el-tree .el-checkbox__input.is-checked .el-checkbox__inner,
+.perm-tree.el-tree .el-checkbox__input.is-indeterminate .el-checkbox__inner {
   background-color: var(--color-accent);
   border-color: var(--color-accent);
   box-shadow: none;
 }
 
 /* 对勾居中，勿再硬改 top，否则会顶到边上看起来像歪 V */
-.perm-tree.ant-tree .ant-tree-checkbox-checked .ant-tree-checkbox-inner::after {
+.perm-tree.el-tree .el-checkbox__input.is-checked .el-checkbox__inner::after {
   width: 5px;
   height: 8px;
   border: 1.5px solid #fff;
   border-top: 0;
-  border-inline-start: 0;
+  border-left: 0;
   top: 46%;
-  inset-inline-start: 25%;
+  left: 25%;
   transform: rotate(45deg) scale(1) translate(-50%, -50%);
   opacity: 1;
 }
 
-.perm-tree.ant-tree .ant-tree-checkbox-indeterminate .ant-tree-checkbox-inner::after {
+.perm-tree.el-tree .el-checkbox__input.is-indeterminate .el-checkbox__inner::before {
   width: 8px;
   height: 2px;
   border-radius: 1px;
   background: #fff;
-  border: none;
-  inset-inline-start: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateY(-50%) scale(1);
   opacity: 1;
-}
-
-.perm-tree.ant-tree .ant-tree-node-content-wrapper {
-  min-height: var(--perm-tree-row-h);
-  line-height: var(--perm-tree-row-h);
-  padding: 0 4px;
-  border-radius: 0;
-  background: transparent !important;
-}
-
-.perm-tree.ant-tree .ant-tree-node-content-wrapper:hover,
-.perm-tree.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
-  background: transparent !important;
 }
 
 .perm-tree-node {
@@ -527,7 +518,7 @@
   opacity: 0.8;
 }
 
-.perm-tree.ant-tree .ant-tree-treenode:hover .perm-tree-code {
+.perm-tree.el-tree .el-tree-node__content:hover .perm-tree-code {
   opacity: 1;
   color: var(--color-text-secondary);
 }

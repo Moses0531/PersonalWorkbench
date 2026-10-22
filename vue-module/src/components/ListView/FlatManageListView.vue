@@ -1,7 +1,7 @@
 <script setup>
 /** 扁平数据管理列表通用布局：工具栏、KPI、表格与行操作插槽 */
 import { computed, useSlots } from 'vue'
-import { SearchOutlined, ReloadOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { Search, Refresh, User } from '@element-plus/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
 
 const props = defineProps({
@@ -106,7 +106,7 @@ function onSearchInput(event) {
           </div>
           <div class="management-list-view__toolbar-right">
             <div v-if="showSearch" class="management-list-view__search">
-              <SearchOutlined class="management-list-view__search-icon" />
+              <Search class="management-list-view__search-icon" />
               <input
                 :value="searchQuery"
                 type="text"
@@ -122,7 +122,7 @@ function onSearchInput(event) {
               title="刷新"
               @click="emit('refresh')"
             >
-              <ReloadOutlined />
+              <Refresh />
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -130,8 +130,7 @@ function onSearchInput(event) {
 
         <slot name="table-prefix" />
 
-        <a-spin :spinning="loading">
-        <div class="table-wrap">
+        <div class="table-wrap" v-loading="loading">
           <table class="data-table">
             <thead>
               <tr>
@@ -153,7 +152,7 @@ function onSearchInput(event) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <UserOutlined style="font-size: 40px" />
+                      <User style="font-size: 40px" />
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>
@@ -209,7 +208,6 @@ function onSearchInput(event) {
             </tbody>
           </table>
         </div>
-        </a-spin>
 
         <div v-if="showFooter" class="management-list-view__table-footer">
           <slot name="footer" :total="displayTotal">

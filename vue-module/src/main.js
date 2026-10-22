@@ -2,8 +2,10 @@ import './assets/main.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import Antd from 'ant-design-vue'
-import 'ant-design-vue/dist/reset.css'
+import ElementPlus from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import 'element-plus/dist/index.css'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 
@@ -16,9 +18,13 @@ dayjs.locale('zh-cn')
 
 const app = createApp(App)
 
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component)
+}
+
 app.use(createPinia())
 app.use(router)
-app.use(Antd)
+app.use(ElementPlus, { locale: zhCn })
 setupEcharts(app)
 app.directive('permission', permissionDirective)
 

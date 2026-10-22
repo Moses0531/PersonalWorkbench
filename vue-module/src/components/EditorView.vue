@@ -1,23 +1,23 @@
 <template>
-  <!-- 仅上传：任务附件 / 头像等场景复用 a-upload，不渲染编辑器 -->
+  <!-- 仅上传：任务附件 / 头像等场景复用 el-upload，不渲染编辑器 -->
   <div v-if="uploadOnly" class="rich-editor rich-editor--upload-only">
-    <a-upload
+    <el-upload
         v-if="!readOnly"
         class="rich-editor__upload"
-        :show-upload-list="false"
+        :show-file-list="false"
         :multiple="multiple"
         :accept="accept"
         :disabled="uploading"
         :before-upload="beforeUpload"
-        :custom-request="handleCustomUpload"
+        :http-request="handleCustomUpload"
     >
       <slot>
         <button type="button" class="toolbar-btn toolbar-btn--primary" :disabled="uploading">
-          <UploadOutlined />
+          <Upload />
           {{ uploading ? '上传中...' : uploadText }}
         </button>
       </slot>
-    </a-upload>
+    </el-upload>
   </div>
 
   <div
@@ -27,14 +27,14 @@
       :style="containerStyle"
   >
     <div v-if="!readOnly" class="rich-editor__toolbar">
-      <a-upload
+      <el-upload
           class="rich-editor__upload"
-          :show-upload-list="false"
+          :show-file-list="false"
           :multiple="multiple"
           :accept="accept"
           :disabled="uploading || !editorReady"
           :before-upload="beforeUpload"
-          :custom-request="handleCustomUpload"
+          :http-request="handleCustomUpload"
       >
         <slot>
           <button
@@ -42,18 +42,18 @@
               class="toolbar-btn toolbar-btn--primary"
               :disabled="uploading || !editorReady"
           >
-            <UploadOutlined />
+            <Upload />
             {{ uploading ? '上传中...' : uploadText }}
           </button>
         </slot>
-      </a-upload>
+      </el-upload>
       <div class="toolbar-divider"></div>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleUndo">
-        <UndoOutlined />
+        <RefreshLeft />
         撤销
       </button>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleRedo">
-        <RedoOutlined />
+        <RefreshRight />
         重做
       </button>
     </div>
@@ -72,8 +72,8 @@
 <script setup>
 /** 富文本编辑器（wangEditor），支持文件上传插入与只读模式；亦可 uploadOnly 仅作上传 */
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import { message } from 'ant-design-vue'
-import { UploadOutlined, UndoOutlined, RedoOutlined } from '@ant-design/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Upload, RefreshLeft, RefreshRight } from '@element-plus/icons-vue'
 
 /** 仅完整编辑模式才加载；uploadOnly 时不解析未安装/未使用的 wangEditor */
 const WangEditor = defineAsyncComponent(async () => {
@@ -200,11 +200,11 @@ function escapeHtml(text) {
 
 function validateFile(file) {
   if (props.accept?.includes('image/') && !isImageFile(file)) {
-    message.error('只能上传图片文件')
+    ElMessage.error('只能上传图片文件')
     return false
   }
   if (props.fileSize != null && props.fileSize > 0 && file.size / 1024 / 1024 > props.fileSize) {
-    message.error(`文件大小不能超过 ${props.fileSize} MB`)
+    ElMessage.error(`文件大小不能超过 ${props.fileSize} MB`)
     return false
   }
   return true
@@ -248,7 +248,7 @@ async function handleFileUpload(file) {
   if (!props.uploadOnly) {
     const editor = editorRef.value
     if (!editor) {
-      message.warning('编辑器尚未就绪，请稍后再试')
+      ElMessage.warning('编辑器尚未就绪，请稍后再试')
       return false
     }
     if (url) insertFileNode(editor, file, url)
@@ -256,16 +256,16 @@ async function handleFileUpload(file) {
   return true
 }
 
-/** a-upload：校验失败则拦截，避免进入 custom-request */
+/** el-upload：校验失败则拦截，避免进入 http-request */
 function beforeUpload(file) {
   if (!props.uploadOnly && !editorReady.value) {
-    message.warning('编辑器尚未就绪，请稍后再试')
+    ElMessage.warning('编辑器尚未就绪，请稍后再试')
     return false
   }
   return validateFile(file)
 }
 
-/** a-upload custom-request */
+/** el-upload http-request */
 async function handleCustomUpload(opts) {
   const file = opts?.file
   if (!file) {
@@ -278,7 +278,7 @@ async function handleCustomUpload(opts) {
     await handleFileUpload(file)
     opts?.onSuccess?.({})
   } catch (err) {
-    message.error(err.message || '文件上传失败')
+    ElMessage.error(err.message || '文件上传失败')
     opts?.onError?.(err)
   } finally {
     uploading.value = false
@@ -361,7 +361,7 @@ async function handlePaste(event) {
         try {
           await handleFileUpload(file)
         } catch (err) {
-          message.error(err.message || '文件上传失败')
+          ElMessage.error(err.message || '文件上传失败')
         } finally {
           uploading.value = false
         }
@@ -375,7 +375,7 @@ async function handlePaste(event) {
 
   if (/src=["']file:/i.test(pastedHtml)) {
     event.preventDefault()
-    message.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
+    ElMessage.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
   }
 }
 
@@ -470,7 +470,7 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-.rich-editor__upload :deep(.ant-upload) {
+.rich-editor__upload :deep(.el-upload) {
   display: inline-block;
 }
 

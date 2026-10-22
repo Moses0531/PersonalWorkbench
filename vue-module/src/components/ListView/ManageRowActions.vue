@@ -2,11 +2,11 @@
 /** 表格行操作按钮：支持图标/文字样式，配合 v-permission 与 visible/disabled 动态控制 */
 import { computed } from 'vue'
 import {
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  SafetyOutlined,
-} from '@ant-design/icons-vue'
+  Edit,
+  Delete,
+  Plus,
+  Lock,
+} from '@element-plus/icons-vue'
 
 const props = defineProps({
   actions: { type: Array, default: () => [] },   // 操作配置数组，每项见下方 action 结构
@@ -88,10 +88,10 @@ const visibleActions = computed(() => props.actions.filter(isVisible))
       @click="handleClick(action)"
     >
       <template v-if="isText">{{ actionLabel(action) }}</template>
-      <EditOutlined v-else-if="action.key === 'edit'" />
-      <DeleteOutlined v-else-if="action.key === 'delete'" />
-      <PlusOutlined v-else-if="action.key === 'add'" />
-      <SafetyOutlined v-else-if="action.key === 'perm'" />
+      <Edit v-else-if="action.key === 'edit'" />
+      <Delete v-else-if="action.key === 'delete'" />
+      <Plus v-else-if="action.key === 'add'" />
+      <Lock v-else-if="action.key === 'perm'" />
       <!-- 无预设 key 时回退为文字 label -->
       <template v-else>{{ actionLabel(action) }}</template>
     </button>
