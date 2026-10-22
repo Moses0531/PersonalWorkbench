@@ -1,12 +1,12 @@
 # PersonalWorkbench · 个人工作台
-项目可访问地址：http://121.40.151.202/auth
+
 ## 1 项目概述
 
 ### 1.1 项目介绍
 
-基于 Spring Boot 3.5 + Vue 3 的智能备忘助手（PersonalWorkbench），涵盖待办与子任务、日程安排、会议记录、笔记整理与 DeepSeek AI 助手。
+基于 Spring Boot 3.5 + Vue 3 的个人工作台（PersonalWorkbench），涵盖待办与子任务，以及 DeepSeek AI 助手。
 
-数据按用户隔离，不做多人协作。系统管理（RBAC）与业务功能并存：普通用户聚焦备忘与日程，管理员保留用户 / 角色 / 权限运维能力。
+数据按用户隔离。系统管理（RBAC）与业务功能并存：普通用户聚焦待办，管理员保留用户 / 角色 / 权限运维能力。
 
 ### 1.2 技术栈
 
@@ -33,8 +33,8 @@ springboot-module/
 ├── start-module        # 启动入口 RunApplication（端口 8090）
 ├── common-module       # 通用配置、工具类、统一响应信封（ResultConfig）、全局异常处理
 ├── system-module       # 认证、用户、角色、权限（RBAC）
-├── business-module     # 待办 / 日程 / 会议 / 笔记
-└── ai-module           # AI 对话（SSE 流式）、智能规划、会议摘要
+├── business-module     # 待办
+└── ai-module           # AI 对话（SSE 流式）、智能规划
 ```
 
 #### 前端
@@ -59,11 +59,8 @@ springboot-module/
 | 认证与个人中心 | 登录 / 注册（图形验证码可选）、资料维护、密码修改、头像上传 |
 | 系统管理（RBAC） | 普通用户 / 管理员分表管理；角色 CRUD；权限（菜单+功能码）CRUD；角色-权限绑定；登录后菜单按角色动态下发 |
 | 待办事务 | 任务 / 子任务统一树：顶层任务可拆阶段与子任务；看板按状态推进叶子任务；附件（OSS）与处理状态；可选 AI 拆解 |
-| 日程 | 日程 CRUD，支持全天事件、起止时间、地点、周重复规则、可选关联任务 |
-| 会议 | 会议 CRUD，记录标题/时间/地点/参会人；上传会议材料（OSS），由 AI 自动整理摘要 |
 | AI 对话 | DeepSeek 流式对话（SSE），多会话管理（创建/切换/删除），Redis 持久化记忆 |
 | AI 智能规划 | 输入目标 → LLM 拆解步骤预览 → 确认后批量落为任务 |
-| AI 会议整理 | 上传会议材料后，AI 自动生成结构化摘要并写回会议记录 |
 
 ## 3 本地运行
 
@@ -80,7 +77,7 @@ springboot-module/
 创建数据库：
 
 ```sql
-CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE project_work DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 ```
 
 在库中导入 SQL（结构 + 数据）：
@@ -89,40 +86,15 @@ CREATE DATABASE personal_workbench DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4
 doc/sql/personal_workbench.sql
 ```
 
-仅结构可参考 `doc/sql/personal_workbench(s).sql`（已含 `note` 等业务表）。
+仅结构可参考 `doc/sql/personal_workbench(s).sql`。
 
 ### 3.3 配置后端
 
-编辑 `springboot-module/start-module/src/main/resources/application.yml`，按本机环境修改密码即可。  
-**本地与服务器 JDBC 连接参数已对齐**（时区 / `allowPublicKeyRetrieval` / `useSSL`）；Docker 只覆盖 host（`mysql`）与密码（`MYSQL_ROOT_PASSWORD`）。
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: 你的密码
-  data:
-    redis:
-      host: localhost
-      port: 6379
-```
+编辑 `springboot-module/start-module/src/main/resources/application.yml`，确认库名、账号和密码与本机 MySQL 一致。默认连接 `localhost:3306/project_work`，用户 `root`，密码 `123456`。Redis 默认 `localhost:6379`，无密码。
 
 **AI / DeepSeek（必填）：** 必须设置环境变量 `DEEPSEEK_KEY`。未配置时 Spring AI 会在启动阶段直接失败，后端无法启动。
 
 **OSS 附件上传（可选）：** 设置环境变量 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`，并确认 `aliyun.oss.*` 配置与桶一致。
-
-### 3.3.1 本地 vs 服务器：允许不同的只有这些
-
-| 项 | 本地开发 | 服务器 Docker |
-| --- | --- | --- |
-| MySQL host | `localhost` | `mysql`（compose 服务名） |
-| Redis host | `localhost` | `redis` |
-| DB 密码 | `application.yml` / `SPRING_DATASOURCE_PASSWORD` | `deploy/.env` → `MYSQL_ROOT_PASSWORD` |
-| 前端 API | Vite 代理 `/api` → `8090` | Nginx `/api/` → `backend:8090`（须 `underscores_in_headers on`，否则丢弃 `rbac_token`） |
-| 附件预览 | 本机 kkFileView `http://127.0.0.1:8012` | Nginx `/preview` → `kkfileview:8012`（同域，勿再指向本机 8012） |
-| JDBC 其它参数 | **相同** | **相同** |
-| Token 头名 | `rbac_token` | `rbac_token`（与本地一致） |
 
 ### 3.4 启动后端
 
@@ -146,80 +118,26 @@ pnpm dev
 
 Vite 已将 `/api` 代理到 `http://localhost:8090`（`/api` 前缀自动去除）。浏览器访问 `http://localhost:5173`。
 
-附件在线预览依赖 [kkFileView](https://kkfileview.keking.cn/)：本地在 `vue-module/.env.development` 配置 `VITE_KK_FILE_VIEW_BASE=http://127.0.0.1:8012`，并本机启动 kkFileView；服务器由 Compose 拉起 `pw-kkfileview`，前端生产构建写死同域 `/preview`。
-
-生产构建：
-
-```bash
-pnpm build
-```
-
-产物在 `vue-module/dist`。
+附件在线预览依赖 [kkFileView](https://kkfileview.keking.cn/)：在 `vue-module/.env.development` 配置 `VITE_KK_FILE_VIEW_BASE=http://127.0.0.1:8012`，并在本机启动 kkFileView。
 
 ### 3.6 首次使用
 
 - 注册已开启（`app.auth.register-enabled: true`），可直接注册普通用户（`USER` 角色）体验 PersonalWorkbench。
 - 种子账号见 `doc/sql/personal_workbench.sql` 中的 `sys_user` 记录：`admin`（管理员）、`root`（超级管理员）。密码以库中实际 BCrypt 值为准；若无法登录，走注册或库中重置。
-- 登录后菜单由后端权限动态下发：普通用户可见首页、日程 / 事务、个人中心、AI；系统管理菜单仅管理员可见。  
+- 登录后菜单由后端权限动态下发：普通用户可见首页、事务、个人中心、AI；系统管理菜单仅管理员可见。  
   事务页为统一任务树：顶层任务 → 阶段（父任务）→ 子任务；看板只推进叶子任务。
 
-## 4 生产部署（阿里云 ECS + Docker + GitHub Actions）
-
-推送到 `master` 后，GitHub Actions 将代码 **scp 到 ECS**（避免服务器直连 GitHub 失败），再 SSH 执行 `docker compose up -d --build`。浏览器访问 `http://ECS公网IP`（或已解析的域名）。
-
-### 4.1 阿里云一次性准备
-
-1. ECS 已安装 Docker Engine 与 Compose 插件，并绑定公网 IP。
-2. 安全组入方向：放行 **TCP 80**（站点）、**TCP 22**（SSH）；不要对公网开放 3306 / 6379 / 8090。
-3. 克隆仓库到服务器（示例路径 `/opt/PersonalWorkbench`）：
-
-```bash
-sudo mkdir -p /opt && sudo git clone https://github.com/Moses0531/PersonalWorkbench.git /opt/PersonalWorkbench
-cd /opt/PersonalWorkbench/deploy
-cp .env.example .env
-# 编辑 .env：必须设置 MYSQL_ROOT_PASSWORD、DEEPSEEK_KEY；OSS_* 按需
-nano .env
-docker compose --env-file .env up -d --build
-```
-
-4. 浏览器打开 `http://公网IP` 验证。若使用域名，在阿里云 DNS 添加 A 记录指向该 IP。
-
-### 4.2 GitHub Secrets（自动部署）
-
-在仓库 **Settings → Secrets and variables → Actions** 中配置：
-
-| Secret | 说明 |
-| --- | --- |
-| `SSH_HOST` | ECS 公网 IP 或域名 |
-| `SSH_USER` | SSH 用户名（如 `root`） |
-| `SSH_PRIVATE_KEY` | 对应私钥全文 |
-| `SSH_PORT` | 可选，默认 `22` |
-| `DEPLOY_PATH` | 服务器仓库路径，如 `/opt/PersonalWorkbench` |
-| `DEEPSEEK_KEY` | **必填**：写入服务器 `.env` 并注入后端容器 |
-| `MYSQL_ROOT_PASSWORD` | 建议填写，与服务器 `.env` 中数据库密码一致 |
-| `OSS_ACCESS_KEY_ID` | **头像/附件上传必填**：写入服务器 `.env` 并注入后端容器 |
-| `OSS_ACCESS_KEY_SECRET` | **头像/附件上传必填**：与上一行成对配置 |
-
-配置完成后，日常只需本地：
-
-```bash
-git push origin master
-```
-
-即可触发 [Deploy](.github/workflows/deploy.yml) 自动上传代码并重建容器；PR / push 还会跑 [CI](.github/workflows/ci.yml) 编译检查。无需再登录服务器拷代码。
-
-## 5 项目结构
+## 4 项目结构
 
 ```
 PersonalWorkbench/
-├── deploy/                 # Docker Compose 部署（nginx / backend / mysql / redis / kkFileView）
-├── .github/workflows/      # CI + 自动部署
+├── .github/workflows/      # 推送后的编译检查
 ├── doc/                    # SQL 脚本
 ├── springboot-module/      # 后端 Maven 多模块
 │   ├── start-module/       # 启动入口 + application.yml
 │   ├── common-module/      # 通用配置与工具
 │   ├── system-module/      # RBAC 认证授权
-│   ├── business-module/    # 业务（待办/日程/会议/笔记）
+│   ├── business-module/    # 业务（待办）
 │   └── ai-module/          # AI 能力
 └── vue-module/             # 前端 Vue 3 项目
     ├── src/
@@ -232,7 +150,7 @@ PersonalWorkbench/
     └── vite.config.js      # Vite 配置 + /api 代理
 ```
 
-## 6 开发约定
+## 5 开发约定
 
 - 接口统一使用 `ResultConfig` 信封返回；业务数据通过 `StpUtil.getLoginIdAsLong()` 做用户隔离，禁止仅凭资源 ID 越权访问。
 - 前端页面通过 `views/**/*.vue` 与菜单权限中的 `router_name` / `component_path` 动态挂载，新增页面时保持组件名与权限种子一致。

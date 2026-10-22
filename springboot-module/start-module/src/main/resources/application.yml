@@ -20,11 +20,9 @@ spring:
       chat:
         options:
           model: deepseek-chat
-  # MySQL：本地与 Docker 仅 host/密码不同，连接参数必须一致
-  # Docker 通过 SPRING_DATASOURCE_* / MYSQL_ROOT_PASSWORD 覆盖 host 与密码
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/personal_workbench?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/project_work?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:123456}
   # Redis配置
@@ -56,7 +54,7 @@ aliyun:
     bucketName: fangqianmin
     region: cn-hangzhou
 
-# 认证功能开关（按部署场景按需关闭）
+# 认证功能开关
 app:
   auth:
     register-enabled: true

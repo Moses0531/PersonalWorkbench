@@ -2,13 +2,12 @@
 /**
  * PersonalWorkbench 首页
  * 构图对齐登录页：Outfit 品牌 + 衬线问候 + 玻璃面板 + 等距氛围。
- * 内容：问候 / 时间日签卡 / 核心指标；三天内截止 · 今日日程。
+ * 内容：问候 / 时间日签卡 / 核心指标；三天内截止的待办。
  */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { pageTasksApi } from '@/apis/business/TaskApi'
-import { pageEventsApi } from '@/apis/business/EventApi'
 import { useUserStore } from '@/stores/userStore'
 import BrandMarkView from '@/components/BrandMarkView.vue'
 import {
@@ -20,7 +19,6 @@ import {
 } from '@/utils/charts'
 
 const TASK_LIMIT = 6
-const EVENT_LIMIT = 6
 const DUE_WITHIN_DAYS = 3
 
 const router = useRouter()
@@ -29,7 +27,6 @@ const now = ref(new Date())
 const loading = ref(true)
 const loadError = ref('')
 const tasks = ref([])
-const events = ref([])
 let clockTimer = null
 
 onMounted(() => {
@@ -126,24 +123,9 @@ const focusTasks = computed(() => {
 const visibleTasks = computed(() => focusTasks.value.slice(0, TASK_LIMIT))
 const moreTaskCount = computed(() => Math.max(0, focusTasks.value.length - TASK_LIMIT))
 const overdueCount = computed(() => focusTasks.value.filter((t) => t.overdue).length)
-
-const todayEvents = computed(() => {
-  const day = today.value
-  const weekday = day.day() === 0 ? '7' : String(day.day())
-  const dayKey = day.format('YYYY-MM-DD')
-  return events.value
-    .filter((ev) => eventOccursOn(ev, day, dayKey, weekday))
-    .slice()
-    .sort((a, b) => {
-      const allA = Number(a.isAllDay) === 1 ? 0 : 1
-      const allB = Number(b.isAllDay) === 1 ? 0 : 1
-      if (allA !== allB) return allA - allB
-      return dayjs(a.startTime).valueOf() - dayjs(b.startTime).valueOf()
-    })
-})
-
-const visibleEvents = computed(() => todayEvents.value.slice(0, EVENT_LIMIT))
-const moreEventCount = computed(() => Math.max(0, todayEvents.value.length - EVENT_LIMIT))
+const doingCount = computed(() =>
+  leafTasks.value.filter((t) => String(t.status ?? '0') === '1').length,
+)
 
 const dayMarks = computed(() => {
   const labels = ['今', '明', '后']
@@ -165,13 +147,9 @@ const focusSummary = computed(() => {
   if (loading.value) return '正在整理今日重点…'
   if (loadError.value) return '数据暂时不可用，可稍后刷新'
   const taskN = focusTasks.value.length
-  const eventN = todayEvents.value.length
-  if (!taskN && !eventN) return '节奏轻松 — 没有临近截止或今日安排'
-  const parts = []
-  if (overdueCount.value) parts.push(`${overdueCount.value} 项已逾期`)
-  else if (taskN) parts.push(`${taskN} 项将在三天内截止`)
-  if (eventN) parts.push(`今日 ${eventN} 项日程`)
-  return parts.join(' · ')
+  if (!taskN) return '节奏轻松 — 近三天没有临近截止的待办'
+  if (overdueCount.value) return `${overdueCount.value} 项已逾期 · ${taskN} 项将在三天内截止`
+  return `${taskN} 项将在三天内截止`
 })
 
 const coreMeters = computed(() => [
@@ -190,11 +168,11 @@ const coreMeters = computed(() => [
     tone: focusTasks.value.length > 0 ? 'accent' : 'idle',
   },
   {
-    key: 'events',
-    label: '今日程',
-    value: loading.value ? '—' : String(todayEvents.value.length),
-    hint: '日程安排',
-    tone: todayEvents.value.length > 0 ? 'accent' : 'idle',
+    key: 'doing',
+    label: '进行中',
+    value: loading.value ? '—' : String(doingCount.value),
+    hint: '正在推进',
+    tone: doingCount.value > 0 ? 'accent' : 'idle',
   },
 ])
 
@@ -211,20 +189,6 @@ const trendChartOption = computed(() =>
 )
 
 const weekDoneTotal = computed(() => weekTrend.value.values.reduce((a, b) => a + b, 0))
-
-function eventOccursOn(ev, day, dayKey, weekday) {
-  const start = dayjs(ev.startTime)
-  if (!start.isValid()) return false
-  if (start.format('YYYY-MM-DD') === dayKey) return true
-  if (String(ev.repeatType) !== '1') return false
-  if (start.startOf('day').isAfter(day, 'day')) return false
-  const days = String(ev.repeatWeekdays || '')
-    .split(',')
-    .map((d) => d.trim())
-    .filter(Boolean)
-  if (!days.length) return weekday === (start.day() === 0 ? '7' : String(start.day()))
-  return days.includes(weekday)
-}
 
 function dueLabel(task) {
   if (task.overdue) {
@@ -243,27 +207,15 @@ function formatDue(value) {
   return d.format('M/D HH:mm')
 }
 
-function formatEventTime(ev) {
-  if (Number(ev.isAllDay) === 1) return '全天'
-  const s = dayjs(ev.startTime)
-  if (!s.isValid()) return '—'
-  return s.format('HH:mm')
-}
-
 async function refreshFocus() {
   loading.value = true
   loadError.value = ''
   try {
-    const [taskRes, eventRes] = await Promise.all([
-      pageTasksApi(1, null),
-      pageEventsApi(1, null),
-    ])
+    const taskRes = await pageTasksApi(1, null)
     tasks.value = taskRes?.data?.records || []
-    events.value = eventRes?.data?.records || []
   } catch (err) {
     loadError.value = err?.message || '加载失败'
     tasks.value = []
-    events.value = []
   } finally {
     loading.value = false
   }
@@ -271,10 +223,6 @@ async function refreshFocus() {
 
 function goTasks() {
   router.push('/task').catch(() => {})
-}
-
-function goEvents() {
-  router.push('/event').catch(() => {})
 }
 </script>
 
@@ -386,7 +334,6 @@ function goEvents() {
               </span>
             </button>
             <button type="button" class="btn-text" @click="goTasks">打开事务</button>
-            <button type="button" class="btn-text" @click="goEvents">打开日程</button>
           </div>
         </div>
 
@@ -593,70 +540,6 @@ function goEvents() {
             另有 {{ moreTaskCount }} 项
             <button type="button" class="btn-text" @click="goTasks">查看</button>
           </p>
-        </section>
-
-        <section class="pane pane--events" aria-labelledby="pane-events">
-          <header class="pane-banner">
-            <div class="pane-banner__left">
-              <span class="pane-ico pane-ico--clock" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6" />
-                  <path d="M12 7.5V12l3.2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </span>
-              <div>
-                <p class="pane-eyebrow pane-eyebrow--on-dark">
-                  <span class="pane-eyebrow__en">Time</span>
-                  <span class="pane-eyebrow__zh">时刻</span>
-                </p>
-                <h2 id="pane-events" class="pane-title">日程安排</h2>
-              </div>
-            </div>
-            <button type="button" class="pane-link pane-link--on-dark" @click="goEvents">全部</button>
-          </header>
-
-          <div class="pane-body">
-            <div v-if="loading" class="skel skel--agenda" aria-hidden="true">
-              <div v-for="n in 3" :key="`e${n}`" class="skel-row skel-row--agenda" />
-            </div>
-
-            <div v-else-if="!visibleEvents.length" class="empty empty--events">
-              <div class="empty-clock" aria-hidden="true">
-                <span class="empty-clock__ring" />
-                <span class="empty-clock__hand empty-clock__hand--h" />
-                <span class="empty-clock__hand empty-clock__hand--m" />
-                <span class="empty-clock__core" />
-              </div>
-              <p class="empty-title">今天暂无安排</p>
-              <p class="empty-desc">可以把时间留给手头的待办。</p>
-              <button type="button" class="btn-ghost btn-ghost--pill" @click="goEvents">去日程</button>
-            </div>
-
-            <ul v-else class="list list--agenda" role="list">
-              <li
-                v-for="(ev, idx) in visibleEvents"
-                :key="ev.eventId"
-                class="card card--event"
-                :style="{ '--i': idx }"
-              >
-                <button type="button" class="card-btn card-btn--event" @click="goEvents">
-                  <time class="card-clock">{{ formatEventTime(ev) }}</time>
-                  <span class="card-rail" aria-hidden="true">
-                    <span class="card-dot" />
-                  </span>
-                  <span class="card-main">
-                    <span class="card-title">{{ ev.title || '未命名日程' }}</span>
-                    <span v-if="ev.location" class="card-meta">{{ ev.location }}</span>
-                  </span>
-                </button>
-              </li>
-            </ul>
-
-            <p v-if="moreEventCount > 0" class="more">
-              另有 {{ moreEventCount }} 项
-              <button type="button" class="btn-text" @click="goEvents">查看</button>
-            </p>
-          </div>
         </section>
       </div>
     </div>
@@ -1013,7 +896,7 @@ function goEvents() {
   background: linear-gradient(180deg, var(--light), var(--accent));
 }
 
-.meter--events::before {
+.meter--doing::before {
   background: linear-gradient(180deg, var(--accent), var(--deep));
 }
 
@@ -1057,7 +940,7 @@ function goEvents() {
 }
 
 .meter--overdue .meter-glyph { border-radius: 8px; }
-.meter--events .meter-glyph { border-radius: 50%; }
+.meter--doing .meter-glyph { border-radius: 50%; }
 
 .meter:hover .meter-glyph {
   background: rgba(8, 145, 178, 0.12);
@@ -1567,7 +1450,7 @@ function goEvents() {
 /* ── Boards ── */
 .boards {
   display: grid;
-  grid-template-columns: 1.08fr 0.92fr;
+  grid-template-columns: 1fr;
   gap: 22px;
   align-items: stretch;
   animation: rise 0.7s var(--ease) 0.14s both;

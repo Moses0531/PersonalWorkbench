@@ -19,412 +19,6 @@
 [TOC]
 
 
-
-
-
-
-# 工作台-会议
-
-
-## 新增会议
-
-
-**接口地址**:`/meeting/addMeeting`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "meetingId": 0,
-  "userId": 0,
-  "title": "",
-  "meetingTime": "",
-  "location": "",
-  "participants": "",
-  "attachments": "",
-  "aiSummary": "",
-  "status": "",
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|meeting|Meeting|body|true|Meeting|Meeting|
-|&emsp;&emsp;meetingId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;title|||false|string||
-|&emsp;&emsp;meetingTime|||false|string(date-time)||
-|&emsp;&emsp;location|||false|string||
-|&emsp;&emsp;participants|||false|string||
-|&emsp;&emsp;attachments|||false|string||
-|&emsp;&emsp;aiSummary|||false|string||
-|&emsp;&emsp;status|||false|string||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 批量删除会议
-
-
-**接口地址**:`/meeting/deleteBatchMeeting`
-
-
-**请求方式**:`DELETE`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-[]
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|integers|integer|body|true|array||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 获取会议分页列表
-
-
-**接口地址**:`/meeting/getMeetingPage`
-
-
-**请求方式**:`GET`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:<p>仅返回当前登录用户的会议</p>
-
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|pageNum||query|false|integer(int32)||
-|pageRows||query|false|integer(int32)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 删除会议材料
-
-
-**接口地址**:`/meeting/removeAttachment`
-
-
-**请求方式**:`DELETE`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求参数**:
-
-
-暂无
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 修改会议
-
-
-**接口地址**:`/meeting/updateMeeting`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "meetingId": 0,
-  "userId": 0,
-  "title": "",
-  "meetingTime": "",
-  "location": "",
-  "participants": "",
-  "attachments": "",
-  "aiSummary": "",
-  "status": "",
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|meeting|Meeting|body|true|Meeting|Meeting|
-|&emsp;&emsp;meetingId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;title|||false|string||
-|&emsp;&emsp;meetingTime|||false|string(date-time)||
-|&emsp;&emsp;location|||false|string||
-|&emsp;&emsp;participants|||false|string||
-|&emsp;&emsp;attachments|||false|string||
-|&emsp;&emsp;aiSummary|||false|string||
-|&emsp;&emsp;status|||false|string||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 上传会议材料（阿里云 OSS）
-
-
-**接口地址**:`/meeting/uploadAttachment`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|meetingId||query|true|integer(int64)||
-|file||query|true|file||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
 # 工作台-任务
 
 
@@ -646,7 +240,6 @@
 
 
 **接口描述**:<p>仅返回当前登录用户的任务；可按 nodeType / parentTaskId / archived 过滤</p>
-
 
 
 **请求参数**:
@@ -1000,309 +593,6 @@
 ```
 
 
-# 工作台-日程
-
-
-## 新增日程
-
-
-**接口地址**:`/event/addEvent`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "eventId": 0,
-  "userId": 0,
-  "taskId": 0,
-  "title": "",
-  "location": "",
-  "startTime": "",
-  "endTime": "",
-  "isAllDay": 0,
-  "repeatType": "",
-  "repeatWeekdays": "",
-  "displayOrder": 0,
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|event|Event|body|true|Event|Event|
-|&emsp;&emsp;eventId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;taskId|||false|integer(int64)||
-|&emsp;&emsp;title|||false|string||
-|&emsp;&emsp;location|||false|string||
-|&emsp;&emsp;startTime|||false|string(date-time)||
-|&emsp;&emsp;endTime|||false|string(date-time)||
-|&emsp;&emsp;isAllDay|||false|integer(int32)||
-|&emsp;&emsp;repeatType|||false|string||
-|&emsp;&emsp;repeatWeekdays|||false|string||
-|&emsp;&emsp;displayOrder|||false|integer(int32)||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 批量删除日程
-
-
-**接口地址**:`/event/deleteBatchEvent`
-
-
-**请求方式**:`DELETE`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-[]
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|integers|integer|body|true|array||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 获取日程分页列表
-
-
-**接口地址**:`/event/getEventPage`
-
-
-**请求方式**:`GET`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:<p>仅返回当前登录用户的日程</p>
-
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|pageNum||query|false|integer(int32)||
-|pageRows||query|false|integer(int32)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## 修改日程
-
-
-**接口地址**:`/event/updateEvent`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "eventId": 0,
-  "userId": 0,
-  "taskId": 0,
-  "title": "",
-  "location": "",
-  "startTime": "",
-  "endTime": "",
-  "isAllDay": 0,
-  "repeatType": "",
-  "repeatWeekdays": "",
-  "displayOrder": 0,
-  "remark": "",
-  "createTime": "",
-  "updateTime": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|event|Event|body|true|Event|Event|
-|&emsp;&emsp;eventId|||false|integer(int64)||
-|&emsp;&emsp;userId|||false|integer(int64)||
-|&emsp;&emsp;taskId|||false|integer(int64)||
-|&emsp;&emsp;title|||false|string||
-|&emsp;&emsp;location|||false|string||
-|&emsp;&emsp;startTime|||false|string(date-time)||
-|&emsp;&emsp;endTime|||false|string(date-time)||
-|&emsp;&emsp;isAllDay|||false|integer(int32)||
-|&emsp;&emsp;repeatType|||false|string||
-|&emsp;&emsp;repeatWeekdays|||false|string||
-|&emsp;&emsp;displayOrder|||false|integer(int32)||
-|&emsp;&emsp;remark|||false|string||
-|&emsp;&emsp;createTime|||false|string(date-time)||
-|&emsp;&emsp;updateTime|||false|string(date-time)||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
 # 工作台-项目
 
 
@@ -1471,7 +761,6 @@
 **接口描述**:<p>获取角色分页列表</p>
 
 
-
 **请求参数**:
 
 
@@ -1609,7 +898,6 @@
 **接口描述**:<p>为指定角色绑定一个权限</p>
 
 
-
 **请求示例**:
 
 
@@ -1679,7 +967,6 @@
 **接口描述**:<p>根据角色ID查询已绑定的权限列表</p>
 
 
-
 **请求参数**:
 
 
@@ -1732,7 +1019,6 @@
 
 
 **接口描述**:<p>解除角色与指定权限的绑定</p>
-
 
 
 **请求示例**:
@@ -1960,7 +1246,6 @@
 **接口描述**:<p>获取权限分页列表</p>
 
 
-
 **请求参数**:
 
 
@@ -2108,7 +1393,6 @@
 
 
 **接口描述**:<p>返回 Base64 图片、校验 token 与时间戳；登录/注册时回传明文验证码 + token + timestamp 完成校验</p>
-
 
 
 **请求参数**:
@@ -2781,7 +2065,6 @@
 **接口描述**:<p>返回注册与验证码开关，供登录页按需展示</p>
 
 
-
 **请求参数**:
 
 
@@ -2832,7 +2115,6 @@
 
 
 **接口描述**:<p>使用账号、手机号或邮箱登录，需要提供密码；验证码按配置可选</p>
-
 
 
 **请求示例**:
@@ -2949,7 +2231,6 @@
 **接口描述**:<p>从数据库实时加载当前登录用户可访问的菜单与功能权限</p>
 
 
-
 **请求参数**:
 
 
@@ -3000,7 +2281,6 @@
 
 
 **接口描述**:<p>通过手机号或邮箱进行注册，需要提供密码、确认密码；验证码按配置可选</p>
-
 
 
 **请求示例**:
@@ -3085,7 +2365,6 @@
 
 
 **接口描述**:<p>发送消息并接收流式响应</p>
-
 
 
 **请求参数**:
@@ -3276,198 +2555,3 @@
 }
 ```
 
-
-## AI 会议整理（根据材料生成概要并写回）
-
-
-**接口地址**:`/ai/meeting/summary`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:
-
-
-**请求参数**:
-
-
-暂无
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## AI 规划确认落板
-
-
-**接口地址**:`/ai/plan/apply`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:<p>将预览阶段写入任务树。body 使用 <code>projectTaskId</code>（项目根任务 ID）；后端仍兼容旧字段 <code>projectId</code>。</p>
-
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "projectTaskId": 0,
-  "planBatchId": "",
-  "phases": []
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|body|Map|body|true|object||
-|&emsp;&emsp;projectTaskId|项目根任务 ID（nodeType=project）|body|true|integer(int64)||
-|&emsp;&emsp;projectId|兼容旧字段，等同 projectTaskId|body|false|integer(int64)||
-|&emsp;&emsp;planBatchId|规划批次号|body|true|string||
-|&emsp;&emsp;phases|阶段与步骤|body|true|array||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```
-
-
-## AI 规划预览（不写库）
-
-
-**接口地址**:`/ai/plan/preview`
-
-
-**请求方式**:`POST`
-
-
-**请求数据类型**:`application/x-www-form-urlencoded,application/json`
-
-
-**响应数据类型**:`*/*`
-
-
-**接口描述**:<p>按项目根任务生成阶段规划预览（不写库）。body 使用 <code>projectTaskId</code>；后端仍兼容旧字段 <code>projectId</code>。</p>
-
-
-
-**请求示例**:
-
-
-```javascript
-{
-  "projectTaskId": 0,
-  "deadline": "2026-10-01",
-  "goal": "",
-  "constraints": ""
-}
-```
-
-
-**请求参数**:
-
-
-| 参数名称 | 参数说明 | 请求类型    | 是否必须 | 数据类型 | schema |
-| -------- | -------- | ----- | -------- | -------- | ------ |
-|body|Map|body|true|object||
-|&emsp;&emsp;projectTaskId|项目根任务 ID（nodeType=project）|body|true|integer(int64)||
-|&emsp;&emsp;projectId|兼容旧字段，等同 projectTaskId|body|false|integer(int64)||
-|&emsp;&emsp;deadline|项目截止时间|body|true|string||
-|&emsp;&emsp;goal|规划目标（可选，默认取项目描述）|body|false|string||
-|&emsp;&emsp;constraints|约束说明|body|false|string||
-
-
-**响应状态**:
-
-
-| 状态码 | 说明 | schema |
-| -------- | -------- | ----- | 
-|200|OK|ResultConfig|
-
-
-**响应参数**:
-
-
-| 参数名称 | 参数说明 | 类型 | schema |
-| -------- | -------- | ----- |----- | 
-|code||integer(int32)|integer(int32)|
-|msg||string||
-|data||string||
-
-
-**响应示例**:
-```javascript
-{
-	"code": 0,
-	"msg": "",
-	"data": {}
-}
-```

@@ -67,11 +67,6 @@ INSERT INTO `role_permission` VALUES (28, 0, 253);
 INSERT INTO `role_permission` VALUES (45, 0, 254);
 INSERT INTO `role_permission` VALUES (47, 0, 255);
 INSERT INTO `role_permission` VALUES (100, 0, 300);
-INSERT INTO `role_permission` VALUES (101, 0, 310);
-INSERT INTO `role_permission` VALUES (102, 0, 311);
-INSERT INTO `role_permission` VALUES (103, 0, 312);
-INSERT INTO `role_permission` VALUES (104, 0, 313);
-INSERT INTO `role_permission` VALUES (105, 0, 314);
 INSERT INTO `role_permission` VALUES (106, 0, 320);
 INSERT INTO `role_permission` VALUES (107, 0, 321);
 INSERT INTO `role_permission` VALUES (108, 0, 322);
@@ -82,12 +77,6 @@ INSERT INTO `role_permission` VALUES (112, 0, 326);
 INSERT INTO `role_permission` VALUES (113, 0, 327);
 INSERT INTO `role_permission` VALUES (114, 0, 328);
 INSERT INTO `role_permission` VALUES (145, 0, 329);
-INSERT INTO `role_permission` VALUES (152, 0, 330);
-INSERT INTO `role_permission` VALUES (153, 0, 331);
-INSERT INTO `role_permission` VALUES (154, 0, 332);
-INSERT INTO `role_permission` VALUES (155, 0, 333);
-INSERT INTO `role_permission` VALUES (156, 0, 334);
-INSERT INTO `role_permission` VALUES (157, 0, 335);
 INSERT INTO `role_permission` VALUES (29, 1, 1);
 INSERT INTO `role_permission` VALUES (30, 1, 100);
 INSERT INTO `role_permission` VALUES (31, 1, 103);
@@ -104,11 +93,6 @@ INSERT INTO `role_permission` VALUES (42, 1, 244);
 INSERT INTO `role_permission` VALUES (46, 1, 255);
 INSERT INTO `role_permission` VALUES (51, 1, 256);
 INSERT INTO `role_permission` VALUES (115, 1, 300);
-INSERT INTO `role_permission` VALUES (116, 1, 310);
-INSERT INTO `role_permission` VALUES (117, 1, 311);
-INSERT INTO `role_permission` VALUES (118, 1, 312);
-INSERT INTO `role_permission` VALUES (119, 1, 313);
-INSERT INTO `role_permission` VALUES (120, 1, 314);
 INSERT INTO `role_permission` VALUES (121, 1, 320);
 INSERT INTO `role_permission` VALUES (122, 1, 321);
 INSERT INTO `role_permission` VALUES (123, 1, 322);
@@ -119,23 +103,12 @@ INSERT INTO `role_permission` VALUES (127, 1, 326);
 INSERT INTO `role_permission` VALUES (128, 1, 327);
 INSERT INTO `role_permission` VALUES (129, 1, 328);
 INSERT INTO `role_permission` VALUES (147, 1, 329);
-INSERT INTO `role_permission` VALUES (158, 1, 330);
-INSERT INTO `role_permission` VALUES (159, 1, 331);
-INSERT INTO `role_permission` VALUES (160, 1, 332);
-INSERT INTO `role_permission` VALUES (161, 1, 333);
-INSERT INTO `role_permission` VALUES (162, 1, 334);
-INSERT INTO `role_permission` VALUES (163, 1, 335);
 INSERT INTO `role_permission` VALUES (38, 2, 1);
 INSERT INTO `role_permission` VALUES (39, 2, 100);
 INSERT INTO `role_permission` VALUES (40, 2, 103);
 INSERT INTO `role_permission` VALUES (48, 2, 255);
 INSERT INTO `role_permission` VALUES (50, 2, 256);
 INSERT INTO `role_permission` VALUES (130, 2, 300);
-INSERT INTO `role_permission` VALUES (131, 2, 310);
-INSERT INTO `role_permission` VALUES (132, 2, 311);
-INSERT INTO `role_permission` VALUES (133, 2, 312);
-INSERT INTO `role_permission` VALUES (134, 2, 313);
-INSERT INTO `role_permission` VALUES (135, 2, 314);
 INSERT INTO `role_permission` VALUES (136, 2, 320);
 INSERT INTO `role_permission` VALUES (137, 2, 321);
 INSERT INTO `role_permission` VALUES (138, 2, 322);
@@ -146,33 +119,6 @@ INSERT INTO `role_permission` VALUES (142, 2, 326);
 INSERT INTO `role_permission` VALUES (143, 2, 327);
 INSERT INTO `role_permission` VALUES (144, 2, 328);
 INSERT INTO `role_permission` VALUES (149, 2, 329);
-INSERT INTO `role_permission` VALUES (164, 2, 330);
-INSERT INTO `role_permission` VALUES (165, 2, 331);
-INSERT INTO `role_permission` VALUES (166, 2, 332);
-INSERT INTO `role_permission` VALUES (167, 2, 333);
-INSERT INTO `role_permission` VALUES (168, 2, 334);
-INSERT INTO `role_permission` VALUES (169, 2, 335);
-INSERT INTO `role_permission` VALUES (170, 0, 340);
-INSERT INTO `role_permission` VALUES (171, 0, 341);
-INSERT INTO `role_permission` VALUES (172, 0, 342);
-INSERT INTO `role_permission` VALUES (173, 0, 343);
-INSERT INTO `role_permission` VALUES (174, 0, 344);
-INSERT INTO `role_permission` VALUES (175, 0, 345);
-INSERT INTO `role_permission` VALUES (176, 0, 346);
-INSERT INTO `role_permission` VALUES (177, 1, 340);
-INSERT INTO `role_permission` VALUES (178, 1, 341);
-INSERT INTO `role_permission` VALUES (179, 1, 342);
-INSERT INTO `role_permission` VALUES (180, 1, 343);
-INSERT INTO `role_permission` VALUES (181, 1, 344);
-INSERT INTO `role_permission` VALUES (182, 1, 345);
-INSERT INTO `role_permission` VALUES (183, 1, 346);
-INSERT INTO `role_permission` VALUES (184, 2, 340);
-INSERT INTO `role_permission` VALUES (185, 2, 341);
-INSERT INTO `role_permission` VALUES (186, 2, 342);
-INSERT INTO `role_permission` VALUES (187, 2, 343);
-INSERT INTO `role_permission` VALUES (188, 2, 344);
-INSERT INTO `role_permission` VALUES (189, 2, 345);
-INSERT INTO `role_permission` VALUES (190, 2, 346);
 INSERT INTO `role_permission` VALUES (49, 5, 256);
 
 -- ----------------------------
@@ -227,13 +173,8 @@ INSERT INTO `sys_permission` VALUES (241, '新增管理员', 240, 'F', '0', 'adm
 INSERT INTO `sys_permission` VALUES (242, '删除管理员', 240, 'F', '0', 'admin:remove', '', NULL, NULL, NULL, NULL, 0, '2026-07-12 23:59:09', '2026-07-12 23:59:09');
 INSERT INTO `sys_permission` VALUES (243, '编辑管理员', 240, 'F', '0', 'admin:modify', '', NULL, NULL, NULL, NULL, 0, '2026-07-12 23:59:09', '2026-07-12 23:59:09');
 INSERT INTO `sys_permission` VALUES (244, '查看管理员', 240, 'F', '0', 'admin:query', '', NULL, NULL, NULL, NULL, 0, '2026-07-12 23:59:09', '2026-07-12 23:59:09');
-INSERT INTO `sys_permission` VALUES (255, '桌面助手', 0, 'M', '0', 'ai:chat', '', '拆解待办、梳理笔记', 'AiChatPage', 0, NULL, 0, '2026-07-15 01:50:49', '2026-07-15 01:50:49');
+INSERT INTO `sys_permission` VALUES (255, '桌面助手', 0, 'M', '0', 'ai:chat', '', '拆解待办、规划推进', 'AiChatPage', 0, NULL, 0, '2026-07-15 01:50:49', '2026-07-15 01:50:49');
 INSERT INTO `sys_permission` VALUES (256, '查看个人信息', 100, 'F', '0', 'profile:query', '', '', '', 0, NULL, 0, '2026-07-16 00:06:08', '2026-07-16 00:06:32');
-INSERT INTO `sys_permission` VALUES (310, '日程', 0, 'M', '0', 'event', '', '今天的安排，可挂到待办', 'EventPage', 0, '/event', 0, '2026-07-17 00:05:53', '2026-07-17 00:07:19');
-INSERT INTO `sys_permission` VALUES (311, '新增日程', 310, 'F', '0', 'event:add', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
-INSERT INTO `sys_permission` VALUES (312, '删除日程', 310, 'F', '0', 'event:remove', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
-INSERT INTO `sys_permission` VALUES (313, '编辑日程', 310, 'F', '0', 'event:modify', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
-INSERT INTO `sys_permission` VALUES (314, '查看日程', 310, 'F', '0', 'event:query', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
 INSERT INTO `sys_permission` VALUES (320, '事务', 0, 'M', '0', 'task', '', '待办看板：清单、阶段与待办同屏推进', 'TaskPage', 1, '/task', 0, '2026-07-17 00:05:53', '2026-07-17 00:07:45');
 INSERT INTO `sys_permission` VALUES (321, '新增待办', 320, 'F', '0', 'task:add', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
 INSERT INTO `sys_permission` VALUES (322, '删除待办', 320, 'F', '0', 'task:remove', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
@@ -244,19 +185,6 @@ INSERT INTO `sys_permission` VALUES (326, '删除项目', 320, 'F', '0', 'projec
 INSERT INTO `sys_permission` VALUES (327, '编辑项目', 320, 'F', '0', 'project:modify', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
 INSERT INTO `sys_permission` VALUES (328, '查看项目', 320, 'F', '0', 'project:query', '', NULL, NULL, NULL, NULL, 0, '2026-07-17 00:05:53', '2026-07-17 00:05:53');
 INSERT INTO `sys_permission` VALUES (329, 'AI智能规划', 320, 'F', '0', 'ai:plan', '', '待办清单智能规划预览与落板', NULL, NULL, NULL, 0, '2026-07-18 00:51:20', '2026-07-18 00:51:20');
-INSERT INTO `sys_permission` VALUES (330, '会议记录', 0, 'M', '0', 'meeting', '', '会议材料上传与AI整理', 'MeetingPage', 2, '/meeting', 0, '2026-07-18 22:01:30', '2026-07-18 22:23:59');
-INSERT INTO `sys_permission` VALUES (331, '新增会议', 330, 'F', '0', 'meeting:add', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
-INSERT INTO `sys_permission` VALUES (332, '删除会议', 330, 'F', '0', 'meeting:remove', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
-INSERT INTO `sys_permission` VALUES (333, '编辑会议', 330, 'F', '0', 'meeting:modify', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
-INSERT INTO `sys_permission` VALUES (334, '查看会议', 330, 'F', '0', 'meeting:query', '', NULL, NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
-INSERT INTO `sys_permission` VALUES (335, 'AI会议整理', 330, 'F', '0', 'ai:meeting:summary', '', '根据会议材料生成概要', NULL, NULL, NULL, 0, '2026-07-18 22:01:30', '2026-07-18 22:01:30');
-INSERT INTO `sys_permission` VALUES (340, '笔记', 0, 'M', '0', 'note', '', '零散想法，整理后可落成待办', 'NotePage', 3, '/note', 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (341, '新增笔记', 340, 'F', '0', 'note:add', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (342, '删除笔记', 340, 'F', '0', 'note:remove', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (343, '编辑笔记', 340, 'F', '0', 'note:modify', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (344, '查看笔记', 340, 'F', '0', 'note:query', '', NULL, NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (345, 'AI笔记整合', 340, 'F', '0', 'ai:note:consolidate', '', '多条碎片整合为整理稿', NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
-INSERT INTO `sys_permission` VALUES (346, 'AI 笔记生成待办', 340, 'F', '0', 'ai:note:to-tasks', '', '整理稿拆解为待办树并落板', NULL, NULL, NULL, 0, '2026-09-06 18:00:00', '2026-09-06 18:00:00');
 
 -- ----------------------------
 -- Table structure for sys_role
@@ -315,88 +243,6 @@ CREATE TABLE `sys_user`  (
 INSERT INTO `sys_user` VALUES (2, 'user', '$2a$10$7kkUrobqVd2rW56QbgZguOZiq12OgzwDpj/nIiu67WnryPc4bnTkW', '0', 2, '用户95626163', '14585252396', NULL, '', '0', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png', NULL, '2026-07-18 22:08:12', '2026-07-13 23:03:14', '2026-07-18 22:08:12');
 INSERT INTO `sys_user` VALUES (3, 'admin', '$2b$12$kvyLSAyBVTlCz4GNP3XBI.19PoQXFQVNDX/rKp220FJOfSUJhwwAm', '0', 1, 'ADMIN', '14525253636', 'admin@admin.com', '', '0', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png', NULL, '2026-07-15 02:44:28', '2026-07-13 23:52:59', '2026-07-15 02:44:28');
 INSERT INTO `sys_user` VALUES (4, 'root', '$2a$10$TOqMXc7qBBtvQA5OJ5VADOMvYwcK8xSWvmiWpedidXNyz.lp807TS', '0', 0, 'ROOT', NULL, 'root@root.com', '超级管理员', '0', 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/69b5e539-179c-4a7c-b51d-469e49769d65.png', '2025-10-14 00:00:00', '2026-07-18 22:21:53', '2026-07-12 23:59:09', '2026-07-18 22:21:53');
-
--- ----------------------------
--- Table structure for event
--- ----------------------------
-DROP TABLE IF EXISTS `event`;
-CREATE TABLE `event`  (
-  `event_id` bigint NOT NULL AUTO_INCREMENT COMMENT '日程ID',
-  `user_id` bigint NOT NULL COMMENT '所属用户ID（逻辑关联 sys_user.user_id）',
-  `task_id` bigint NULL DEFAULT NULL COMMENT '关联任务ID（可选；逻辑关联 task.task_id）',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '标题',
-  `location` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '地点',
-  `start_time` datetime NOT NULL COMMENT '开始时间（重复日程表示当日时段起点）',
-  `end_time` datetime NOT NULL COMMENT '结束时间（重复日程表示当日时段终点）',
-  `is_all_day` tinyint NOT NULL DEFAULT 0 COMMENT '是否全天（0-否，1-是）',
-  `repeat_type` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '重复类型（0-不重复，1-每周）',
-  `repeat_weekdays` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '每周重复的星期（1=周一…7=周日，逗号分隔，如1或1,3,5）',
-  `display_order` int NOT NULL DEFAULT 0 COMMENT '同日显示顺序（越小越靠前）',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '备注说明',
-  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`event_id`) USING BTREE,
-  INDEX `idx_event_user_range`(`user_id` ASC, `start_time` ASC, `end_time` ASC) USING BTREE,
-  INDEX `idx_event_user_repeat`(`user_id` ASC, `repeat_type` ASC) USING BTREE,
-  INDEX `idx_event_task`(`task_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-日程表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of event
--- ----------------------------
-INSERT INTO `event` VALUES (1, 4, NULL, '周工作例会', '', '2026-07-06 09:00:00', '2026-07-06 10:00:00', 0, '1', '1', 0, '', '2026-07-16 23:54:30', '2026-07-16 23:54:30');
-INSERT INTO `event` VALUES (2, 2, NULL, '组会', '', '2026-07-17 09:00:00', '2026-07-17 10:00:00', 0, '1', '', 0, '', '2026-07-17 22:48:37', '2026-07-17 22:48:37');
-
--- ----------------------------
--- Table structure for meeting
--- ----------------------------
-DROP TABLE IF EXISTS `meeting`;
-CREATE TABLE `meeting`  (
-  `meeting_id` bigint NOT NULL AUTO_INCREMENT COMMENT '会议ID',
-  `user_id` bigint NOT NULL COMMENT '所属用户ID',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '会议标题',
-  `meeting_time` datetime NOT NULL COMMENT '会议时间',
-  `location` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '地点（可选）',
-  `participants` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '参会人（可选）',
-  `attachments` json NULL COMMENT '会议材料（OSS；元素含 id/name/url/size/mime/createTime）',
-  `ai_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'AI整理后的会议概要',
-  `status` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '0-待整理，1-已整理',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '备注',
-  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`meeting_id`) USING BTREE,
-  INDEX `idx_meeting_user_time`(`user_id` ASC, `meeting_time` DESC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-会议记录表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of meeting
--- ----------------------------
-INSERT INTO `meeting` VALUES (2, 4, '教务系统功能方案设计', '2026-07-18 22:35:33', '会议室', '张三 李四', '[{\"id\": \"9d278d7b5251485582441f948c9ebc0c\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/4c7d376b-8771-4ebf-9f49-5652c6cbf5fb.md\", \"mime\": \"text/markdown\", \"name\": \"li.md\", \"size\": 1340, \"createTime\": \"2026-07-18 22:36:12\"}, {\"id\": \"66fb8cb5ac964fc89e4a0199f14683f8\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/abb9e048-8b7d-4fbf-b642-3bf55ca39ff6.md\", \"mime\": \"text/markdown\", \"name\": \"z.md\", \"size\": 2077, \"createTime\": \"2026-07-18 22:36:26\"}, {\"id\": \"0e7b29be316042379a075edcddfa6faf\", \"url\": \"https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/2026/07/0e938e78-c994-4878-84f1-bbdd9aa94106.md\", \"kind\": \"ai-summary\", \"mime\": \"text/markdown\", \"name\": \"教务系统功能方案设计-会议纪要.md\", \"size\": 2409, \"createTime\": \"2026-07-18 22:36:39\"}]', '### 会议概要\n\n#### 会议背景\n本次会议围绕教务系统的功能方案设计展开，由张三、李四两位参会人共同讨论。会上提供了两份设计方案：一份为基础版教务管理系统（设计一），另一份为增强型智能教务服务平台（设计二），旨在对比两者模块、流程与技术架构的差异，并确定后续开发方向。\n\n#### 讨论要点\n- **模块划分对比**：\n  - 设计一（简易版）包含用户管理、学生管理、课程管理、成绩管理、系统设置五大核心模块。\n  - 设计二（增强版）在继承设计一基础模块（优化批量导入导出）上，新增在线选课系统（含冲突检测）、通知与消息推送、数据分析报表、移动端支持（小程序/APP）等功能。\n- **核心流程扩展**：\n  - 设计一流程包括学生选课（管理员发布→学生选课→生成课表）、成绩录入（教师录入→系统计算总分→学生查看）、数据维护。\n  - 设计二新增智能推荐（基于历史选课数据）、教师评价（学生匿名评分）、数据大屏（实时展示关键指标）等流程。\n- **技术架构差异**：\n  - 设计一采用Web界面，侧重权限控制与数据加密。\n  - 设计二升级为响应式设计（适配PC+移动端），数据库使用MySQL + Redis（缓存热点数据），并集成简单推荐算法（基于协同过滤）。\n- **数据流动方向**：设计二强调“教师录入成绩 → 系统计算总分 → 学生查看成绩”，与设计一类似但更注重新增流程中的数据实时反馈。\n\n#### 结论与决策\n- 会议认可设计二（智能教务服务平台）作为后续开发基础，因其在功能丰富性、移动支持与智能化方面优于设计一。\n- 设计一的模块（如基础用户、课程、成绩管理）可作为系统的底层核心直接被继承，设计二在此基础上进行增强。\n- 需明确技术架构升级细节，例如Redis缓存的具体应用场景、推荐算法的冷启动问题等，但未在本次会议中深入讨论。\n\n#### 后续事项\n- 张三负责整理设计二中的模块优先级，提交开发排期建议。\n- 李四负责评估移动端支持的实现方案（小程序或APP），并列出技术选型对比。\n- 双方约定下次会议前完成对新流程（智能推荐、教师评价）的用户故事定义。', '1', '', '2026-07-18 22:35:52', '2026-07-18 22:36:39');
-
--- ----------------------------
--- Table structure for note
--- ----------------------------
-DROP TABLE IF EXISTS `note`;
-CREATE TABLE `note`  (
-  `note_id` bigint NOT NULL AUTO_INCREMENT COMMENT '笔记ID',
-  `user_id` bigint NOT NULL COMMENT '所属用户ID',
-  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '标题（碎片可空）',
-  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '正文（纯文本/Markdown）',
-  `note_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'scrap' COMMENT '类型：scrap-碎片 / digest-整理稿',
-  `status` char(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '0' COMMENT '0-活跃，1-已归档',
-  `source_note_ids` json NULL COMMENT '整理稿来源碎片 ID 列表',
-  `linked_task_id` bigint NULL DEFAULT NULL COMMENT '生成待办后挂接的顶层清单 ID',
-  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`note_id`) USING BTREE,
-  INDEX `idx_note_user_update`(`user_id` ASC, `update_time` DESC) USING BTREE,
-  INDEX `idx_note_user_type_status`(`user_id` ASC, `note_type` ASC, `status` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务-笔记' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of note
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for project
