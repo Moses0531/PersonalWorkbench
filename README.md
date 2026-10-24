@@ -66,7 +66,7 @@ springboot-module/
 
 ### 3.1 环境要求
 
-- JDK 17+
+- JDK 21+
 - Maven 3.8+
 - Node.js（`^22.18.0` 或 `>=24.12.0`） + [pnpm](https://pnpm.io/)
 - MySQL 8.x（本地实例）

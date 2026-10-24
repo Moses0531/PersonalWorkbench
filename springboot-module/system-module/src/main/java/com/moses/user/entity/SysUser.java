@@ -41,6 +41,18 @@ public class SysUser {
     private Long roleId;
 
     /**
+     * 角色编码（非表字段，资料接口填充；对应 sys_role.role_code）
+     */
+    @TableField(exist = false)
+    private String roleCode;
+
+    /**
+     * 角色名称（非表字段，资料接口填充）
+     */
+    @TableField(exist = false)
+    private String roleName;
+
+    /**
      * 用户昵称
      */
     private String username;

@@ -1,10 +1,11 @@
 package com.moses.tool;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.moses.context.UserContext;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.moses.service.TaskService;
+import com.moses.task.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
@@ -30,7 +31,7 @@ public class BusinessTools {
 
     @Tool(description = "获取指定顶层任务的看板快照：名称/描述、各状态子任务数量与摘要。projectTaskId 为 node_type=project 的顶层任务 ID。")
     public String getProjectBoard(@ToolParam(description = "顶层任务 ID") Long projectTaskId) {
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = UserContext.currentUserId();
         return toJson(taskService.getProjectBoardSnapshot(userId, projectTaskId));
     }
 
@@ -39,7 +40,7 @@ public class BusinessTools {
             @ToolParam(description = "顶层任务 ID") Long projectTaskId,
             @ToolParam(description = "规划批次号；空则自动生成") String planBatchId,
             @ToolParam(description = "阶段列表 JSON") String phasesJson) {
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = UserContext.currentUserId();
         String batchId = StringUtils.hasText(planBatchId)
                 ? planBatchId.trim()
                 : UUID.randomUUID().toString().replace("-", "");

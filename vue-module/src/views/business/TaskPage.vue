@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -13,8 +13,12 @@ import {
   updateAttachmentStatusApi,
   updateTaskApi,
   uploadTaskAttachmentApi,
+  type TaskAttachmentRecord,
+  type TaskRecord,
 } from '@/apis/business/TaskApi'
-import { planApplyApi, planPreviewApi } from '@/apis/ai/AiApi'
+import { planApplyApi, planPreviewApi, type AiPlanPreview } from '@/apis/ai/AiApi'
+import { toErrorMessage } from '@/types/api'
+import type { IdLike } from '@/types/entities'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
 import EditorView from '@/components/EditorView.vue'
 import {
@@ -44,19 +48,19 @@ const NODE_PHASE = 'phase'
 const NODE_TASK = 'task'
 
 /** 兼容缺省 / 下划线字段，缺省按叶子任务处理 */
-function nodeTypeOf(t) {
+function nodeTypeOf(t?: TaskRecord | null) {
   const raw = t?.nodeType ?? t?.node_type ?? ''
   const v = String(raw).trim().toLowerCase()
   if (v === NODE_PROJECT || v === NODE_PHASE || v === NODE_TASK) return v
   return NODE_TASK
 }
-function isLeafTask(t) {
+function isLeafTask(t?: TaskRecord | null) {
   return nodeTypeOf(t) === NODE_TASK
 }
-function isPhaseNode(t) {
+function isPhaseNode(t?: TaskRecord | null) {
   return nodeTypeOf(t) === NODE_PHASE
 }
-function isProjectNode(t) {
+function isProjectNode(t?: TaskRecord | null) {
   return nodeTypeOf(t) === NODE_PROJECT
 }
 
@@ -81,25 +85,29 @@ const taskLoading = ref(false)
 const taskSubmitting = ref(false)
 const taskDialogVisible = ref(false)
 const taskIsEdit = ref(false)
-const tasks = ref([])
+const tasks = ref<TaskRecord[]>([])
 const taskSearchQuery = ref('')
-const filterPriority = ref(null)
+const filterPriority = ref<number | null>(null)
 /** null=全部 | independent=无父任务 | bound=有父任务 */
-const filterBinding = ref(null)
+const filterBinding = ref<'independent' | 'bound' | null>(null)
 
 const taskById = computed(() => {
-  const map = new Map()
+  const map = new Map<number, TaskRecord>()
   for (const t of tasks.value) map.set(Number(t.taskId), t)
   return map
 })
 
 const childrenByParent = computed(() => {
-  const map = new Map()
+  const map = new Map<number, TaskRecord[]>()
   for (const t of tasks.value) {
     if (t.parentTaskId == null || t.parentTaskId === '') continue
     const pid = Number(t.parentTaskId)
-    if (!map.has(pid)) map.set(pid, [])
-    map.get(pid).push(t)
+    let kids = map.get(pid)
+    if (!kids) {
+      kids = []
+      map.set(pid, kids)
+    }
+    kids.push(t)
   }
   return map
 })
@@ -109,7 +117,7 @@ const projects = computed(() =>
   tasks.value
     .filter((t) => isProjectNode(t))
     .slice()
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0))
     .map((t) => ({
       ...t,
       nodeType: NODE_PROJECT,
@@ -118,7 +126,7 @@ const projects = computed(() =>
 )
 
 const projectMap = computed(() => {
-  const map = new Map()
+  const map = new Map<number, string>()
   for (const p of projects.value) map.set(Number(p.taskId), p.title || p.name || '')
   return map
 })
@@ -127,19 +135,19 @@ const activeProjects = computed(() =>
   projects.value.filter((p) => String(p.archived) !== '1'),
 )
 
-function isProjectArchived(project) {
+function isProjectArchived(project?: TaskRecord | null) {
   return project != null && String(project.archived) === '1'
 }
 
-function getTaskById(id) {
+function getTaskById(id?: IdLike | null): TaskRecord | null {
   if (id == null || id === '') return null
   return taskById.value.get(Number(id)) || null
 }
 
 /** 沿 parentTaskId 向上找到顶层节点 */
-function findAncestorProject(taskLike) {
+function findAncestorProject(taskLike: TaskRecord | IdLike | null): TaskRecord | null {
   if (!taskLike) return null
-  let cur
+  let cur: TaskRecord | null
   if (typeof taskLike === 'object') {
     cur =
       taskLike.taskId != null
@@ -148,7 +156,7 @@ function findAncestorProject(taskLike) {
   } else {
     cur = getTaskById(taskLike)
   }
-  const seen = new Set()
+  const seen = new Set<number>()
   while (cur) {
     const id = Number(cur.taskId)
     if (!Number.isNaN(id)) {
@@ -162,13 +170,14 @@ function findAncestorProject(taskLike) {
   return null
 }
 
-function collectDescendants(rootId) {
+function collectDescendants(rootId: IdLike): TaskRecord[] {
   const root = Number(rootId)
-  const out = []
-  const queue = [...(childrenByParent.value.get(root) || [])]
-  const seen = new Set()
+  const out: TaskRecord[] = []
+  const queue: TaskRecord[] = [...(childrenByParent.value.get(root) || [])]
+  const seen = new Set<number>()
   while (queue.length) {
     const node = queue.shift()
+    if (!node) break
     const id = Number(node.taskId)
     if (seen.has(id)) continue
     seen.add(id)
@@ -179,22 +188,22 @@ function collectDescendants(rootId) {
   return out
 }
 
-function leafTasksUnder(rootId) {
+function leafTasksUnder(rootId: IdLike) {
   return collectDescendants(rootId).filter((t) => isLeafTask(t))
 }
 
-function hasProjectAncestor(task) {
+function hasProjectAncestor(task: TaskRecord | IdLike | null) {
   return findAncestorProject(task) != null
 }
 
-function phaseTitleOf(task) {
+function phaseTitleOf(task?: TaskRecord | null) {
   if (!task?.parentTaskId) return ''
   const parent = getTaskById(task.parentTaskId)
   if (parent && isPhaseNode(parent)) return parent.title || ''
   return ''
 }
 
-function projectNameOf(taskLike) {
+function projectNameOf(taskLike: TaskRecord | IdLike | null) {
   const project = findAncestorProject(taskLike)
   if (!project) return ''
   return project.title || project.name || projectMap.value.get(Number(project.taskId)) || ''
@@ -240,7 +249,7 @@ const headerCopy = computed(() => {
 })
 
 function buildQuery() {
-  const query = {}
+  const query: Record<string, string> = {}
   if (filterProjectId.value != null && !Number.isNaN(Number(filterProjectId.value))) {
     query.projectId = String(filterProjectId.value)
   }
@@ -263,7 +272,8 @@ function syncRouteQuery() {
   })
 }
 
-function viewProjectTasks(projectTaskId) {
+function viewProjectTasks(projectTaskId?: IdLike | null) {
+  if (projectTaskId == null) return
   filterProjectId.value = Number(projectTaskId)
 }
 
@@ -286,7 +296,22 @@ watch(
   },
 )
 
-const taskForm = reactive({
+/** 任务表单数据结构 */
+interface TaskFormData {
+  taskId: IdLike | null
+  nodeType: string
+  parentTaskId: IdLike | null
+  title: string
+  description: string
+  status: string
+  priority: number
+  dueTime: string | null
+  tags: string
+  displayOrder: number
+  remark: string
+}
+
+const taskForm = reactive<TaskFormData>({
   taskId: null,
   nodeType: NODE_TASK,
   parentTaskId: null,
@@ -303,7 +328,7 @@ const taskForm = reactive({
 /** 看板只展示 leaf task；任务组内取根下子孙 leaf */
 const projectScopedTasks = computed(() => {
   if (!inProjectSpace.value) return tasks.value.filter((t) => isLeafTask(t))
-  return leafTasksUnder(filterProjectId.value)
+  return leafTasksUnder(filterProjectId.value!)
 })
 
 /** 任务组：阶段 + 下属步骤的紧凑树 */
@@ -313,23 +338,23 @@ const projectPhaseTree = computed(() => {
   const phases = (childrenByParent.value.get(rootId) || [])
     .filter((t) => isPhaseNode(t))
     .slice()
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0))
   return phases.map((phase) => ({
     ...phase,
     steps: (childrenByParent.value.get(Number(phase.taskId)) || [])
       .filter((t) => isLeafTask(t))
       .slice()
-      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+      .sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0)),
   }))
 })
 
 /** 可选父节点：活跃顶层 +（任务组内）本阶段 */
 const parentSelectOptions = computed(() => {
-  const opts = []
+  const opts: Array<{ value: number; label: string; kind: 'project' | 'phase' }> = []
   for (const p of activeProjects.value) {
     opts.push({
       value: Number(p.taskId),
-      label: p.title || p.name,
+      label: p.title || p.name || '',
       kind: 'project',
     })
   }
@@ -384,7 +409,7 @@ const columnsData = computed(() =>
     items: filteredTasks.value
       .filter((t) => String(t.status ?? '0') === col.key)
       .slice()
-      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+      .sort((a, b) => Number(a.displayOrder ?? 0) - Number(b.displayOrder ?? 0)),
   })),
 )
 
@@ -419,9 +444,9 @@ const projectStatusChartOption = computed(() =>
 
 /** 各父任务完成率：leaf task descendants（条目标题等展示） */
 const projectProgressMap = computed(() => {
-  const result = new Map()
+  const result = new Map<number, ReturnType<typeof calcCompletion>>()
   for (const p of projects.value) {
-    const list = leafTasksUnder(p.taskId)
+    const list = leafTasksUnder(p.taskId ?? 0)
     const stats = calcCompletion(list)
     result.set(Number(p.taskId), stats)
   }
@@ -436,11 +461,11 @@ const emptyProjectProgress = {
   rate: 0,
 }
 
-function projectProgressOf(projectTaskId) {
+function projectProgressOf(projectTaskId?: IdLike | null) {
   return projectProgressMap.value.get(Number(projectTaskId)) || emptyProjectProgress
 }
 
-function resetTaskForm(defaults = {}) {
+function resetTaskForm(defaults: Partial<TaskFormData> = {}) {
   Object.assign(taskForm, {
     taskId: null,
     nodeType: NODE_TASK,
@@ -457,19 +482,19 @@ function resetTaskForm(defaults = {}) {
   })
 }
 
-function formatDue(value) {
+function formatDue(value?: string | null) {
   if (!value) return ''
   const d = dayjs(value)
   if (!d.isValid()) return ''
   return d.format('MM-DD HH:mm')
 }
 
-function isOverdue(task) {
-  if (!task.dueTime || String(task.status) === '2' || String(task.status) === '3') return false
+function isOverdue(task?: TaskRecord | null) {
+  if (!task?.dueTime || String(task.status) === '2' || String(task.status) === '3') return false
   return dayjs(task.dueTime).isBefore(dayjs(), 'day')
 }
 
-function tagList(tags) {
+function tagList(tags?: string | null): string[] {
   if (!tags) return []
   return String(tags)
     .split(',')
@@ -484,7 +509,7 @@ const ATTACH_STATUS = [
   { key: '2', label: '处理完成' },
 ]
 
-function resolveAttachmentStatus(file) {
+function resolveAttachmentStatus(file?: TaskAttachmentRecord | null) {
   if (!file) return '0'
   const s = file.status != null ? String(file.status).trim() : ''
   if (s === '0' || s === '1' || s === '2') return s
@@ -493,8 +518,8 @@ function resolveAttachmentStatus(file) {
   return '0'
 }
 
-function parseAttachments(raw) {
-  let list = []
+function parseAttachments(raw: unknown): TaskAttachmentRecord[] {
+  let list: TaskAttachmentRecord[] = []
   if (!raw) list = []
   else if (Array.isArray(raw)) list = raw
   else if (typeof raw === 'string') {
@@ -508,23 +533,23 @@ function parseAttachments(raw) {
   return list.map((f) => ({ ...f, status: resolveAttachmentStatus(f) }))
 }
 
-function attachmentCount(task) {
+function attachmentCount(task?: TaskRecord | null) {
   return parseAttachments(task?.attachments).length
 }
 
-function attachmentStatusLabel(file) {
+function attachmentStatusLabel(file?: TaskAttachmentRecord | null) {
   const key = resolveAttachmentStatus(file)
   return ATTACH_STATUS.find((x) => x.key === key)?.label || '未处理'
 }
 
-function attachmentStatusClass(file) {
+function attachmentStatusClass(file?: TaskAttachmentRecord | null) {
   const key = resolveAttachmentStatus(file)
   if (key === '2') return 'attach-badge--done'
   if (key === '1') return 'attach-badge--doing'
   return 'attach-badge--todo'
 }
 
-function formatFileSize(size) {
+function formatFileSize(size?: string | number | null) {
   const n = Number(size)
   if (!n || n < 0) return ''
   if (n < 1024) return `${n} B`
@@ -533,7 +558,7 @@ function formatFileSize(size) {
 }
 
 /** 附件只读：祖先顶层 archived === '1' */
-function isTaskAttachmentsReadonly(taskLike) {
+function isTaskAttachmentsReadonly(taskLike: TaskRecord | IdLike | null) {
   if (taskLike == null || taskLike === '') return false
   if (typeof taskLike === 'object' && isProjectNode(taskLike)) {
     return isProjectArchived(taskLike)
@@ -548,7 +573,7 @@ function isTaskAttachmentsReadonly(taskLike) {
 }
 
 /* ---------- 任务附件 ---------- */
-const taskAttachments = ref([])
+const taskAttachments = ref<TaskAttachmentRecord[]>([])
 
 const taskFormAttachmentsReadonly = computed(() =>
   isTaskAttachmentsReadonly({
@@ -558,11 +583,11 @@ const taskFormAttachmentsReadonly = computed(() =>
   }),
 )
 
-const projectAttachmentList = ref([])
+const projectAttachmentList = ref<TaskAttachmentRecord[]>([])
 const projectAttachmentLoading = ref(false)
 
 const projectAttachmentStatusCounts = computed(() => {
-  const counts = { '0': 0, '1': 0, '2': 0 }
+  const counts: Record<string, number> = { '0': 0, '1': 0, '2': 0 }
   for (const f of projectAttachmentList.value) {
     const key = resolveAttachmentStatus(f)
     counts[key] = (counts[key] || 0) + 1
@@ -577,7 +602,7 @@ async function loadProjectAttachments() {
   }
   projectAttachmentLoading.value = true
   try {
-    const result = await listProjectAttachmentsApi(filterProjectId.value)
+    const result = await listProjectAttachmentsApi(filterProjectId.value!)
     const list = result?.data || []
     projectAttachmentList.value = list.map((f) => ({ ...f, status: resolveAttachmentStatus(f) }))
   } catch {
@@ -595,12 +620,12 @@ watch(
   },
 )
 
-function openAttachmentUrl(url) {
+function openAttachmentUrl(url?: string | null) {
   if (!url) return
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
-function previewAttachment(file) {
+function previewAttachment(file?: TaskAttachmentRecord | null) {
   if (!file?.url) {
     ElMessage.warning('文件地址无效')
     return
@@ -608,13 +633,13 @@ function previewAttachment(file) {
   openKkFileViewPreview(file.url)
 }
 
-function downloadAttachment(file) {
+function downloadAttachment(file?: TaskAttachmentRecord | null) {
   openAttachmentUrl(file?.url)
 }
 
 /* ---------- 卡片附件弹窗 ---------- */
 const filesModalVisible = ref(false)
-const filesModalTask = ref(null)
+const filesModalTask = ref<TaskRecord | null>(null)
 
 const filesModalTitle = computed(() => {
   const title = (filesModalTask.value?.title || '').trim()
@@ -625,7 +650,7 @@ const filesModalFiles = computed(() => parseAttachments(filesModalTask.value?.at
 
 const filesModalReadonly = computed(() => isTaskAttachmentsReadonly(filesModalTask.value))
 
-function openFilesModal(task) {
+function openFilesModal(task: TaskRecord) {
   filesModalTask.value = task
   filesModalVisible.value = true
 }
@@ -635,13 +660,14 @@ function closeFilesModal() {
   filesModalTask.value = null
 }
 
-function removeFilesModalAttachment(attachmentId) {
+function removeFilesModalAttachment(attachmentId?: IdLike | null) {
+  if (!attachmentId) return
   const task = filesModalTask.value
   if (!task) return
   return removeAttachment(attachmentId, { taskId: task.taskId, task })
 }
 
-function syncAttachmentViews(taskId) {
+function syncAttachmentViews(taskId: IdLike) {
   const row = tasks.value.find((t) => Number(t.taskId) === Number(taskId))
   if (Number(taskForm.taskId) === Number(taskId)) {
     taskAttachments.value = parseAttachments(row?.attachments)
@@ -656,7 +682,7 @@ function syncAttachmentViews(taskId) {
   }
 }
 
-async function handleAttachmentUpload(file) {
+async function handleAttachmentUpload(file: File) {
   if (!file || !taskForm.taskId) {
     throw new Error('未选择有效文件')
   }
@@ -668,7 +694,14 @@ async function handleAttachmentUpload(file) {
   return { url: '' }
 }
 
-function resolveReadonlyTask(ctx = {}) {
+/** 附件只读判断上下文 */
+interface ReadonlyTaskCtx {
+  task?: TaskRecord | null
+  taskId?: IdLike | null
+  parentTaskId?: IdLike | null
+}
+
+function resolveReadonlyTask(ctx: ReadonlyTaskCtx = {}): TaskRecord {
   if (ctx.task) return ctx.task
   if (ctx.taskId != null) return getTaskById(ctx.taskId) || { taskId: ctx.taskId, parentTaskId: ctx.parentTaskId }
   return {
@@ -678,9 +711,9 @@ function resolveReadonlyTask(ctx = {}) {
   }
 }
 
-async function removeAttachment(attachmentId, ctx = {}) {
+async function removeAttachment(attachmentId?: IdLike | null, ctx: ReadonlyTaskCtx = {}) {
   const taskId = ctx.taskId ?? taskForm.taskId
-  if (!taskId || isTaskAttachmentsReadonly(resolveReadonlyTask(ctx))) return
+  if (!attachmentId || !taskId || isTaskAttachmentsReadonly(resolveReadonlyTask(ctx))) return
   try {
     await removeTaskAttachmentApi(taskId, attachmentId)
     ElMessage.success('已删除附件')
@@ -688,11 +721,15 @@ async function removeAttachment(attachmentId, ctx = {}) {
     syncAttachmentViews(taskId)
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    ElMessage.error(toErrorMessage(error) || '删除失败')
   }
 }
 
-async function setAttachmentStatus(file, status, ctx = {}) {
+async function setAttachmentStatus(
+  file: TaskAttachmentRecord | null,
+  status: string | number,
+  ctx: ReadonlyTaskCtx = {},
+) {
   const taskId = ctx.taskId ?? file?.taskId ?? taskForm.taskId
   const attachmentId = file?.id
   const next = String(status)
@@ -708,7 +745,7 @@ async function setAttachmentStatus(file, status, ctx = {}) {
     syncAttachmentViews(taskId)
     if (inProjectSpace.value) await loadProjectAttachments()
   } catch (error) {
-    ElMessage.error(error.message || '更新失败')
+    ElMessage.error(toErrorMessage(error) || '更新失败')
   }
 }
 
@@ -718,7 +755,7 @@ async function loadTasks() {
     const result = await pageTasksApi(1, null)
     tasks.value = result?.data?.records || []
   } catch (error) {
-    ElMessage.error(error.message || '获取待办列表失败')
+    ElMessage.error(toErrorMessage(error) || '获取待办列表失败')
   } finally {
     taskLoading.value = false
   }
@@ -731,7 +768,11 @@ async function refreshTasks() {
 const planDialogVisible = ref(false)
 const planPreviewing = ref(false)
 const planApplying = ref(false)
-const planForm = reactive({
+const planForm = reactive<{
+  goal: string
+  deadline: string | null
+  constraints: string
+}>({
   goal: '',
   deadline: null,
   constraints: '',
@@ -745,7 +786,7 @@ const planDeadlineHint = computed(() => {
   if (days <= 45) return `剩 ${days} 天 · 按一到一个半月均衡拆解`
   return `剩 ${days} 天 · 按较长周期细分阶段`
 })
-const planPreview = ref(null)
+const planPreview = ref<AiPlanPreview | null>(null)
 
 function openPlanDialog() {
   if (!inProjectSpace.value || projectAttachmentsReadonly.value) return
@@ -779,7 +820,7 @@ async function runPlanPreview() {
       ElMessage.warning('未生成有效阶段，请补充目标后重试')
     }
   } catch (error) {
-    ElMessage.error(error.message || 'AI 规划失败')
+    ElMessage.error(toErrorMessage(error) || 'AI 规划失败')
   } finally {
     planPreviewing.value = false
   }
@@ -802,14 +843,14 @@ async function applyPlanPreview() {
     planPreview.value = null
     await refreshTasks()
   } catch (error) {
-    ElMessage.error(error.message || '落板失败')
+    ElMessage.error(toErrorMessage(error) || '落板失败')
     return Promise.reject(error)
   } finally {
     planApplying.value = false
   }
 }
 
-function openCreateTask(status = '0') {
+function openCreateTask(status: string | number = '0') {
   taskIsEdit.value = false
   taskAttachments.value = []
   resetTaskForm({
@@ -833,11 +874,11 @@ function openCreatePhase() {
   taskDialogVisible.value = true
 }
 
-function openEditTask(row) {
+function openEditTask(row: TaskRecord) {
   taskIsEdit.value = true
   taskAttachments.value = parseAttachments(row.attachments)
   resetTaskForm({
-    taskId: row.taskId,
+    taskId: row.taskId ?? null,
     nodeType: row.nodeType || NODE_TASK,
     parentTaskId: row.parentTaskId != null ? Number(row.parentTaskId) : null,
     title: row.title || '',
@@ -846,7 +887,7 @@ function openEditTask(row) {
     priority: row.priority != null ? Number(row.priority) : 0,
     dueTime: row.dueTime ? dayjs(row.dueTime).format('YYYY-MM-DD HH:mm:ss') : null,
     tags: row.tags || '',
-    displayOrder: row.displayOrder ?? 0,
+    displayOrder: Number(row.displayOrder ?? 0),
     remark: row.remark || '',
   })
   taskDialogVisible.value = true
@@ -893,19 +934,20 @@ async function submitTaskForm() {
     taskDialogVisible.value = false
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(toErrorMessage(error) || '操作失败')
   } finally {
     taskSubmitting.value = false
   }
 }
 
-async function removeTask(id) {
+async function removeTask(id?: IdLike | null) {
+  if (id == null) return
   try {
     await deleteTasksApi(id)
     ElMessage.success('删除成功')
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    ElMessage.error(toErrorMessage(error) || '删除失败')
   }
 }
 
@@ -914,7 +956,14 @@ const projectSubmitting = ref(false)
 const projectDialogVisible = ref(false)
 const projectIsEdit = ref(false)
 
-const projectForm = reactive({
+const projectForm = reactive<{
+  taskId: IdLike | null
+  title: string
+  description: string
+  archived: string
+  displayOrder: number
+  remark: string
+}>({
   taskId: null,
   title: '',
   description: '',
@@ -940,15 +989,15 @@ function openCreateProject() {
   projectDialogVisible.value = true
 }
 
-function openEditProject(row) {
+function openEditProject(row?: TaskRecord | null) {
   if (!row) return
   projectIsEdit.value = true
   Object.assign(projectForm, {
-    taskId: row.taskId,
+    taskId: row.taskId ?? null,
     title: row.title || row.name || '',
     description: row.description || '',
     archived: row.archived != null ? String(row.archived) : '0',
-    displayOrder: row.displayOrder ?? 0,
+    displayOrder: Number(row.displayOrder ?? 0),
     remark: row.remark || '',
   })
   projectDialogVisible.value = true
@@ -978,13 +1027,14 @@ async function submitProjectForm() {
     projectDialogVisible.value = false
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(toErrorMessage(error) || '操作失败')
   } finally {
     projectSubmitting.value = false
   }
 }
 
-async function removeProject(id) {
+async function removeProject(id?: IdLike | null) {
+  if (id == null) return
   try {
     await deleteTasksApi(id)
     ElMessage.success('删除成功')
@@ -993,11 +1043,11 @@ async function removeProject(id) {
     }
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    ElMessage.error(toErrorMessage(error) || '删除失败')
   }
 }
 
-async function toggleArchive(row) {
+async function toggleArchive(row?: TaskRecord | null) {
   if (!row?.taskId) return
   const next = String(row.archived) === '1' ? '0' : '1'
   try {
@@ -1005,7 +1055,7 @@ async function toggleArchive(row) {
     ElMessage.success(next === '1' ? '已归档' : '已恢复进行中')
     await loadTasks()
   } catch (error) {
-    ElMessage.error(error.message || '状态更新失败')
+    ElMessage.error(toErrorMessage(error) || '状态更新失败')
   }
 }
 
@@ -1064,7 +1114,7 @@ onMounted(async () => {
             <el-popconfirm
               v-permission="'task:remove'"
               title="确认删除该清单及其待办？"
-              @confirm="removeProject(currentProject.taskId)"
+              @confirm="removeProject(currentProject.taskId ?? undefined)"
             >
               <template #reference>
                 <button type="button" class="wb-btn wb-btn--ghost">
@@ -1232,7 +1282,7 @@ onMounted(async () => {
         >
           <h2 class="phase-tree__title">阶段结构</h2>
           <ul class="phase-tree__list">
-            <li v-for="phase in projectPhaseTree" :key="phase.taskId" class="phase-tree__phase">
+            <li v-for="(phase, pi) in projectPhaseTree" :key="phase.taskId ?? pi" class="phase-tree__phase">
               <div class="phase-tree__phase-head">
                 <span class="phase-tree__phase-name">{{ phase.title }}</span>
                 <span class="phase-tree__phase-count">{{ phase.steps.length }} 步</span>
@@ -1247,7 +1297,7 @@ onMounted(async () => {
                 </button>
               </div>
               <ul v-if="phase.steps.length" class="phase-tree__steps">
-                <li v-for="step in phase.steps" :key="step.taskId" class="phase-tree__step">
+                <li v-for="(step, si) in phase.steps" :key="step.taskId ?? si" class="phase-tree__step">
                   <span class="phase-tree__step-status" :data-s="String(step.status ?? '0')" />
                   <span class="phase-tree__step-title">{{ step.title }}</span>
                 </li>
@@ -1302,7 +1352,7 @@ onMounted(async () => {
                     class="attach-status-select"
                     :value="resolveAttachmentStatus(file)"
                     :aria-label="`附件状态 · ${file.name || ''}`"
-                    @change="setAttachmentStatus(file, $event.target.value, { taskId: file.taskId, task: currentProject })"
+                    @change="setAttachmentStatus(file, ($event.target as HTMLSelectElement).value, { taskId: file.taskId, task: currentProject })"
                   >
                     <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
                   </select>
@@ -1387,7 +1437,7 @@ onMounted(async () => {
             <div class="task-list" role="list">
               <article
                 v-for="(task, idx) in statusTabTasks"
-                :key="task.taskId"
+                :key="task.taskId ?? idx"
                 class="task-card"
                 :class="[
                   `task-card--s${String(task.status ?? '0')}`,
@@ -1412,7 +1462,7 @@ onMounted(async () => {
                       <el-popconfirm
                         v-permission="'task:remove'"
                         title="确认删除该待办？"
-                        @confirm="removeTask(task.taskId)"
+                        @confirm="removeTask(task.taskId ?? undefined)"
                       >
                         <template #reference>
                           <button type="button" class="btn-action btn-action--delete" title="删除">
@@ -1597,7 +1647,7 @@ onMounted(async () => {
                       class="attach-status-select"
                       :value="resolveAttachmentStatus(file)"
                       :aria-label="`附件状态 · ${file.name || ''}`"
-                      @change="setAttachmentStatus(file, $event.target.value)"
+                      @change="setAttachmentStatus(file, ($event.target as HTMLSelectElement).value)"
                     >
                       <option v-for="opt in ATTACH_STATUS" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
                     </select>
@@ -1680,7 +1730,7 @@ onMounted(async () => {
               class="attach-status-select"
               :value="resolveAttachmentStatus(file)"
               :aria-label="`附件状态 · ${file.name || ''}`"
-              @change="setAttachmentStatus(file, $event.target.value, {
+              @change="setAttachmentStatus(file, ($event.target as HTMLSelectElement).value, {
                 taskId: filesModalTask?.taskId,
                 task: filesModalTask,
               })"
@@ -1764,7 +1814,7 @@ onMounted(async () => {
               value-format="YYYY-MM-DD"
               style="width: 100%"
               placeholder="整组要在哪天完成"
-              :disabled-date="(date) => dayjs(date).isBefore(dayjs().startOf('day'))"
+              :disabled-date="(date: Date) => dayjs(date).isBefore(dayjs().startOf('day'))"
             />
             <p v-if="planDeadlineHint" class="plan-dialog__deadline-hint">{{ planDeadlineHint }}</p>
           </el-form-item>

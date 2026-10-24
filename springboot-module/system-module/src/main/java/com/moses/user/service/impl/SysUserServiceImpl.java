@@ -4,6 +4,8 @@ import cn.dev33.satoken.secure.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.moses.config.ResultConfig;
+import com.moses.rabc.entity.SysRole;
+import com.moses.rabc.service.SysRoleService;
 import com.moses.user.entity.SysUser;
 import com.moses.user.mapper.SysUserMapper;
 import com.moses.user.service.SysUserService;
@@ -35,6 +37,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
     @Autowired
     private UploadFileUtil uploadFileUtil;
 
+    @Autowired
+    private SysRoleService sysRoleService;
+
     @Override
     public SysUser getCurrentUserInfo(Long userId) {
         SysUser sysUser = getById(userId);
@@ -42,6 +47,13 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
             throw new RuntimeException("用户不存在");
         }
         sysUser.setPassword(null);
+        if (sysUser.getRoleId() != null) {
+            SysRole role = sysRoleService.getById(sysUser.getRoleId());
+            if (role != null) {
+                sysUser.setRoleCode(role.getRoleCode());
+                sysUser.setRoleName(role.getRoleName());
+            }
+        }
         return sysUser;
     }
 

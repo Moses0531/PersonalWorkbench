@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /** 个人中心：资料修改、头像上传与密码变更 */
 import { onMounted, reactive, ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -17,9 +17,11 @@ import {
   changePasswordApi,
   uploadAvatarApi,
 } from '@/apis/system/user/UserProfileApi'
-import { hasPermission } from '@/utils/menu'
+import { hasPermission } from '@/utils/permission'
 import { useUserStore } from '@/stores/userStore'
 import EditorView from '@/components/EditorView.vue'
+import { toErrorMessage } from '@/types/api'
+import type { SysUser } from '@/types/entities'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -28,12 +30,12 @@ const canModify = computed(() => hasPermission('profile:modify'))
 // --- 单字段编辑弹窗 ---
 const savingField = ref(false)
 const fieldDialogVisible = ref(false)
-const editingField = ref(null)
-const fieldDialogKey = ref(null)
+const editingField = ref<string | null>(null)
+const fieldDialogKey = ref<string | null>(null)
 const fieldDraft = ref('')
 const passwordDialogVisible = ref(false)
 
-const fieldDialogTitles = {
+const fieldDialogTitles: Record<string, string> = {
   email: '修改安全邮箱',
   phone: '修改安全手机号',
   phoneLogin: '修改手机号登录',
@@ -46,10 +48,11 @@ const avatarError = ref(false)
 
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
-const ROLE_LABELS = {
-  0: '超级管理员',
-  1: '管理员',
-  2: '普通用户',
+/** 按角色编码展示（禁止按 roleId 硬编码） */
+const ROLE_LABELS_BY_CODE: Record<string, string> = {
+  ROOT: '超级管理员',
+  ADMIN: '管理员',
+  USER: '普通用户',
 }
 
 // --- 用户资料（与 SysUser 字段对齐） ---
@@ -64,6 +67,8 @@ const userInfo = reactive({
   avatar: '',
   birthday: '',
   roleId: null,
+  roleCode: '',
+  roleName: '',
   createTime: '',
   lastLoginTime: '',
 })
@@ -74,7 +79,7 @@ const sexOptions = [
 ]
 
 /** 相对路径头像拼 VITE_APP_BASE_API 前缀 */
-function resolveAvatarUrl(raw) {
+function resolveAvatarUrl(raw: string): string {
   if (!raw) return ''
   if (/^https?:\/\//.test(raw)) return raw
   const base = (import.meta.env.VITE_APP_BASE_API || '/api').replace(/\/$/, '')
@@ -84,23 +89,23 @@ function resolveAvatarUrl(raw) {
 const avatarSrc = computed(() => resolveAvatarUrl(userInfo.avatar))
 watch(() => userInfo.avatar, () => { avatarError.value = false })
 
-function formatBirthDate(s) {
+function formatBirthDate(s?: string | null): string {
   if (!s) return ''
   const d = new Date(s)
   if (isNaN(d.getTime())) return ''
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function formatDateTime(s) {
+function formatDateTime(s?: string | null): string {
   if (!s) return ''
   const d = new Date(s)
   if (isNaN(d.getTime())) return ''
-  const pad = (n) => String(n).padStart(2, '0')
+  const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 /** 展示用脱敏，编辑弹窗仍用明文 userInfo */
-function maskEmail(email) {
+function maskEmail(email: string): string {
   if (!email) return ''
   const [name, domain] = email.split('@')
   if (!domain) return email
@@ -108,7 +113,7 @@ function maskEmail(email) {
   return `${visible}${'*'.repeat(Math.max(name.length - visible.length, 2))}@${domain}`
 }
 
-function maskPhone(phone) {
+function maskPhone(phone: string): string {
   if (!phone || phone.length < 7) return phone || ''
   return `${phone.slice(0, 3)}****${phone.slice(-4)}`
 }
@@ -128,10 +133,13 @@ const ageText = computed(() => {
 
 const displayName = computed(() => userInfo.username || userInfo.account || '-')
 const roleDisplayName = computed(() => {
-  if (userInfo.roleId == null) return '-'
-  return ROLE_LABELS[userInfo.roleId] ?? `角色 ${userInfo.roleId}`
+  if (userInfo.roleName) return userInfo.roleName
+  if (userInfo.roleCode) {
+    return ROLE_LABELS_BY_CODE[userInfo.roleCode] ?? userInfo.roleCode
+  }
+  return '-'
 })
-const fieldDialogTitle = computed(() => fieldDialogTitles[fieldDialogKey.value] || '修改资料')
+const fieldDialogTitle = computed(() => fieldDialogTitles[fieldDialogKey.value ?? ''] || '修改资料')
 
 function buildProfilePayload() {
   return {
@@ -159,7 +167,7 @@ async function loadUserInfo() {
   loading.value = true
   try {
     const r = await getCurrentUserProfileApi()
-    const d = r?.data || {}
+    const d: Partial<SysUser> = r?.data || {}
     Object.assign(userInfo, {
       userId: d.userId ?? null,
       account: d.account || '',
@@ -171,19 +179,21 @@ async function loadUserInfo() {
       avatar: d.avatar || '',
       birthday: formatBirthDate(d.birthday),
       roleId: d.roleId ?? null,
+      roleCode: d.roleCode ?? '',
+      roleName: d.roleName ?? '',
       createTime: formatDateTime(d.createTime),
       lastLoginTime: formatDateTime(d.lastLoginTime),
     })
     syncStoredUser()
     closeFieldDialog()
-  } catch (e) { ElMessage.error(e.message || '获取用户信息失败') }
+  } catch (e) { ElMessage.error(toErrorMessage(e) || '获取用户信息失败') }
   finally { loading.value = false }
 }
 
-function openFieldDialog(saveField, dialogKey = saveField) {
+function openFieldDialog(saveField: string, dialogKey: string = saveField) {
   editingField.value = saveField
   fieldDialogKey.value = dialogKey
-  fieldDraft.value = userInfo[saveField] ?? ''
+  fieldDraft.value = String((userInfo as Record<string, unknown>)[saveField] ?? '')
   fieldDialogVisible.value = true
 }
 
@@ -194,7 +204,7 @@ function closeFieldDialog() {
   fieldDraft.value = ''
 }
 
-function validateField(field, value) {
+function validateField(field: string, value: string): boolean {
   if (field === 'username' && !String(value).trim()) {
     ElMessage.warning('请输入昵称')
     return false
@@ -220,13 +230,13 @@ async function confirmFieldEdit() {
   if (!validateField(field, fieldDraft.value)) return
   savingField.value = true
   try {
-    userInfo[field] = fieldDraft.value
+    ;(userInfo as Record<string, unknown>)[field] = fieldDraft.value
     await updateUserProfileApi(buildProfilePayload())
     syncStoredUser()
     ElMessage.success('保存成功')
     closeFieldDialog()
   } catch (e) {
-    ElMessage.error(e.message || '保存失败')
+    ElMessage.error(toErrorMessage(e) || '保存失败')
     await loadUserInfo()
   } finally {
     savingField.value = false
@@ -234,10 +244,10 @@ async function confirmFieldEdit() {
 }
 
 /** 交给 EditorView 的 uploadHandler，仍走头像接口 */
-async function handleAvatarUpload(file) {
+async function handleAvatarUpload(file: File) {
   if (!file) throw new Error('未选择有效文件')
   const r = await uploadAvatarApi(file)
-  userInfo.avatar = r?.data ?? r
+  userInfo.avatar = r?.data ?? ''
   syncStoredUser()
   ElMessage.success('头像更新成功')
   await loadUserInfo()
@@ -261,7 +271,7 @@ async function changePassword() {
     passwordDialogVisible.value = false
     Object.assign(passwordForm, { oldPassword: '', newPassword: '', confirmPassword: '' })
     setTimeout(() => { window.location.href = '/auth' }, 1500)
-  } catch (e) { ElMessage.error(e.message || '密码修改失败') }
+  } catch (e) { ElMessage.error(toErrorMessage(e) || '密码修改失败') }
 }
 
 async function copyAccountId() {

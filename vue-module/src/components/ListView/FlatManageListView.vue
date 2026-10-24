@@ -1,34 +1,70 @@
-<script setup>
+<script setup lang="ts" generic="T extends object">
 /** 扁平数据管理列表通用布局：工具栏、KPI、表格与行操作插槽 */
 import { computed, useSlots } from 'vue'
-import { Search, Refresh, User } from '@element-plus/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
+import type { ColumnDef, RowAction, RowClassFn, RowKeyConfig, RowStyleFn } from '@/types/components'
 
-const props = defineProps({
-  title: { type: String, default: '' },
-  desc: { type: String, default: '' },
-  loading: { type: Boolean, default: false },
-  data: { type: Array, default: () => [] },           // 已过滤后的行数据，由父组件维护
-  columns: { type: Array, default: () => [] },       // 列定义：prop / label / type / width / align 等
-  rowKey: { type: [String, Function], default: 'id' },
-  searchQuery: { type: String, default: '' },        // 支持 v-model:search-query
-  searchPlaceholder: { type: String, default: '搜索...' },
-  showSearch: { type: Boolean, default: true },
-  showRefresh: { type: Boolean, default: true },
-  showBackground: { type: Boolean, default: true },
-  showFooter: { type: Boolean, default: true },
-  emptyText: { type: String, default: '暂无数据' },
-  emptySearchText: { type: String, default: '未找到匹配结果' },
-  total: { type: Number, default: null },            // 显式总数；null 时用 data.length
-  rowActions: { type: Array, default: () => [] },    // 默认行操作，列 type='actions' 时使用
-  actionVariant: { type: String, default: 'icon' },
-  variant: { type: String, default: '' },              // 附加样式变体 class 后缀
-  embedded: { type: Boolean, default: false },         // 嵌入模式：无背景 blob、紧凑布局
-  rowClass: { type: Function, default: null },
-  rowStyle: { type: Function, default: null }
-})
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    desc?: string
+    loading?: boolean
+    /** 已过滤后的行数据，由父组件维护 */
+    data?: T[]
+    /** 列定义：prop / label / type / width / align 等 */
+    columns?: ColumnDef[]
+    rowKey?: RowKeyConfig
+    /** 支持 v-model:search-query */
+    searchQuery?: string
+    searchPlaceholder?: string
+    showSearch?: boolean
+    showRefresh?: boolean
+    showBackground?: boolean
+    showFooter?: boolean
+    emptyText?: string
+    emptySearchText?: string
+    /** 显式总数；null 时用 data.length */
+    total?: number | null
+    /** 默认行操作，列 type='actions' 时使用 */
+    rowActions?: RowAction[]
+    actionVariant?: string
+    /** 附加样式变体 class 后缀 */
+    variant?: string
+    /** 嵌入模式：无背景 blob、紧凑布局 */
+    embedded?: boolean
+    rowClass?: RowClassFn | null
+    rowStyle?: RowStyleFn | null
+  }>(),
+  {
+    title: '',
+    desc: '',
+    loading: false,
+    data: () => [],
+    columns: () => [],
+    rowKey: 'id',
+    searchQuery: '',
+    searchPlaceholder: '搜索...',
+    showSearch: true,
+    showRefresh: true,
+    showBackground: true,
+    showFooter: true,
+    emptyText: '暂无数据',
+    emptySearchText: '未找到匹配结果',
+    total: null,
+    rowActions: () => [],
+    actionVariant: 'icon',
+    variant: '',
+    embedded: false,
+    rowClass: null,
+    rowStyle: null,
+  },
+)
 
-const emit = defineEmits(['update:searchQuery', 'refresh', 'search'])
+const emit = defineEmits<{
+  (e: 'update:searchQuery', value: string): void
+  (e: 'refresh'): void
+  (e: 'search', value: string): void
+}>()
 
 const slots = useSlots()
 
@@ -45,33 +81,33 @@ const emptyMessage = computed(() => {
   return props.searchQuery.trim() ? props.emptySearchText : props.emptyText
 })
 
-function resolveRowKey(row, index) {
+function resolveRowKey(row: T, index: number): string | number {
   if (typeof props.rowKey === 'function') return props.rowKey(row, index)
-  const key = row?.[props.rowKey]
-  return key != null ? key : index
+  const key = (row as Record<string, unknown>)?.[props.rowKey]
+  return key != null ? (key as string | number) : index
 }
 
 /** 自定义列插槽名：普通列 cell-{prop}，操作列固定 actions */
-function cellSlotName(column) {
+function cellSlotName(column: ColumnDef): string {
   if (column.type === 'actions') return 'actions'
   return `cell-${column.prop}`
 }
 
-function hasCellSlot(column) {
+function hasCellSlot(column: ColumnDef): boolean {
   const name = cellSlotName(column)
   return Boolean(slots[name])
 }
 
 /** 默认单元格展示：空值显示 '-' 或 column.emptyText */
-function formatCell(row, column) {
-  const value = row?.[column.prop]
+function formatCell(row: T, column: ColumnDef): unknown {
+  const value = (row as Record<string, unknown>)?.[column.prop ?? '']
   if (value == null || value === '') return column.emptyText ?? '-'
   return value
 }
 
 /** 同步 v-model 并通知父组件执行过滤（父组件通常在 @search 里 filter） */
-function onSearchInput(event) {
-  const value = event.target.value
+function onSearchInput(event: Event): void {
+  const value = (event.target as HTMLInputElement).value
   emit('update:searchQuery', value)
   emit('search', value)
 }
@@ -106,7 +142,11 @@ function onSearchInput(event) {
           </div>
           <div class="management-list-view__toolbar-right">
             <div v-if="showSearch" class="management-list-view__search">
-              <Search class="management-list-view__search-icon" />
+              <svg class="management-list-view__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 :value="searchQuery"
                 type="text"
@@ -122,7 +162,11 @@ function onSearchInput(event) {
               title="刷新"
               @click="emit('refresh')"
             >
-              <Refresh />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -130,7 +174,7 @@ function onSearchInput(event) {
 
         <slot name="table-prefix" />
 
-        <div class="table-wrap" v-loading="loading">
+        <div v-loading="loading" class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
@@ -152,7 +196,11 @@ function onSearchInput(event) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <User style="font-size: 40px" />
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                      </svg>
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>

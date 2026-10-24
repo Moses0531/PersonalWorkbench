@@ -18,11 +18,11 @@
   </svg>
 </template>
 
-<script setup>
-defineProps({
-  size: {
-    type: Number,
-    default: 24,
-  },
-})
+<script setup lang="ts">
+withDefaults(
+  defineProps<{
+    size?: number
+  }>(),
+  { size: 24 },
+)
 </script>

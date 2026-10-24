@@ -1,29 +1,49 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
 /** 管理页新增/编辑弹窗外壳：统一宽度、双列栅格、确认/取消 */
-const props = defineProps({
-  modelValue: { type: Boolean, default: false },
-  title: { type: String, default: '' },
-  /** 显式宽度；不传时 1 列 520 / 2 列 960 */
-  width: { type: [String, Number], default: undefined },
-  /** 1 单列 · 2 一行两字段（会给内容区加上 dialog-grid 双列能力） */
-  columns: { type: Number, default: 1 },
-  loading: { type: Boolean, default: false },
-  confirmText: { type: String, default: '保存' },
-  cancelText: { type: String, default: '取消' },
-  closeOnClickModal: { type: Boolean, default: false },
-  destroyOnClose: { type: Boolean, default: false },
-  centered: { type: Boolean, default: true },
-})
+const props = withDefaults(
+  defineProps<{
+    /** v-model 控制显隐 */
+    modelValue?: boolean
+    title?: string
+    /** 显式宽度；不传时 1 列 520 / 2 列 960 */
+    width?: string | number | null
+    /** 1 单列 · 2 一行两字段（会给内容区加上 dialog-grid 双列能力） */
+    columns?: number
+    /** 提交中：禁用按钮、确认文案变「保存中...」 */
+    loading?: boolean
+    confirmText?: string
+    cancelText?: string
+    closeOnClickModal?: boolean
+    destroyOnClose?: boolean
+    centered?: boolean
+  }>(),
+  {
+    modelValue: false,
+    title: '',
+    width: undefined,
+    columns: 1,
+    loading: false,
+    confirmText: '保存',
+    cancelText: '取消',
+    closeOnClickModal: false,
+    destroyOnClose: false,
+    centered: true,
+  },
+)
 
-const emit = defineEmits(['update:modelValue', 'confirm', 'cancel'])
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+}>()
 
 const isTwoCol = computed(() => Number(props.columns) === 2)
 
-const resolvedWidth = computed(() => {
+const resolvedWidth = computed<string | number>(() => {
   if (props.width !== undefined && props.width !== null && props.width !== '') {
-    return props.width
+    return typeof props.width === 'number' ? `${props.width}px` : props.width
   }
   return isTwoCol.value ? 960 : 520
 })
@@ -33,20 +53,21 @@ const dialogClass = computed(() =>
     .join(' '),
 )
 
-function close() {
+function close(): void {
   emit('update:modelValue', false)
 }
 
-function onCancel() {
+function onCancel(): void {
   close()
   emit('cancel')
 }
 
-function onConfirm() {
+/** 仅 emit confirm，实际提交逻辑由父组件 @confirm 处理 */
+function onConfirm(): void {
   emit('confirm')
 }
 
-function onOpenChange(open) {
+function onOpenChange(open: boolean): void {
   emit('update:modelValue', open)
 }
 </script>

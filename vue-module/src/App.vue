@@ -1,6 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { RouterView } from 'vue-router'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import router from '@/router'
 import { syncAppMenu } from '@/utils/syncAppMenu'
 
@@ -18,5 +19,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <RouterView />
+  <el-config-provider :locale="zhCn">
+    <RouterView />
+  </el-config-provider>
 </template>

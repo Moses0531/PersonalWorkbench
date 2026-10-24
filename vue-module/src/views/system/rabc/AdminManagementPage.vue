@@ -1,21 +1,48 @@
-﻿<script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+﻿<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
+import { message } from '@/utils/message'
 import { deleteUserApi, pageAdminsApi, saveUserApi, updateUserApi } from '@/apis/system/rabc/UserApi'
 import { listRolesApi } from '@/apis/system/rabc/RoleApi'
 import FlatManageListView from '@/components/ListView/FlatManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import type { IdLike, SysRole, UserForm, UserRow } from '@/types/entities'
+import type { ColumnDef } from '@/types/components'
+import type { PageResult } from '@/types/api'
+import { toErrorMessage } from '@/types/api'
+
+/** 列表行：用户 + 角色冗余字段（roleName/roleCode 由 enrichAdminRow 补齐） */
+interface AdminListRow extends UserRow {
+  roleName?: string
+  roleCode?: string
+  remark?: string
+}
+
+/** 管理员提交载荷（含冗余 remark 字段，与表单对齐） */
+interface AdminPayload extends UserForm {
+  remark?: string
+}
 
 const loading = ref(false)
-const tableData = ref([])
+const tableData = ref<AdminListRow[]>([])
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const roleOptions = ref([])
+const roleOptions = ref<SysRole[]>([])
 const searchQuery = ref('')
-const filteredData = ref([])
+const filteredData = ref<AdminListRow[]>([])
 
-const form = reactive({
+const sexSelectOptions = [
+  { label: '男', value: '0' },
+  { label: '女', value: '1' },
+]
+
+const roleSelectOptions = computed(() =>
+  roleOptions.value.map((role) => ({
+    label: `${role.roleName} (${role.roleCode})`,
+    value: Number(role.roleId),
+  })),
+)
+
+const form = reactive<UserForm & { remark: string }>({
   id: null,
   account: '',
   username: '',
@@ -28,7 +55,7 @@ const form = reactive({
   roleId: null
 })
 
-const columns = [
+const columns: ColumnDef[] = [
   { prop: 'account', label: '账号' },
   { prop: 'username', label: '用户昵称', cellClass: 'cell-name' },
   { prop: 'phone', label: '手机号', cellClass: 'cell-muted' },
@@ -37,7 +64,7 @@ const columns = [
   { prop: 'actions', label: '操作', type: 'actions', headerClass: 'th-action', align: 'center' }
 ]
 
-function resetForm() {
+function resetForm(): void {
   Object.assign(form, {
     id: null,
     account: '',
@@ -52,7 +79,7 @@ function resetForm() {
   })
 }
 
-function applyFilter() {
+function applyFilter(): void {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) {
     filteredData.value = tableData.value
@@ -68,7 +95,7 @@ function applyFilter() {
   )
 }
 
-function enrichAdminRow(row) {
+function enrichAdminRow(row: AdminListRow): AdminListRow {
   const role = roleOptions.value.find((item) => Number(item.roleId) === Number(row.roleId))
   return {
     ...row,
@@ -77,21 +104,21 @@ function enrichAdminRow(row) {
   }
 }
 
-async function loadAdmins() {
+async function loadAdmins(): Promise<void> {
   loading.value = true
   try {
     const result = await pageAdminsApi(1, null)
-    const data = result?.data || {}
+    const data: Partial<PageResult<UserRow>> = result?.data || {}
     tableData.value = (data.records || []).map(enrichAdminRow)
     applyFilter()
   } catch (error) {
-    ElMessage.error(error.message || '获取管理员列表失败')
+    message.error(toErrorMessage(error) || '获取管理员列表失败')
   } finally {
     loading.value = false
   }
 }
 
-async function loadAdminRoles() {
+async function loadAdminRoles(): Promise<void> {
   try {
     const rolesResp = await listRolesApi()
     const allRoles = Array.isArray(rolesResp?.data) ? rolesResp.data : []
@@ -103,16 +130,16 @@ async function loadAdminRoles() {
       form.roleId = Number((adminRole || roleOptions.value[0]).roleId)
     }
   } catch (error) {
-    const msg = String(error?.message || '')
+    const msg = toErrorMessage(error)
     if (msg.includes('403') || msg.includes('无权限') || msg.includes('权限不足')) {
       roleOptions.value = []
       return
     }
-    ElMessage.error(msg || '加载管理员角色失败')
+    message.error(msg || '加载管理员角色失败')
   }
 }
 
-function openCreate() {
+function openCreate(): void {
   isEdit.value = false
   resetForm()
   const adminRole = roleOptions.value.find((r) => String(r.roleCode).toUpperCase() === 'ADMIN')
@@ -120,7 +147,7 @@ function openCreate() {
   dialogVisible.value = true
 }
 
-function openEdit(row) {
+function openEdit(row: AdminListRow): void {
   isEdit.value = true
   Object.assign(form, {
     id: row.id,
@@ -136,9 +163,9 @@ function openEdit(row) {
   dialogVisible.value = true
 }
 
-async function submitForm() {
+async function submitForm(): Promise<void> {
   try {
-    const payload = {
+    const payload: AdminPayload = {
       id: form.id,
       username: form.username,
       realName: form.realName,
@@ -151,7 +178,7 @@ async function submitForm() {
     if (!isEdit.value) {
       const acc = String(form.account || '').trim()
       if (!acc) {
-        ElMessage.warning('请填写管理员登录账号')
+        message.warning('请填写管理员登录账号')
         return
       }
       payload.account = acc
@@ -159,29 +186,29 @@ async function submitForm() {
     if (form.password) payload.password = form.password
     if (isEdit.value) {
       await updateUserApi(payload)
-      ElMessage.success('编辑成功')
+      message.success('编辑成功')
     } else {
       await saveUserApi(payload)
-      ElMessage.success('新增成功')
+      message.success('新增成功')
     }
     dialogVisible.value = false
     await loadAdmins()
   } catch (error) {
-    ElMessage.error(error.message || (isEdit.value ? '编辑失败' : '新增失败'))
+    message.error(toErrorMessage(error) || (isEdit.value ? '编辑失败' : '新增失败'))
   }
 }
 
-async function removeAdmin(id) {
+async function removeAdmin(id: IdLike): Promise<void> {
   try {
     await deleteUserApi(id)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     await loadAdmins()
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    message.error(toErrorMessage(error) || '删除失败')
   }
 }
 
-function getRoleColor(code) {
+function getRoleColor(code?: string): string {
   const c = String(code || '').toUpperCase()
   if (c === 'ROOT') return 'root'
   if (c === 'ADMIN') return 'admin'
@@ -210,7 +237,9 @@ onMounted(async () => {
   >
     <template #toolbar-actions>
       <button v-permission="'admin:add'" type="button" class="mlv-btn-primary" @click="openCreate">
-        <Plus />
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
         新增管理员
       </button>
     </template>
@@ -228,12 +257,20 @@ onMounted(async () => {
     <template #actions="{ row }">
       <div class="action-btns">
         <button v-permission="'admin:modify'" type="button" class="btn-action btn-action--edit" title="编辑" @click="openEdit(row)">
-          <Edit />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
         </button>
-        <el-popconfirm v-permission="'admin:remove'" title="确认删除该管理员？" @confirm="removeAdmin(row.id)">
-          <template #reference><button type="button" class="btn-action btn-action--delete" title="删除">
-            <Delete />
-          </button></template>
+        <el-popconfirm v-permission="'admin:remove'" @confirm="removeAdmin(row.id!)" title="确认删除该管理员？">
+          <template #reference>
+            <button type="button" class="btn-action btn-action--delete" title="删除">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </template>
         </el-popconfirm>
       </div>
     </template>
@@ -242,56 +279,54 @@ onMounted(async () => {
   <DataOperationView
     v-model="dialogVisible"
     :title="isEdit ? '编辑管理员' : '新增管理员'"
-    :columns="2"
+    width="520px"
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
     <el-form label-position="top" :model="form" class="dialog-form">
       <div class="dialog-grid">
         <el-form-item v-if="!isEdit" label="登录账号" class="dialog-item">
-          <el-input v-model.trim="form.account" placeholder="由创建人指定" />
+          <el-input v-model="form.account" placeholder="由创建人指定" clearable />
         </el-form-item>
         <el-form-item v-else label="账号" class="dialog-item">
           <el-input v-model="form.account" disabled />
         </el-form-item>
 
         <el-form-item label="用户昵称" class="dialog-item">
-          <el-input v-model.trim="form.username" placeholder="请输入昵称" />
+          <el-input v-model="form.username" placeholder="请输入昵称" clearable />
         </el-form-item>
 
         <el-form-item label="手机号" class="dialog-item">
-          <el-input v-model.trim="form.phone" placeholder="请输入手机号" />
+          <el-input v-model="form.phone" placeholder="请输入手机号" clearable />
         </el-form-item>
 
         <el-form-item label="邮箱" class="dialog-item">
-          <el-input v-model.trim="form.email" placeholder="请输入邮箱" />
+          <el-input v-model="form.email" placeholder="请输入邮箱" clearable />
         </el-form-item>
 
         <el-form-item label="性别" class="dialog-item">
-          <el-select v-model="form.sex" placeholder="请选择" style="width: 100%">
-            <el-option value="0">男</el-option>
-            <el-option value="1">女</el-option>
+          <el-select v-model="form.sex" placeholder="请选择" >
+            <el-option v-for="o in sexSelectOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
 
         <el-form-item label="角色" class="dialog-item">
-          <el-select v-model="form.roleId" placeholder="请选择角色" style="width: 100%">
-            <el-option
-              v-for="role in roleOptions"
-              :key="role.roleId"
-              :value="Number(role.roleId)"
-            >
-              {{ role.roleName }} ({{ role.roleCode }})
-            </el-option>
+          <el-select v-model="form.roleId" placeholder="请选择角色" >
+            <el-option v-for="o in roleSelectOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="密码" class="dialog-item">
-          <el-input type="password" show-password v-model.trim="form.password" :placeholder="isEdit ? '留空则不修改' : '请设置登录密码'" />
+        <el-form-item label="密码" class="dialog-item dialog-item--full">
+          <el-input
+            v-model="form.password"
+            type="password"
+            show-password
+            :placeholder="isEdit ? '留空则不修改' : '请设置登录密码'"
+          />
         </el-form-item>
 
-        <el-form-item label="备注" class="dialog-item">
-          <el-input v-model.trim="form.remark" placeholder="选填" />
+        <el-form-item label="备注" class="dialog-item dialog-item--full">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
         </el-form-item>
       </div>
     </el-form>

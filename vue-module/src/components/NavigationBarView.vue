@@ -1,118 +1,92 @@
-<template>
+﻿<template>
   <div class="layout">
-    <!-- 悬浮胶囊 Dock：图标直达，目录展开飞层 -->
-    <nav class="dock" role="navigation" aria-label="主导航">
-      <button
-        type="button"
-        class="dock-brand"
-        title="PersonalWorkbench · 打开命令面板"
-        aria-label="打开命令面板"
-        @click="openCmd"
-      >
-        <BrandMarkView :size="22" />
-      </button>
-
-      <div class="dock-icons">
-        <template v-for="(item, index) in railItems" :key="item.id">
-          <div
-            v-if="index > 0 && isRailTypeBoundary(railItems[index - 1], item)"
-            class="dock-divider"
-            aria-hidden="true"
-          />
-          <button
-            type="button"
-            class="dock-btn"
-            :class="{
-              active: isRailActive(item),
-              'is-directory': isDirectoryRailItem(item),
-              'is-menu': isMenuRailItem(item),
-              'is-flyout-open': flyoutId === item.id,
-            }"
-            :title="railItemTitle(item)"
-            :aria-label="railItemTitle(item)"
-            :aria-expanded="hasFlyoutChildren(item) ? flyoutId === item.id : undefined"
-            @click="handleRailClick(item, $event)"
-          >
-            <span class="dock-icon-wrap">
-              <component :is="item.icon" class="dock-icon" />
-              <span
-                v-if="hasFlyoutChildren(item)"
-                class="dock-chevron"
-                aria-hidden="true"
-              />
-            </span>
-            <span class="dock-label">{{ item.label }}</span>
-          </button>
-        </template>
+    <!-- 左侧图标轨道 -->
+    <nav class="rail" role="navigation" aria-label="主导航">
+      <div class="rail-brand" title="RapidKit">
+        <span class="rail-brand-mark">
+          <el-icon :size="22"><Box /></el-icon>
+        </span>
       </div>
 
-      <div class="dock-bottom">
+      <div class="rail-icons">
         <button
-          type="button"
-          class="dock-btn dock-btn--quiet"
-          title="退出登录"
-          aria-label="退出登录"
-          @click="handleLogout"
+          v-for="item in railItems"
+          :key="item.id"
+          class="rail-btn"
+          :class="{
+            active: isRailActive(item),
+            'is-flyout-open': flyoutId === item.id
+          }"
+          :title="railItemTitle(item)"
+          :aria-expanded="hasFlyoutChildren(item) ? flyoutId === item.id : undefined"
+          @click="handleRailClick(item, $event)"
         >
-          <span class="dock-icon-wrap">
-            <SwitchButton class="dock-icon" />
+          <component :is="item.icon" class="rail-icon" />
+          <span class="rail-label-row">
+            <span class="rail-label">{{ displayRailLabel(item.label) }}</span>
+            <el-icon
+              v-if="hasFlyoutChildren(item)"
+              class="rail-expand-caret"
+              :size="12"
+            ><ArrowRight /></el-icon>
           </span>
-          <span class="dock-label">退出</span>
         </button>
-        <button
-          type="button"
-          class="dock-avatar"
-          :title="displayName"
-          :aria-label="`个人中心 · ${displayName}`"
-          @click="goToProfile"
-        >
-          <img :src="userAvatar" class="dock-avatar-img" alt="" @error="onAvatarError" />
+      </div>
+
+      <div class="rail-bottom">
+        <button class="rail-btn" @click="handleLogout" title="退出登录">
+          <el-icon class="rail-icon" :size="18"><SwitchButton /></el-icon>
+          <span class="rail-label">退出</span>
         </button>
+        <div class="rail-avatar" @click="goToProfile" :title="displayName">
+          <el-avatar :size="32" :src="userAvatar" @error="onAvatarError">
+            <el-icon :size="16"><User /></el-icon>
+          </el-avatar>
+        </div>
       </div>
     </nav>
 
-    <!-- 子菜单飞层 -->
+    <!-- 子菜单弹出面板 -->
     <Transition name="flyout">
       <div
         v-if="flyoutId && flyoutChildren.length"
         ref="flyoutRef"
         class="flyout-panel"
-        :style="{ top: flyoutTop + 'px' }"
+        :style="{ top: flyoutTop + 'px', left: flyoutLeft + 'px' }"
       >
         <div class="flyout-title">{{ flyoutItem?.label }}</div>
         <button
           v-for="child in flyoutChildren"
           :key="child.menuId"
-          type="button"
           class="flyout-child"
           :class="{ active: isFlyoutChildActive(child) }"
           @click="selectFlyoutChild(child)"
         >
+          <span class="flyout-child-icon" aria-hidden="true">
+            <component :is="getMenuIcon(child.menuName)" />
+          </span>
           <span class="flyout-child-name">{{ child.menuName }}</span>
-          <kbd v-if="isFlyoutChildActive(child)" class="flyout-here">当前</kbd>
         </button>
       </div>
     </Transition>
 
     <!-- 主区域 -->
     <div class="main-area">
-      <header class="topbar">
-        <div class="topbar-crumb" v-if="currentPageTitle">
-          <span class="topbar-crumb-label">{{ currentPageTitle }}</span>
+      <header class="search-bar">
+        <div class="search-bar-left">
+          <span class="search-brand">RapidKit</span>
+          <span v-if="currentPageTitle" class="search-page">{{ currentPageTitle }}</span>
         </div>
-        <div v-else class="topbar-crumb topbar-crumb--empty" aria-hidden="true" />
 
-        <button type="button" class="cmd-trigger" @click="openCmd">
-          <Search class="cmd-trigger-icon" />
-          <span class="cmd-trigger-text">跳转菜单、搜索…</span>
-          <kbd class="cmd-trigger-kbd">
-            <span class="cmd-trigger-mod">{{ modKey }}</span>K
-          </kbd>
+        <button class="search-pill" @click="openCmd">
+          <el-icon :size="16"><Search /></el-icon>
+          <span class="search-placeholder">搜索菜单...</span>
+          <kbd class="search-kbd">Ctrl K</kbd>
         </button>
 
-        <div class="topbar-right">
-          <button type="button" class="topbar-icon" title="通知" aria-label="通知">
-            <Bell />
+        <div class="search-right">
+          <button class="icon-btn" title="通知">
+            <el-icon :size="18"><Bell /></el-icon>
           </button>
         </div>
       </header>
@@ -124,17 +98,17 @@
       </main>
     </div>
 
-    <!-- 命令面板 -->
+    <!-- 命令面板 (Ctrl+K) -->
     <Teleport to="body">
       <div v-if="cmdOpen" class="cmd-overlay" @click.self="closeCmd">
-        <div class="cmd-palette" role="dialog" aria-label="命令面板" aria-modal="true">
+        <div class="cmd-palette" role="dialog" aria-label="命令面板">
           <div class="cmd-input-wrap">
-            <Search />
+            <el-icon :size="18"><Search /></el-icon>
             <input
               ref="cmdInputRef"
               v-model="cmdQuery"
               class="cmd-input"
-              placeholder="输入菜单名称，Enter 跳转"
+              placeholder="输入菜单名称搜索..."
               @keydown.down.prevent="moveCmd(1)"
               @keydown.up.prevent="moveCmd(-1)"
               @keydown.enter.prevent="selectCmd"
@@ -142,29 +116,10 @@
             />
             <kbd class="cmd-esc">ESC</kbd>
           </div>
-          <div v-if="!cmdQuery && recentMenus.length" class="cmd-section">
-            <div class="cmd-section-label">最近</div>
-            <div class="cmd-list">
-              <button
-                v-for="(item, i) in recentMenus"
-                :key="'r-' + item.menuId"
-                type="button"
-                class="cmd-item"
-                :class="{ selected: i === cmdIndex && !cmdResults.length }"
-                @click="goToMenu(item)"
-                @mouseenter="cmdIndex = i"
-              >
-                <component :is="getMenuIcon(item.menuName)" class="cmd-item-icon" />
-                <span class="cmd-item-label">{{ item.menuName }}</span>
-                <span class="cmd-item-path">{{ item.path }}</span>
-              </button>
-            </div>
-          </div>
           <div v-if="cmdResults.length" class="cmd-list">
             <button
               v-for="(item, i) in cmdResults"
               :key="item.menuId"
-              type="button"
               class="cmd-item"
               :class="{ selected: i === cmdIndex }"
               @click="goToMenu(item)"
@@ -175,25 +130,26 @@
               <span class="cmd-item-path">{{ item.path }}</span>
             </button>
           </div>
-          <div v-else-if="cmdQuery" class="cmd-empty">没有匹配的菜单</div>
-          <div v-else-if="!recentMenus.length" class="cmd-hint">
-            输入关键词搜索，或点左侧图标直达
-          </div>
+          <div v-else-if="cmdQuery" class="cmd-empty">没有找到匹配的菜单</div>
+          <div v-else class="cmd-hint">输入关键词搜索所有菜单，按 Enter 跳转</div>
         </div>
       </div>
     </Teleport>
   </div>
 </template>
 
-<script setup>
-/** 主布局：悬浮胶囊 Dock + 命令优先顶栏 + Ctrl+K 面板 */
+<script setup lang="ts">
+/** 主布局导航：左侧轨道菜单、子菜单飞层、Ctrl+K 命令面板 */
 import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from 'vue'
+import type { Component } from 'vue'
 import { useRoute, useRouter, isNavigationFailure, NavigationFailureType } from 'vue-router'
-import BrandMarkView from './BrandMarkView.vue'
 import {
-  SwitchButton,
-  Search,
+  ArrowRight,
   Bell,
+  Box,
+  Search,
+  SwitchButton,
+  User,
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/userStore'
 import {
@@ -205,18 +161,28 @@ import {
 import { getMenuIcon } from '@/utils/menuIcons'
 import { resetDynamicRoutes } from '@/router/dynamicRoutes'
 import router from '@/router'
+import type { IdLike } from '@/types/entities'
+import type { MenuItem } from '@/types/menu'
 
-const RECENT_KEY = 'remo_nav_recent'
-const RECENT_MAX = 5
+/** 左侧轨道项：目录展开飞层，菜单直接跳转 */
+interface RailItem {
+  id: IdLike
+  label: string
+  type: string
+  children: MenuItem[]
+  menu: MenuItem
+  icon: Component
+}
 
 const route = useRoute()
 const vueRouter = useRouter()
 const userStore = useUserStore()
 
-const flyoutId = ref(null)
+const flyoutId = ref<IdLike | null>(null)
 const flyoutTop = ref(0)
-const flyoutRef = ref(null)
-const mainScrollRef = ref(null)
+const flyoutLeft = ref(0)
+const flyoutRef = ref<HTMLElement | null>(null)
+const mainScrollRef = ref<HTMLElement | null>(null)
 
 const menuTree = computed(() => userStore.getMenuTree)
 const menuList = computed(() => userStore.getMenuList)
@@ -224,10 +190,6 @@ const activePath = computed(() => route.path)
 
 const displayName = computed(
   () => userStore.user?.username || userStore.user?.account || '用户',
-)
-
-const modKey = computed(() =>
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl',
 )
 
 const DEFAULT_AVATAR = 'https://fangqianmin.oss-cn-hangzhou.aliyuncs.com/DefaultAva.png'
@@ -246,24 +208,23 @@ const userAvatar = computed(() => {
   if (avatarLoadFailed.value) return DEFAULT_AVATAR
   const avatar = userStore.user?.avatar || DEFAULT_AVATAR
   if (/^https?:\/\//.test(avatar)) return avatar
-  const base = (import.meta.env.VITE_APP_BASE_API || '/api').replace(/\/$/, '')
+  const base = String(import.meta.env.VITE_APP_BASE_API || '/api').replace(/\/$/, '')
   const path = avatar.startsWith('/') ? avatar : `/${avatar}`
   return `${base}${path}`
 })
 
 watch(() => userStore.user?.avatar, () => { avatarLoadFailed.value = false })
 
-function onAvatarError(e) {
+function onAvatarError(): void {
   avatarLoadFailed.value = true
-  e.target.src = DEFAULT_AVATAR
 }
 
-function filterVisibleChildren(menu) {
+function filterVisibleChildren(menu: MenuItem): MenuItem[] {
   if (!menu.children?.length) return []
   return menu.children.filter((child) => !isFunctionType(child) && canAccessMenu(child))
 }
 
-function canAccessMenu(menu) {
+function canAccessMenu(menu: MenuItem): boolean {
   if (!menu.visibleFlag || menu.disabledFlag) return false
   if (isFunctionType(menu)) return false
   if (isDirectoryType(menu)) {
@@ -278,9 +239,9 @@ function canAccessMenu(menu) {
   return true
 }
 
-function collectNavigableChildren(menu) {
-  const items = []
-  function walk(nodes) {
+function collectNavigableChildren(menu: MenuItem): MenuItem[] {
+  const items: MenuItem[] = []
+  function walk(nodes: MenuItem[]): void {
     for (const node of nodes) {
       if (!canAccessMenu(node)) continue
       if (isMenuType(node)) {
@@ -294,7 +255,7 @@ function collectNavigableChildren(menu) {
   return items
 }
 
-const railItems = computed(() =>
+const railItems = computed<RailItem[]>(() =>
   menuTree.value
     .filter((m) => canAccessMenu(m))
     .map((m) => ({
@@ -307,34 +268,35 @@ const railItems = computed(() =>
     })),
 )
 
-function isDirectoryRailItem(item) {
+function isDirectoryRailItem(item: RailItem): boolean {
   return item.type === MENU_TYPE.DIRECTORY
 }
 
-function isMenuRailItem(item) {
+function isMenuRailItem(item: RailItem): boolean {
   return item.type === MENU_TYPE.MENU
 }
 
-function hasFlyoutChildren(item) {
+function hasFlyoutChildren(item: RailItem): boolean {
   return isDirectoryRailItem(item) && item.children.length > 1
 }
 
-function isRailTypeBoundary(prev, curr) {
-  return isDirectoryRailItem(prev) !== isDirectoryRailItem(curr)
+function displayRailLabel(name?: string): string {
+  return String(name || '').replace(/目录$/, '')
 }
 
-function railItemTitle(item) {
+function railItemTitle(item: RailItem): string {
+  const label = displayRailLabel(item.label)
   if (isDirectoryRailItem(item) && item.children.length > 1) {
-    return `${item.label} · ${item.children.length}`
+    return `${label} · ${item.children.length}`
   }
-  return item.label
+  return label
 }
 
-function resolveRoutePath(menu) {
+function resolveRoutePath(menu?: MenuItem | null): string {
   return menu?.path || ''
 }
 
-function isRailActive(item) {
+function isRailActive(item: RailItem): boolean {
   const path = activePath.value
   if (isMenuRailItem(item)) {
     return resolveRoutePath(item.menu) === path
@@ -342,7 +304,7 @@ function isRailActive(item) {
   return item.children.some((child) => resolveRoutePath(child) === path)
 }
 
-function handleRailClick(item, evt) {
+function handleRailClick(item: RailItem, evt?: MouseEvent): void {
   if (isMenuRailItem(item)) {
     handleMenuSelect(item.menu)
     closeFlyout()
@@ -357,13 +319,13 @@ function handleRailClick(item, evt) {
   if (flyoutId.value === item.id) {
     closeFlyout()
   } else {
-    const btn = evt?.currentTarget
+    const btn = evt?.currentTarget as HTMLElement | null
+    const rail = document.querySelector('.rail')
     if (btn) {
-      const rect = btn.getBoundingClientRect()
-      flyoutTop.value = Math.min(
-        rect.top,
-        window.innerHeight - 280,
-      )
+      flyoutTop.value = btn.getBoundingClientRect().top
+    }
+    if (rail) {
+      flyoutLeft.value = rail.getBoundingClientRect().right + 8
     }
     flyoutId.value = item.id
   }
@@ -374,15 +336,15 @@ const flyoutItem = computed(() =>
 )
 const flyoutChildren = computed(() => flyoutItem.value?.children || [])
 
-function closeFlyout() {
+function closeFlyout(): void {
   flyoutId.value = null
 }
 
-function isFlyoutChildActive(child) {
+function isFlyoutChildActive(child: MenuItem): boolean {
   return resolveRoutePath(child) === activePath.value
 }
 
-function selectFlyoutChild(child) {
+function selectFlyoutChild(child: MenuItem): void {
   handleMenuSelect(child)
   closeFlyout()
 }
@@ -390,33 +352,11 @@ function selectFlyoutChild(child) {
 const cmdOpen = ref(false)
 const cmdQuery = ref('')
 const cmdIndex = ref(0)
-const cmdInputRef = ref(null)
-const recentIds = ref([])
-
-function loadRecent() {
-  try {
-    const raw = localStorage.getItem(RECENT_KEY)
-    recentIds.value = raw ? JSON.parse(raw) : []
-  } catch {
-    recentIds.value = []
-  }
-}
-
-function pushRecent(menu) {
-  if (!menu?.menuId) return
-  const id = String(menu.menuId)
-  const next = [id, ...recentIds.value.filter((x) => x !== id)].slice(0, RECENT_MAX)
-  recentIds.value = next
-  try {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
-  } catch {
-    /* ignore quota */
-  }
-}
+const cmdInputRef = ref<HTMLInputElement | null>(null)
 
 const flatMenuList = computed(() => {
-  const result = []
-  function walk(list) {
+  const result: MenuItem[] = []
+  function walk(list: MenuItem[]): void {
     for (const m of list) {
       if (canAccessMenu(m) && isMenuType(m)) result.push(m)
       if (m.children?.length) walk(m.children)
@@ -424,11 +364,6 @@ const flatMenuList = computed(() => {
   }
   walk(menuTree.value)
   return result
-})
-
-const recentMenus = computed(() => {
-  const byId = new Map(flatMenuList.value.map((m) => [String(m.menuId), m]))
-  return recentIds.value.map((id) => byId.get(id)).filter(Boolean)
 })
 
 const cmdResults = computed(() => {
@@ -439,37 +374,35 @@ const cmdResults = computed(() => {
     .slice(0, 12)
 })
 
-function openCmd() {
+function openCmd(): void {
   cmdOpen.value = true
   cmdQuery.value = ''
   cmdIndex.value = 0
   nextTick(() => cmdInputRef.value?.focus())
 }
 
-function closeCmd() {
+function closeCmd(): void {
   cmdOpen.value = false
   cmdQuery.value = ''
 }
 
-function moveCmd(delta) {
-  const list = cmdQuery.value ? cmdResults.value : recentMenus.value
-  const len = list.length
+function moveCmd(delta: number): void {
+  const len = cmdResults.value.length
   if (!len) return
   cmdIndex.value = (cmdIndex.value + delta + len) % len
 }
 
-function selectCmd() {
-  const list = cmdQuery.value ? cmdResults.value : recentMenus.value
-  const item = list[cmdIndex.value]
+function selectCmd(): void {
+  const item = cmdResults.value[cmdIndex.value]
   if (item) goToMenu(item)
 }
 
-function goToMenu(item) {
+function goToMenu(item: MenuItem): void {
   handleMenuSelect(item)
   closeCmd()
 }
 
-function handleGlobalKey(e) {
+function handleGlobalKey(e: KeyboardEvent): void {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault()
     cmdOpen.value ? closeCmd() : openCmd()
@@ -488,18 +421,17 @@ watch(activePath, () => {
   closeFlyout()
 })
 
-function goToProfile() {
+function goToProfile(): void {
   const profile = menuList.value.find((m) => m.path === '/profile')
   if (profile) handleMenuSelect(profile)
 }
 
-function handleMenuSelect(menu) {
+function handleMenuSelect(menu: MenuItem): void {
   const name = String(menu.menuId)
   const targetPath = resolveRoutePath(menu)
   const label = menu.menuName || '该菜单'
-  pushRecent(menu)
 
-  function pushPath() {
+  function pushPath(): void {
     if (!targetPath) return
     vueRouter.push(targetPath).catch((failure) => {
       if (isNavigationFailure(failure, NavigationFailureType.duplicated)) return
@@ -517,7 +449,7 @@ function handleMenuSelect(menu) {
   pushPath()
 }
 
-async function handleLogout() {
+async function handleLogout(): Promise<void> {
   userStore.clearAuth()
   resetDynamicRoutes(router)
   await vueRouter.replace('/auth')
@@ -536,17 +468,17 @@ watch(
   },
 )
 
-function handleDocClick(e) {
+function handleDocClick(e: MouseEvent): void {
   if (!flyoutId.value) return
   const flyout = flyoutRef.value
-  const dock = document.querySelector('.dock')
-  if (flyout?.contains(e.target)) return
-  if (dock?.contains(e.target)) return
+  const rail = document.querySelector('.rail')
+  const target = e.target as Node | null
+  if (flyout?.contains(target)) return
+  if (rail?.contains(target)) return
   closeFlyout()
 }
 
 onMounted(() => {
-  loadRecent()
   window.addEventListener('keydown', handleGlobalKey)
   document.addEventListener('mousedown', handleDocClick)
 })
@@ -564,271 +496,202 @@ onBeforeUnmount(() => {
   overflow: hidden;
   font-family: var(--font-family-sans);
   background: var(--color-bg);
-  position: relative;
+  padding: var(--rail-margin) 0 var(--rail-margin) var(--rail-margin);
+  gap: var(--rail-gap);
+  box-sizing: border-box;
 }
 
 /* ═══════════════════════════════
- *  悬浮胶囊 Dock
+ *  胶囊形图标轨道
  * ═══════════════════════════════ */
-.dock {
-  position: fixed;
-  left: var(--dock-inset);
-  top: var(--dock-inset);
-  bottom: var(--dock-inset);
-  width: var(--dock-width);
-  z-index: var(--z-sticky);
+.rail {
+  width: var(--rail-width);
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 0;
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(236, 246, 252, 0.88) 100%);
-  border: 1px solid rgba(8, 145, 178, 0.18);
+  background: #f0f7ff;
+  border-radius: 40px;
+  padding: 16px 0 14px;
+  z-index: var(--z-sticky);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 12px 32px rgba(8, 116, 146, 0.12),
-    0 2px 8px rgba(12, 42, 66, 0.06);
-  backdrop-filter: blur(var(--blur-lg));
-  -webkit-backdrop-filter: blur(var(--blur-lg));
+    0 1px 2px rgba(8, 116, 146, 0.04),
+    0 8px 24px rgba(8, 116, 146, 0.08);
+  border: 1px solid rgba(8, 145, 178, 0.1);
 }
 
-.dock-brand {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 14px;
-  background: rgba(8, 145, 178, 0.1);
-  color: var(--color-accent);
+.rail-brand {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-  transition:
-    background var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
+  padding: 0 0 14px;
+  margin-bottom: 2px;
+  color: var(--color-accent-deep);
 }
 
-.dock-brand:hover {
-  background: rgba(8, 145, 178, 0.18);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(8, 116, 146, 0.16);
+.rail-brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 145, 178, 0.1);
+  color: var(--color-accent-deep);
+  font-size: 22px;
 }
 
-.dock-brand:active {
-  transform: scale(0.96);
-}
-
-.dock-brand:focus-visible {
-  outline: 2px solid var(--color-accent-glow);
-  outline-offset: 2px;
-}
-
-.dock-icons {
+.rail-icons {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
   width: 100%;
-  padding: 4px 0;
-  min-height: 0;
+  padding: 0 8px;
 }
 
-.dock-icons::-webkit-scrollbar {
+.rail-icons::-webkit-scrollbar {
   display: none;
 }
 
-.dock-divider {
-  width: 20px;
-  height: 1px;
-  margin: 4px 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(8, 145, 178, 0.28),
-    transparent
-  );
-  flex-shrink: 0;
-}
-
-.dock-btn {
-  position: relative;
-  width: 60px;
-  min-height: 52px;
-  padding: 6px 4px;
-  border: none;
+.rail-btn {
+  width: 56px;
+  min-height: 54px;
   border-radius: 14px;
+  border: none;
   background: transparent;
-  color: var(--color-text-dim);
+  color: #7aa8b8;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
+  padding: 8px 4px 6px;
   cursor: pointer;
-  flex-shrink: 0;
   transition:
-    background var(--transition-fast),
-    color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-.dock-icon-wrap {
+    background var(--transition-normal),
+    color var(--transition-normal),
+    transform var(--transition-fast);
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
   flex-shrink: 0;
 }
 
-.dock-icon {
-  font-size: 18px;
-  display: block;
+.rail-icon {
+  font-size: 20px;
+  line-height: 1;
 }
 
-.dock-label {
-  font-size: 10px;
-  line-height: 1.15;
-  font-weight: var(--font-medium);
-  text-align: center;
-  max-width: 56px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dock-btn:hover {
-  background: rgba(8, 145, 178, 0.1);
+.rail-btn:hover {
+  background: rgba(217, 236, 255, 0.7);
   color: var(--color-accent);
 }
 
-.dock-btn:active {
-  transform: scale(0.94);
+.rail-btn:active {
+  transform: scale(0.97);
 }
 
-.dock-btn:focus-visible {
-  outline: 2px solid var(--color-accent-glow);
-  outline-offset: 2px;
+.rail-btn.active,
+.rail-btn.is-flyout-open {
+  background: #d9ecff;
+  color: #008491;
 }
 
-.dock-btn.active {
-  background: rgba(8, 145, 178, 0.16);
-  color: var(--color-accent-deep);
-  box-shadow: 0 0 0 1px rgba(8, 145, 178, 0.2);
-}
-
-.dock-btn.active::before {
+.rail-btn.active::before,
+.rail-btn.is-flyout-open::before {
   content: '';
   position: absolute;
-  left: -1px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 16px;
+  height: 22px;
+  background: #008491;
   border-radius: 0 3px 3px 0;
-  background: var(--color-accent);
 }
 
-.dock-btn.is-flyout-open {
-  background: rgba(34, 184, 207, 0.2);
-  color: var(--color-accent-deep);
-}
-
-.dock-btn--quiet {
-  color: var(--color-text-muted);
-}
-
-.dock-chevron {
-  position: absolute;
-  right: -2px;
-  bottom: -1px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 3px 0 3px 4px;
-  border-color: transparent transparent transparent var(--color-accent);
-  opacity: 0.7;
-}
-
-.dock-btn.is-flyout-open .dock-chevron {
-  transform: rotate(90deg);
-  opacity: 1;
-}
-
-.dock-bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding-top: 8px;
-  margin-top: 4px;
-  border-top: 1px solid rgba(8, 145, 178, 0.14);
-  width: calc(100% - 16px);
-  flex-shrink: 0;
-}
-
-.dock-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 11px;
-  overflow: hidden;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  background: var(--color-accent-soft);
-  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.2);
-  transition:
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
-}
-
-.dock-avatar:hover {
-  box-shadow: 0 0 0 2px var(--color-accent);
-  transform: translateY(-1px);
-}
-
-.dock-avatar:focus-visible {
+.rail-btn:focus-visible {
   outline: 2px solid var(--color-accent-glow);
   outline-offset: 2px;
 }
 
-.dock-avatar-img {
+.rail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  max-width: 52px;
+}
+
+.rail-label {
+  font-size: 10px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46px;
+  text-align: center;
+  font-weight: var(--font-medium);
+}
+
+.rail-expand-caret {
+  font-size: 8px;
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition: transform var(--transition-normal);
+}
+
+.rail-btn.is-flyout-open .rail-expand-caret {
+  transform: rotate(90deg);
+}
+
+.rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 8px 0;
+  margin-top: 8px;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+  border-top: 1px solid rgba(8, 145, 178, 0.14);
+}
+
+.rail-avatar {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--transition-fast);
+}
+
+.rail-avatar:hover {
+  opacity: 0.88;
+}
+
+.rail-avatar :deep(.el-avatar) {
+  border: 2px solid rgba(8, 145, 178, 0.18);
+  background: #d9ecff;
+  color: #008491;
 }
 
 /* ═══════════════════════════════
- *  子菜单飞层
+ *  子菜单弹出面板
  * ═══════════════════════════════ */
 .flyout-panel {
   position: fixed;
-  left: calc(var(--dock-inset) + var(--dock-width) + 10px);
   z-index: var(--z-dropdown);
-  min-width: 168px;
-  max-width: 220px;
+  min-width: 180px;
+  max-width: 240px;
   max-height: 70vh;
   overflow-y: auto;
-  padding: 8px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(8, 145, 178, 0.16);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 16px 40px rgba(8, 116, 146, 0.14);
-  backdrop-filter: blur(var(--blur-lg));
-  -webkit-backdrop-filter: blur(var(--blur-lg));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -836,11 +699,13 @@ onBeforeUnmount(() => {
 }
 
 .flyout-title {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--color-text-secondary);
-  padding: 4px 10px 8px;
-  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -849,66 +714,78 @@ onBeforeUnmount(() => {
 .flyout-child {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 9px 12px;
   border: none;
   background: transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text-body);
   font-size: var(--text-sm);
   font-family: inherit;
   text-align: left;
   width: 100%;
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .flyout-child:hover {
   background: var(--color-accent-soft);
-  color: var(--color-accent-deep);
+  color: var(--color-accent);
 }
 
 .flyout-child.active {
-  background: rgba(8, 145, 178, 0.12);
+  background: var(--color-accent-soft);
   color: var(--color-accent-deep);
   font-weight: var(--font-medium);
 }
 
+.flyout-child-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(8, 145, 178, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-dim);
+  flex-shrink: 0;
+  font-size: 12px;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.flyout-child:hover .flyout-child-icon,
+.flyout-child.active .flyout-child-icon {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--color-accent);
+  border-color: rgba(8, 145, 178, 0.24);
+}
+
 .flyout-child-name {
-  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.flyout-here {
-  font-size: 9px;
-  font-family: var(--font-family-mono);
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid rgba(8, 145, 178, 0.28);
-  color: var(--color-accent);
-  background: rgba(255, 255, 255, 0.7);
-}
-
 .flyout-enter-active {
-  transition: opacity 0.16s ease-out, transform 0.16s ease-out;
+  transition: all 0.18s ease-out;
 }
 
 .flyout-leave-active {
-  transition: opacity 0.1s ease-in, transform 0.1s ease-in;
+  transition: all 0.12s ease-in;
 }
 
 .flyout-enter-from,
 .flyout-leave-to {
   opacity: 0;
-  transform: translateX(-6px) scale(0.98);
+  transform: translateX(-8px);
 }
 
 /* ═══════════════════════════════
- *  主区域 · 命令优先顶栏
+ *  主区域
  * ═══════════════════════════════ */
 .main-area {
   flex: 1;
@@ -916,141 +793,112 @@ onBeforeUnmount(() => {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  margin-left: var(--dock-gutter);
+  border-radius: 20px 0 0 20px;
 }
 
-.topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 420px) minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-  height: var(--topbar-height);
-  padding: 0 20px 0 8px;
-  flex-shrink: 0;
-  background: transparent;
-}
-
-.topbar-crumb {
-  min-width: 0;
-  justify-self: start;
-}
-
-.topbar-crumb-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-text-secondary);
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.topbar-crumb--empty {
-  min-height: 1px;
-}
-
-.cmd-trigger {
+.search-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 12px 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(8, 145, 178, 0.16);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  cursor: pointer;
-  color: var(--color-text-dim);
-  transition:
-    border-color var(--transition-normal),
-    box-shadow var(--transition-normal),
-    background var(--transition-fast),
-    transform var(--transition-fast);
-  width: 100%;
-  justify-self: center;
-  font-family: inherit;
+  gap: var(--space-4);
+  padding: 8px 20px;
+  flex-shrink: 0;
+  background: var(--color-zone-content);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.cmd-trigger:hover {
-  border-color: rgba(8, 145, 178, 0.32);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 0 3px var(--color-accent-muted);
-  color: var(--color-accent-deep);
-}
-
-.cmd-trigger:active {
-  transform: scale(0.99);
-}
-
-.cmd-trigger:focus-visible {
-  outline: 2px solid var(--color-accent-glow);
-  outline-offset: 2px;
-}
-
-.cmd-trigger-icon {
-  font-size: 14px;
+.search-bar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
   flex-shrink: 0;
 }
 
-.cmd-trigger-text {
-  flex: 1;
-  text-align: left;
+.search-brand {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.search-page {
   font-size: var(--text-sm);
-  color: inherit;
+  color: var(--color-text-secondary);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 160px;
 }
 
-.cmd-trigger-kbd {
-  display: inline-flex;
+.search-pill {
+  display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-control, 10px);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  flex: 1;
+  max-width: 360px;
+  color: var(--color-text-dim);
+}
+
+.search-pill:hover {
+  border-color: var(--color-accent-glow);
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+}
+
+.search-placeholder {
+  font-size: var(--text-sm);
+  color: var(--color-text-dim);
+  flex: 1;
+  text-align: left;
+}
+
+.search-kbd {
   font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  border: 1px solid rgba(8, 145, 178, 0.16);
-  background: rgba(240, 247, 251, 0.9);
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   color: var(--color-text-dim);
   font-family: var(--font-family-mono);
-  flex-shrink: 0;
+  background: var(--color-bg);
 }
 
-.cmd-trigger-mod {
-  opacity: 0.75;
-}
-
-.topbar-right {
+.search-right {
   display: flex;
   gap: 6px;
   align-items: center;
-  justify-self: end;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.topbar-icon {
+.icon-btn {
   width: 34px;
   height: 34px;
-  border-radius: 11px;
-  border: 1px solid rgba(8, 145, 178, 0.12);
-  background: rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-control, 10px);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: var(--color-text-dim);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition:
-    color var(--transition-fast),
-    background var(--transition-fast),
-    border-color var(--transition-fast);
+  transition: all var(--transition-normal);
 }
 
-.topbar-icon:hover {
+.icon-btn:hover {
   color: var(--color-accent);
-  border-color: rgba(8, 145, 178, 0.28);
+  border-color: var(--color-accent-glow);
   background: var(--color-accent-soft);
 }
 
-.topbar-icon:focus-visible {
+.icon-btn:focus-visible {
   outline: 2px solid var(--color-accent-glow);
   outline-offset: 2px;
 }
@@ -1110,18 +958,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 14vh;
+  padding-top: 15vh;
 }
 
 .cmd-palette {
   width: 520px;
-  max-height: 440px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(8, 145, 178, 0.16);
-  border-radius: 18px;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 24px 64px rgba(8, 116, 146, 0.18);
+  max-height: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1144,7 +990,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(8, 145, 178, 0.1);
+  border-bottom: 1px solid var(--color-border);
   color: var(--color-text-dim);
 }
 
@@ -1171,18 +1017,6 @@ onBeforeUnmount(() => {
   font-family: var(--font-family-mono);
 }
 
-.cmd-section {
-  padding-top: 4px;
-}
-
-.cmd-section-label {
-  font-size: 10px;
-  font-weight: var(--font-semibold);
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-  padding: 8px 16px 4px;
-}
-
 .cmd-list {
   overflow-y: auto;
   padding: 6px;
@@ -1196,7 +1030,7 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
   border: none;
   background: transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background var(--transition-fast);
   text-align: left;
@@ -1236,26 +1070,15 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .topbar {
-    grid-template-columns: 1fr auto;
-    padding-right: 12px;
-  }
-
-  .topbar-crumb {
+  .search-bar-left {
     display: none;
   }
 
-  .cmd-trigger {
-    grid-column: 1;
-    justify-self: stretch;
+  .search-pill {
     max-width: none;
   }
 
-  .topbar-right {
-    grid-column: 2;
-  }
-
-  .cmd-trigger-kbd {
+  .search-kbd {
     display: none;
   }
 
@@ -1263,18 +1086,25 @@ onBeforeUnmount(() => {
     width: calc(100vw - 32px);
   }
 
-  .dock {
-    border-radius: 18px;
+  .rail-label-row,
+  .rail-label {
+    display: none;
+  }
+
+  .rail-btn {
+    min-height: 44px;
+  }
+
+  .layout {
+    padding: 8px 0 8px 8px;
+    gap: 8px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .flyout-enter-active,
   .flyout-leave-active,
-  .cmd-palette,
-  .dock-btn,
-  .dock-brand,
-  .cmd-trigger {
+  .cmd-palette {
     animation: none;
     transition: none;
   }

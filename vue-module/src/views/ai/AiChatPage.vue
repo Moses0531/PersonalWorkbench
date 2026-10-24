@@ -1,32 +1,33 @@
-<script setup>
+<script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
 import {
   chatWithAiStream,
   deleteAiConversationApi,
   getAiHistoryApi,
   listAiConversationsApi
 } from '@/apis/ai/AiApi'
-import { Plus, Delete, Promotion } from '@element-plus/icons-vue'
+import type { AIConversationMeta, AiChatMessage } from '@/types/entities'
+import { toErrorMessage } from '@/types/api'
 
 const loading = ref(false)
 const clearLoading = ref(false)
-const message = ref('')
-const messages = ref([])
-const conversations = ref([])
+const inputText = ref('')
+const messages = ref<AiChatMessage[]>([])
+const conversations = ref<AIConversationMeta[]>([])
 const activeConversationId = ref('')
-const listRef = ref(null)
+const listRef = ref<HTMLElement | null>(null)
 const streamingMessageIndex = ref(-1)
-const cancelStream = ref(null)
+const cancelStream = ref<(() => void) | null>(null)
 
-function scrollToBottom() {
+function scrollToBottom(): void {
   nextTick(() => {
     if (!listRef.value) return
     listRef.value.scrollTop = listRef.value.scrollHeight
   })
 }
 
-async function loadConversations() {
+async function loadConversations(): Promise<void> {
   try {
     const result = await listAiConversationsApi()
     conversations.value = Array.isArray(result?.data) ? result.data : []
@@ -38,7 +39,7 @@ async function loadConversations() {
   }
 }
 
-async function loadHistory() {
+async function loadHistory(): Promise<void> {
   if (!activeConversationId.value) {
     messages.value = []
     return
@@ -52,19 +53,19 @@ async function loadHistory() {
   scrollToBottom()
 }
 
-async function selectConversation(conversationId) {
+async function selectConversation(conversationId: string): Promise<void> {
   if (!conversationId || activeConversationId.value === conversationId) return
   activeConversationId.value = conversationId
   await loadHistory()
 }
 
-async function createConversation() {
+async function createConversation(): Promise<void> {
   activeConversationId.value = ''
   messages.value = []
-  message.value = ''
+  inputText.value = ''
 }
 
-async function refreshConversationsAndHistory(preferredConversationId = '') {
+async function refreshConversationsAndHistory(preferredConversationId: string = ''): Promise<void> {
   await loadConversations()
   if (preferredConversationId) {
     activeConversationId.value = preferredConversationId
@@ -75,13 +76,13 @@ async function refreshConversationsAndHistory(preferredConversationId = '') {
   await loadHistory()
 }
 
-async function sendMessage() {
-  const content = message.value.trim()
+async function sendMessage(): Promise<void> {
+  const content = inputText.value.trim()
   if (!content || loading.value) return
 
   loading.value = true
   const draft = content
-  message.value = ''
+  inputText.value = ''
 
   messages.value.push({
     role: 'user',
@@ -119,7 +120,7 @@ async function sendMessage() {
           scrollToBottom()
         },
         (error) => {
-          ElMessage.error(error?.message || '发送失败')
+          message.error(toErrorMessage(error) || '发送失败')
           if (streamingMessageIndex.value >= 0 && streamingMessageIndex.value < messages.value.length) {
             if (!messages.value[streamingMessageIndex.value].content) {
               messages.value[streamingMessageIndex.value].content = '抱歉，本次回答失败，请稍后重试。'
@@ -132,7 +133,7 @@ async function sendMessage() {
         }
     )
   } catch (err) {
-    ElMessage.error(err?.message || '发送失败')
+    message.error(toErrorMessage(err) || '发送失败')
     messages.value.push({
       role: 'assistant',
       content: '抱歉，本次回答失败，请稍后重试。',
@@ -143,7 +144,7 @@ async function sendMessage() {
   }
 }
 
-async function clearHistory() {
+async function clearHistory(): Promise<void> {
   if (!activeConversationId.value || clearLoading.value) return
   clearLoading.value = true
   try {
@@ -151,9 +152,9 @@ async function clearHistory() {
     activeConversationId.value = ''
     messages.value = []
     await refreshConversationsAndHistory()
-    ElMessage.success('对话已删除')
+    message.success('对话已删除')
   } catch (err) {
-    ElMessage.error(err?.message || '删除失败')
+    message.error(toErrorMessage(err) || '删除失败')
   } finally {
     clearLoading.value = false
   }
@@ -183,7 +184,11 @@ onMounted(async () => {
         <div class="sidebar-header">
           <h3 class="sidebar-title">会话</h3>
           <button class="btn-new" @click="createConversation" title="新建会话">
-            <Plus />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </button>
         </div>
 
@@ -224,7 +229,11 @@ onMounted(async () => {
                 @click="clearHistory"
                 title="删除当前会话"
             >
-              <Delete />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
             </button>
           </div>
         </div>
@@ -267,8 +276,8 @@ onMounted(async () => {
         <div class="chat-input-area">
           <div class="input-wrap">
             <el-input
+                v-model="inputText"
                 type="textarea"
-                v-model="message"
                 :rows="2"
                 :autosize="{ minRows: 2, maxRows: 6 }"
                 placeholder="说说今天要推进什么，Enter 发送…"
@@ -279,10 +288,14 @@ onMounted(async () => {
               <button
                   class="btn-send"
                   :class="{ 'is-loading': loading }"
-                  :disabled="!message.trim() || loading"
+                  :disabled="!inputText.trim() || loading"
                   @click="sendMessage"
               >
-                <Promotion v-if="!loading" />
+                <svg v-if="!loading" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
                 <span v-if="loading" class="send-spinner"></span>
               </button>
             </div>
@@ -636,22 +649,27 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
-.input-wrap :deep(.el-input) {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: var(--space-3) var(--space-4) var(--space-1);
+.input-wrap :deep(.el-textarea),
+.input-wrap :deep(.el-textarea),
+.input-wrap :deep(.el-textarea__inner),
+.input-wrap :deep(.el-textarea__inner) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   font-size: var(--text-lg);
   color: var(--color-text-primary);
   font-family: inherit;
   line-height: var(--leading-relaxed);
+}
+.input-wrap :deep(.el-textarea__inner) {
+  padding: var(--space-3) var(--space-4) var(--space-1) !important;
   resize: none;
 }
-.input-wrap :deep(.el-input::placeholder) {
+.input-wrap :deep(.el-textarea__inner::placeholder) {
   color: var(--color-text-dim);
 }
-.input-wrap :deep(.el-input:focus) {
-  box-shadow: none;
+.input-wrap :deep(.el-textarea__inner:focus) {
+  box-shadow: none !important;
 }
 
 .input-actions {

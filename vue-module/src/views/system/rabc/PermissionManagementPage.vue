@@ -1,6 +1,6 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from '@/utils/message'
 import {
   deletePermissionApi,
   listPermissionsApi,
@@ -20,21 +20,24 @@ import {
 } from '@/utils/menu'
 import HierarchicalManageListView from '@/components/ListView/HierarchicalManageListView.vue'
 import DataOperationView from '@/components/ListView/DataOperationView.vue'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import type { IdLike, RawSysPermission, SysRole } from '@/types/entities'
+import type { PermissionRecord, RawPermissionInput } from '@/types/menu'
+import type { ColumnDef } from '@/types/components'
+import { toErrorMessage } from '@/types/api'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const tableData = ref([])
+const tableData = ref<PermissionRecord[]>([])
 const searchQuery = ref('')
 
-const roleOptions = ref([])
+const roleOptions = ref<SysRole[]>([])
 const roleAssignLoading = ref(false)
 
 const form = reactive({
-  permissionId: null,
+  permissionId: null as IdLike | null,
   name: '',
-  parentId: 0,
+  parentId: 0 as IdLike,
   type: 'D',
   routerName: '',
   isDisplay: 0,
@@ -43,10 +46,10 @@ const form = reactive({
   icon: '',
   displayOrder: 0,
   remark: '',
-  roleIds: []
+  roleIds: [] as number[]
 })
 
-const columns = [
+const columns: ColumnDef[] = [
   { prop: 'name', label: '名称' },
   { prop: 'type', label: '类型', width: '56px' },
   { prop: 'routerName', label: '路由名称', width: '130px' },
@@ -73,7 +76,7 @@ const parentOptions = computed(() => {
   const options = [{ value: 0, label: '根节点' }]
   list
     .slice()
-    .sort((a, b) => (a.displayOrder ?? 99999) - (b.displayOrder ?? 99999) || (a.permissionId || 0) - (b.permissionId || 0))
+    .sort((a, b) => (Number(a.displayOrder ?? 99999) - Number(b.displayOrder ?? 99999)) || (Number(a.permissionId || 0) - Number(b.permissionId || 0)))
     .forEach((item) => {
       options.push({
         value: Number(item.permissionId),
@@ -92,20 +95,36 @@ const roleSelectOptions = computed(() =>
   }))
 )
 
-async function loadPermissions() {
+const typeSelectOptions = [
+  { label: 'D - 目录', value: 'D' },
+  { label: 'M - 菜单', value: 'M' },
+  { label: 'F - 功能', value: 'F' },
+]
+
+const displaySelectOptions = [
+  { label: '0 - 显示', value: 0 },
+  { label: '1 - 隐藏', value: 1 },
+]
+
+const statusSelectOptions = [
+  { label: '0 - 正常', value: '0' },
+  { label: '1 - 停用', value: '1' },
+]
+
+async function loadPermissions(): Promise<void> {
   loading.value = true
   try {
     const result = await listPermissionsApi()
     const list = Array.isArray(result?.data) ? result.data : []
     tableData.value = normalizePermissionList(list)
   } catch (error) {
-    ElMessage.error(error.message || '获取权限列表失败')
+    message.error(toErrorMessage(error) || '获取权限列表失败')
   } finally {
     loading.value = false
   }
 }
 
-function resetForm() {
+function resetForm(): void {
   Object.assign(form, {
     permissionId: null,
     name: '',
@@ -122,20 +141,20 @@ function resetForm() {
   })
 }
 
-async function loadRoles() {
+async function loadRoles(): Promise<void> {
   try {
     const res = await listRolesApi()
     roleOptions.value = Array.isArray(res?.data) ? res.data : []
   } catch (error) {
-    const msg = String(error?.message || '')
+    const msg = toErrorMessage(error)
     if (!msg.includes('403') && !msg.includes('无权限')) {
-      ElMessage.error(msg || '加载角色列表失败')
+      message.error(msg || '加载角色列表失败')
     }
     roleOptions.value = []
   }
 }
 
-async function loadPermissionRoleIds(permissionId) {
+async function loadPermissionRoleIds(permissionId: IdLike | null): Promise<void> {
   if (!permissionId) {
     form.roleIds = []
     return
@@ -151,17 +170,18 @@ async function loadPermissionRoleIds(permissionId) {
   }
 }
 
-async function openCreate(parentId = 0) {
+async function openCreate(parentId: IdLike = 0): Promise<void> {
   isEdit.value = false
   resetForm()
   form.parentId = parentId
   dialogVisible.value = true
-  if (parentId > 0) {
+  // Number() 与 JS 隐式转换行为一致（parentId 可能是字符串 ID）
+  if (Number(parentId) > 0) {
     await loadPermissionRoleIds(parentId)
   }
 }
 
-async function openEdit(row) {
+async function openEdit(row: PermissionRecord): Promise<void> {
   isEdit.value = true
   Object.assign(form, {
     permissionId: row.permissionId,
@@ -181,12 +201,13 @@ async function openEdit(row) {
   await loadPermissionRoleIds(row.permissionId)
 }
 
-function permissionPayloadFromForm() {
+/** 表单 → 权限载荷（去掉角色勾选字段；表单 id 可能为 null，做一次受控转换） */
+function permissionPayloadFromForm(): RawPermissionInput {
   const { roleIds: _roleIds, ...permission } = form
-  return permission
+  return permission as unknown as RawPermissionInput
 }
 
-function findCreatedPermissionId(list, payload) {
+function findCreatedPermissionId(list: PermissionRecord[], payload: RawSysPermission): IdLike | null {
   const match = list.find(
     (item) =>
       item.name === payload.name &&
@@ -197,10 +218,10 @@ function findCreatedPermissionId(list, payload) {
   return match?.permissionId ?? null
 }
 
-async function submitForm() {
+async function submitForm(): Promise<void> {
   try {
     const payload = permissionPayloadFromForm()
-    let permissionId = form.permissionId
+    let permissionId: IdLike | null = form.permissionId
     if (isEdit.value) {
       await updatePermissionApi(payload)
     } else {
@@ -209,33 +230,33 @@ async function submitForm() {
       permissionId = findCreatedPermissionId(refreshed?.data || [], payload)
     }
     if (!permissionId) {
-      ElMessage.warning('权限已保存，但未能分配角色，请编辑该权限重新勾选角色')
+      message.warning('权限已保存，但未能分配角色，请编辑该权限重新勾选角色')
       dialogVisible.value = false
       await loadPermissions()
       return
     }
     await assignPermissionRolesApi(permissionId, form.roleIds.map(Number))
-    ElMessage.success(isEdit.value ? '权限与角色已保存' : '权限已创建并完成角色分配')
+    message.success(isEdit.value ? '权限与角色已保存' : '权限已创建并完成角色分配')
     dialogVisible.value = false
     await loadPermissions()
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    message.error(toErrorMessage(error) || '操作失败')
   }
 }
 
-async function removePermission(permissionId) {
+async function removePermission(permissionId: IdLike): Promise<void> {
   try {
     await deletePermissionApi(permissionId)
-    ElMessage.success('删除成功')
+    message.success('删除成功')
     await loadPermissions()
     window.dispatchEvent(new CustomEvent('permissions-updated'))
   } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    message.error(toErrorMessage(error) || '删除失败')
   }
 }
 
-function getNodeType(type) {
+function getNodeType(type?: string): { label: string; cls: string } {
   const t = String(type || '').trim().toUpperCase()
   if (t === 'D') return { label: '目录', cls: 'dir' }
   if (t === 'M') return { label: '菜单', cls: 'menu' }
@@ -252,7 +273,7 @@ onMounted(async () => {
   <HierarchicalManageListView
     v-model:search-query="searchQuery"
     title="权限列表"
-    desc="维护菜单、路由与功能权限标识"
+    desc="维护系统权限结构、路由配置与权限标识（D-目录 / M-菜单 / F-功能）"
     :loading="loading"
     :data="treeData"
     :columns="columns"
@@ -264,7 +285,9 @@ onMounted(async () => {
   >
     <template #toolbar-actions>
       <button v-permission="'permission:add'" type="button" class="mlv-btn-primary" @click="openCreate(0)">
-        <Plus />
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
         新增根权限
       </button>
     </template>
@@ -316,15 +339,25 @@ onMounted(async () => {
     <template #actions="{ row }">
       <div class="action-btns">
         <button v-permission="'permission:modify'" type="button" class="btn-action btn-action--edit" title="编辑" @click="openEdit(row)">
-          <Edit />
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
         </button>
         <button v-permission="'permission:add'" type="button" class="btn-action btn-action--add" title="新增子项" @click="openCreate(row.permissionId)">
-          <Plus />
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
         </button>
-        <el-popconfirm v-permission="'permission:remove'" title="确认删除该权限？" @confirm="removePermission(row.permissionId)">
-          <template #reference><button type="button" class="btn-action btn-action--delete" title="删除">
-            <Delete />
-          </button></template>
+        <el-popconfirm v-permission="'permission:remove'" @confirm="removePermission(row.permissionId)" title="确认删除该权限？">
+          <template #reference>
+            <button type="button" class="btn-action btn-action--delete" title="删除">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </template>
         </el-popconfirm>
       </div>
     </template>
@@ -337,37 +370,29 @@ onMounted(async () => {
   <DataOperationView
     v-model="dialogVisible"
     :title="isEdit ? '编辑权限' : '新增权限'"
-    :columns="2"
+    width="640px"
     :confirm-text="isEdit ? '保存修改' : '确认新增'"
     @confirm="submitForm"
   >
     <el-form label-position="top" :model="form" class="dialog-form">
       <div class="dialog-grid">
-        <el-form-item label="名称" class="dialog-item" required>
-          <el-input v-model.trim="form.name" placeholder="显示名称" />
+        <el-form-item label="名称" class="dialog-item">
+          <el-input v-model="form.name" placeholder="显示名称" clearable />
         </el-form-item>
 
         <el-form-item label="类型（D/M/F）" class="dialog-item">
-          <el-select v-model="form.type" style="width: 100%">
-            <el-option value="D">D - 目录</el-option>
-            <el-option value="M">M - 菜单</el-option>
-            <el-option value="F">F - 功能</el-option>
+          <el-select v-model="form.type" >
+            <el-option v-for="o in typeSelectOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
 
         <el-form-item label="上级（parent_id）" class="dialog-item">
           <el-select
             v-model="form.parentId"
-            style="width: 100%"
             filterable
             placeholder="选择上级目录或菜单"
           >
-            <el-option
-              v-for="opt in parentOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
+            <el-option v-for="o in parentOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
           <p class="field-hint">
             {{ form.type === 'F' ? '功能的上级须为 M 类型菜单页' : '目录/菜单的上级为根节点或 D 类型目录' }}
@@ -379,8 +404,8 @@ onMounted(async () => {
           <p class="field-hint">数值越小越靠前</p>
         </el-form-item>
 
-        <el-form-item label="路由名称（router_name）" class="dialog-item">
-          <el-input v-model.trim="form.routerName" placeholder="如 DashboardPage（PascalCase，以 Page 结尾）" clearable />
+        <el-form-item label="路由名称（router_name）" class="dialog-item dialog-item--full">
+          <el-input v-model="form.routerName" placeholder="如 DashboardPage（PascalCase，以 Page 结尾）" clearable />
           <p v-if="form.type === 'M' && form.routerName" class="field-hint">
             将自动生成访问路径 <code>{{ previewUrlPath }}</code>，页面组件 <code>{{ previewViewFile }}</code>
           </p>
@@ -388,30 +413,28 @@ onMounted(async () => {
         </el-form-item>
 
         <el-form-item label="权限标识（code）" class="dialog-item">
-          <el-input v-model.trim="form.code" placeholder="如 user:add" clearable />
+          <el-input v-model="form.code" placeholder="如 user:add" clearable />
           <p class="field-hint">与后端 @PreAuthorize 及 v-permission 对应</p>
         </el-form-item>
 
         <el-form-item label="图标（icon）" class="dialog-item">
-          <el-input v-model.trim="form.icon" placeholder="图标 URL，选填" />
+          <el-input v-model="form.icon" placeholder="图标 URL，选填" clearable />
         </el-form-item>
 
         <el-form-item label="是否显示（is_display）" class="dialog-item">
-          <el-select v-model="form.isDisplay" style="width: 100%">
-            <el-option :value="0">0 - 显示</el-option>
-            <el-option :value="1">1 - 隐藏</el-option>
+          <el-select v-model="form.isDisplay" >
+            <el-option v-for="o in displaySelectOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
 
         <el-form-item label="状态（status）" class="dialog-item">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option value="0">0 - 正常</el-option>
-            <el-option value="1">1 - 停用</el-option>
+          <el-select v-model="form.status" >
+            <el-option v-for="o in statusSelectOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="备注（remark）" class="dialog-item">
-          <el-input v-model.trim="form.remark" placeholder="选填" />
+        <el-form-item label="备注（remark）" class="dialog-item dialog-item--full">
+          <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
         </el-form-item>
 
         <el-form-item label="角色权限分配" class="dialog-item dialog-item--full">
@@ -427,15 +450,9 @@ onMounted(async () => {
                 clearable
                 filterable
                 placeholder="请选择角色"
-                style="width: 100%"
               >
-                <el-option
-                  v-for="opt in roleSelectOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
+            <el-option v-for="o in roleSelectOptions" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
               <p v-else class="role-assign-empty">暂无可选角色，请先在角色管理中创建角色</p>
             </div>
           </div>

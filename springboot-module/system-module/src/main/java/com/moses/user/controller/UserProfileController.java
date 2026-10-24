@@ -1,8 +1,9 @@
 package com.moses.user.controller;
 
+import com.moses.context.UserContext;
+
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import cn.dev33.satoken.stp.StpUtil;
 import com.moses.config.ResultConfig;
 import com.moses.user.entity.SysUser;
 import com.moses.user.service.SysUserService;
@@ -26,7 +27,7 @@ public class UserProfileController {
     @SaCheckLogin
     @GetMapping("/getCurrentUserProfile")
     public ResultConfig getCurrentUserInfo() {
-        SysUser userProfile = sysUserService.getCurrentUserInfo(StpUtil.getLoginIdAsLong());
+        SysUser userProfile = sysUserService.getCurrentUserInfo(UserContext.currentUserId());
         return ResultConfig.success(userProfile);
     }
 
@@ -35,7 +36,7 @@ public class UserProfileController {
     @SaCheckPermission("profile:modify")
     @PutMapping("/updateUserProfile")
     public ResultConfig updateUserInfo(@RequestBody SysUser userProfile) {
-        sysUserService.updateUserInfo(StpUtil.getLoginIdAsLong(), userProfile);
+        sysUserService.updateUserInfo(UserContext.currentUserId(), userProfile);
         return ResultConfig.success("个人信息更新成功");
     }
 
@@ -45,7 +46,7 @@ public class UserProfileController {
     @PostMapping("/changePassword")
     public ResultConfig changePassword(@RequestBody Map<String, String> passwordData) {
         sysUserService.changePassword(
-                StpUtil.getLoginIdAsLong(),
+                UserContext.currentUserId(),
                 passwordData.get("oldPassword"),
                 passwordData.get("newPassword")
         );
@@ -57,7 +58,7 @@ public class UserProfileController {
     @SaCheckPermission("profile:modify")
     @PostMapping("/updateAvatar")
     public ResultConfig updateAvatar(@RequestParam("file") MultipartFile file) {
-        String avatarUrl = sysUserService.updateAvatar(StpUtil.getLoginIdAsLong(), file);
+        String avatarUrl = sysUserService.updateAvatar(UserContext.currentUserId(), file);
         return ResultConfig.success(avatarUrl);
     }
 }

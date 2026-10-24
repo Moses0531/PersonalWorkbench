@@ -2,7 +2,7 @@ package com.moses.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moses.config.ResultConfig;
-import com.moses.entity.Task;
+import com.moses.task.entity.Task;
 import com.moses.utils.UploadFileUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * PersonalWorkbench 首页
  * 构图对齐登录页：Outfit 品牌 + 衬线问候 + 玻璃面板 + 等距氛围。
@@ -7,7 +7,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { pageTasksApi } from '@/apis/business/TaskApi'
+import { pageTasksApi, type TaskRecord } from '@/apis/business/TaskApi'
+import { toErrorMessage } from '@/types/api'
 import { useUserStore } from '@/stores/userStore'
 import BrandMarkView from '@/components/BrandMarkView.vue'
 import {
@@ -26,8 +27,8 @@ const userStore = useUserStore()
 const now = ref(new Date())
 const loading = ref(true)
 const loadError = ref('')
-const tasks = ref([])
-let clockTimer = null
+const tasks = ref<TaskRecord[]>([])
+let clockTimer: number | undefined
 
 onMounted(() => {
   clockTimer = window.setInterval(() => {
@@ -190,7 +191,7 @@ const trendChartOption = computed(() =>
 
 const weekDoneTotal = computed(() => weekTrend.value.values.reduce((a, b) => a + b, 0))
 
-function dueLabel(task) {
+function dueLabel(task: { daysLeft: number; overdue: boolean }) {
   if (task.overdue) {
     const n = Math.abs(task.daysLeft)
     return n === 1 ? '逾期 1 天' : `逾期 ${n} 天`
@@ -200,7 +201,7 @@ function dueLabel(task) {
   return `${task.daysLeft} 天后`
 }
 
-function formatDue(value) {
+function formatDue(value?: string | null) {
   const d = dayjs(value)
   if (!d.isValid()) return ''
   if (d.hour() === 0 && d.minute() === 0) return d.format('M/D')
@@ -214,7 +215,7 @@ async function refreshFocus() {
     const taskRes = await pageTasksApi(1, null)
     tasks.value = taskRes?.data?.records || []
   } catch (err) {
-    loadError.value = err?.message || '加载失败'
+    loadError.value = toErrorMessage(err) || '加载失败'
     tasks.value = []
   } finally {
     loading.value = false
@@ -518,7 +519,7 @@ function goTasks() {
           <ul v-else class="list list--tasks" role="list">
             <li
               v-for="(task, idx) in visibleTasks"
-              :key="task.taskId"
+              :key="task.taskId ?? idx"
               class="card card--task"
               :class="{ 'is-overdue': task.overdue, 'is-today': !task.overdue && task.daysLeft === 0 }"
               :style="{ '--i': idx }"
@@ -529,7 +530,7 @@ function goTasks() {
                   <span class="card-title">{{ task.title || '未命名待办' }}</span>
                   <span class="card-meta">
                     <span class="card-badge" :class="{ 'card-badge--warn': task.overdue }">{{ dueLabel(task) }}</span>
-                    <time :datetime="task.dueTime">{{ formatDue(task.dueTime) }}</time>
+                    <time :datetime="task.dueTime ?? undefined">{{ formatDue(task.dueTime) }}</time>
                   </span>
                 </span>
               </button>

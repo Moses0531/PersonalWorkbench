@@ -54,12 +54,16 @@ aliyun:
     bucketName: fangqianmin
     region: cn-hangzhou
 
-# 认证功能开关
+# 认证 / 上传
 app:
   auth:
     register-enabled: true
     captcha-on-login: true
     captcha-on-register: true
+  upload:
+    storage: oss
+    local-dir: uploads/
+    public-prefix: /uploads/
 
 # Sa-Token 配置
 sa-token:
@@ -83,8 +87,6 @@ sa-token:
   is-read-header: true
   # token 前缀 (设置后必须携带 Bearer 前缀)
   token-prefix: Bearer
-  # JWT 模式配置 (如果启用 JWT)
-  jwt-secret-key: abcdefghijklmnopqrstuvwxyz
 
 # springdoc-openapi（文档引擎；UI 使用 Knife4j doc.html）
 springdoc:

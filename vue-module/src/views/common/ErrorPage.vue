@@ -114,13 +114,21 @@
         <div class="actions">
           <el-button type="primary" class="btn-primary" @click="goHome">
             <span class="btn-icon">
-              <HomeFilled />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
             </span>
             返回首页
           </el-button>
           <el-button class="btn-ghost" @click="goBack">
             <span class="btn-icon">
-              <ArrowLeft />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
             </span>
             返回上页
           </el-button>
@@ -130,17 +138,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeFilled, ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const sceneRef = ref(null)
+const sceneRef = ref<HTMLElement | null>(null)
 const mouseX = ref(0.5)
 const mouseY = ref(0.5)
 
-const onMouseMove = (e) => {
+const onMouseMove = (e: MouseEvent): void => {
   const rect = sceneRef.value?.getBoundingClientRect()
   if (!rect) return
   mouseX.value = (e.clientX - rect.left) / rect.width

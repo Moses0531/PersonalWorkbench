@@ -221,7 +221,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /** 登录/注册页：左插画 + 右同色纯底表单区 */
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -240,6 +240,8 @@ import { useUserStore } from '@/stores/userStore'
 import { buildRoutes, resolveDefaultPath } from '@/router/dynamicRoutes'
 import appRouter from '@/router'
 import BrandMarkView from '@/components/BrandMarkView.vue'
+import { toErrorMessage } from '@/types/api'
+import type { AuthConfig, SessionInfo } from '@/types/entities'
 
 const route = useRoute()
 const router = useRouter()
@@ -253,7 +255,6 @@ const activeTab = ref(route.query.tab === 'register' ? 'register' : 'login')
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 const rememberMe = ref(false)
-const loginFormRef = ref(null)
 const captchaBase64 = ref('')
 const captchaToken = ref('')
 const captchaTimestamp = ref(0)
@@ -286,12 +287,12 @@ const loginRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
-function looksLikePhone(value) {
+function looksLikePhone(value: string): boolean {
   const text = value?.trim() || ''
   return text.length > 0 && /^\d+$/.test(text)
 }
 
-function looksLikeEmail(value) {
+function looksLikeEmail(value: string): boolean {
   const text = value?.trim() || ''
   return text.includes('@')
 }
@@ -313,7 +314,7 @@ watch(
   }
 )
 
-function switchMode(mode) {
+function switchMode(mode: 'login' | 'register') {
   if (mode === 'register' && !registerEnabled.value) return
   if (activeTab.value === mode) return
   activeTab.value = mode
@@ -332,16 +333,16 @@ function switchMode(mode) {
 async function refreshCaptcha() {
   try {
     const result = await fetchCaptchaBase64Api()
-    captchaBase64.value = result.data.img
-    captchaToken.value = result.data.token
-    captchaTimestamp.value = result.data.timestamp
+    captchaBase64.value = result.data!.img
+    captchaToken.value = result.data!.token
+    captchaTimestamp.value = result.data!.timestamp
   } catch (error) {
-    ElMessage.error(error.message || '获取验证码失败')
+    ElMessage.error(toErrorMessage(error) || '获取验证码失败')
     captchaBase64.value = ''
   }
 }
 
-function resolveRegisterContact() {
+function resolveRegisterContact(): { error?: string; phone?: string; email?: string } {
   const contact = registerForm.contact?.trim() || ''
   if (!contact) {
     return { error: '请输入手机号或邮箱' }
@@ -371,7 +372,7 @@ function resolveSafeRedirect() {
   return resolveDefaultPath('/dashboard')
 }
 
-async function completeLogin(data, successMsg = '登录成功') {
+async function completeLogin(data: Partial<SessionInfo>, successMsg = '登录成功') {
   if (!data?.token) {
     throw new Error('登录成功但未获取到令牌')
   }
@@ -420,7 +421,7 @@ async function handleLogin() {
     })
     await completeLogin(result?.data || {})
   } catch (error) {
-    ElMessage.error(error.message || '登录失败')
+    ElMessage.error(toErrorMessage(error) || '登录失败')
     if (captchaOnLogin.value) {
       refreshCaptcha()
       loginForm.captcha = ''
@@ -465,13 +466,13 @@ async function handleRegister() {
     }
 
     const result = await registerApi(payload)
-    const data = result?.data || {}
+    const data: Partial<SessionInfo> = result?.data || {}
     if (!data.account) {
       throw new Error('注册成功但未获取到系统账号')
     }
     await completeLogin(data, `注册成功，已自动登录（账号：${data.account}）`)
   } catch (error) {
-    ElMessage.error(error.message || '注册失败')
+    ElMessage.error(toErrorMessage(error) || '注册失败')
     if (captchaOnRegister.value) {
       refreshCaptcha()
       registerForm.captcha = ''
@@ -484,7 +485,7 @@ async function handleRegister() {
 async function loadAuthConfig() {
   try {
     const result = await fetchAuthConfigApi()
-    const data = result?.data || {}
+    const data: Partial<AuthConfig> = result?.data || {}
     registerEnabled.value = data.registerEnabled !== false
     captchaOnLogin.value = data.captchaOnLogin !== false
     captchaOnRegister.value = data.captchaOnRegister !== false
@@ -493,7 +494,7 @@ async function loadAuthConfig() {
       router.replace({ path: '/auth', query: { ...route.query, tab: 'login' } })
     }
   } catch (error) {
-    ElMessage.error(error.message || '加载认证配置失败')
+    ElMessage.error(toErrorMessage(error) || '加载认证配置失败')
   }
 }
 

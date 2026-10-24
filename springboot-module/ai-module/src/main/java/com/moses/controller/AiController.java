@@ -1,7 +1,8 @@
 package com.moses.controller;
 
+import com.moses.context.UserContext;
+
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import cn.dev33.satoken.stp.StpUtil;
 import com.moses.config.ResultConfig;
 import com.moses.model.AIConversationMeta;
 import com.moses.service.AIChatService;
@@ -57,7 +58,7 @@ public class AiController {
             return Flux.error(new IllegalArgumentException("消息长度不能超过" + MAX_MESSAGE_LENGTH + "字符"));
         }
 
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = UserContext.currentUserId();
         return chatService.chat(userId, conversationId, message);
     }
 
@@ -65,7 +66,7 @@ public class AiController {
     @SaCheckPermission("ai:chat")
     @GetMapping("/listConversations")
     public ResultConfig listConversations() {
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = UserContext.currentUserId();
         List<AIConversationMeta> conversations = conversationRedisService.listConversations(userId);
         return ResultConfig.success(conversations);
     }
@@ -84,7 +85,7 @@ public class AiController {
     @DeleteMapping("/deleteConversation")
     public ResultConfig deleteConversation(
             @Parameter(description = "会话ID") @RequestParam(name = "conversationId") String conversationId) {
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = UserContext.currentUserId();
         conversationRedisService.deleteConversation(userId, conversationId);
         return ResultConfig.success();
     }
@@ -93,13 +94,13 @@ public class AiController {
     @Operation(summary = "AI 规划预览（不写库）；权限 ai:plan 可单独关闭")
     @SaCheckPermission("ai:plan")
     public ResultConfig planPreview(@RequestBody Map<String, Object> body) {
-        return ResultConfig.success(aiPlanService.preview(StpUtil.getLoginIdAsLong(), body));
+        return ResultConfig.success(aiPlanService.preview(UserContext.currentUserId(), body));
     }
 
     @PostMapping("/plan/apply")
     @Operation(summary = "AI 规划确认落板；权限 ai:plan 可单独关闭")
     @SaCheckPermission("ai:plan")
     public ResultConfig planApply(@RequestBody Map<String, Object> body) {
-        return ResultConfig.success(aiPlanService.apply(StpUtil.getLoginIdAsLong(), body));
+        return ResultConfig.success(aiPlanService.apply(UserContext.currentUserId(), body));
     }
 }

@@ -1,0 +1,74 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { constantRoutes } from './routers'
+import { useUserStore } from '@/stores/userStore'
+import { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, FALLBACK_ROUTE_NAME, ERROR_ROUTE_NAME } from './dynamicRoutes'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: constantRoutes,
+})
+
+let menuRefreshPromise: Promise<boolean> | null = null
+
+async function ensureDynamicRoutes(): Promise<boolean> {
+  const userStore = useUserStore()
+  if (userStore.routesBuilt) return true
+  if (!userStore.isLoggedIn) return false
+
+  if (!menuRefreshPromise) {
+    menuRefreshPromise = userStore.refreshSessionFromServer().finally(() => {
+      menuRefreshPromise = null
+    })
+  }
+  const hasMenu = await menuRefreshPromise
+  if (!hasMenu) return false
+
+  return buildRoutes(router)
+}
+
+router.beforeEach(async (to) => {
+  const userStore = useUserStore()
+
+  if (to.meta.guest) {
+    if (userStore.isLoggedIn && (to.name === 'auth' || to.name === 'intro')) {
+      const ready = await ensureDynamicRoutes()
+      if (!ready) {
+        userStore.clearAuth()
+        return true
+      }
+      const first = userStore.getMenuRouterList?.[0]
+      return first?.path ? (first.path.startsWith('/') ? first.path : `/${first.path}`) : '/dashboard'
+    }
+    return true
+  }
+
+  if (to.meta.requiresAuth !== false && !userStore.isLoggedIn) {
+    return { path: '/auth', query: { redirect: to.fullPath } }
+  }
+
+  if (userStore.isLoggedIn) {
+    const wasBuilt = userStore.routesBuilt
+    const ready = await ensureDynamicRoutes()
+    if (!ready) {
+      userStore.clearAuth()
+      return { path: '/auth', query: { redirect: to.fullPath } }
+    }
+    if (!wasBuilt && userStore.routesBuilt) {
+      // 勿 spread to：刷新时可能先命中 fallback，携带 name 会导致二次导航仍进错误页
+      if (to.name === FALLBACK_ROUTE_NAME || to.name === ERROR_ROUTE_NAME) {
+        return true
+      }
+      return {
+        path: to.fullPath,
+        query: to.query,
+        hash: to.hash,
+        replace: true,
+      }
+    }
+  }
+
+  return true
+})
+
+export { buildRoutes, resetDynamicRoutes, MAIN_LAYOUT_NAME, ensureDynamicRoutes }
+export default router

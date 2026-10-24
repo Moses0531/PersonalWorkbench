@@ -1,59 +1,49 @@
 <template>
-  <!-- 仅上传：任务附件 / 头像等场景复用 el-upload，不渲染编辑器 -->
-  <div v-if="uploadOnly" class="rich-editor rich-editor--upload-only">
-    <el-upload
-        v-if="!readOnly"
-        class="rich-editor__upload"
-        :show-file-list="false"
-        :multiple="multiple"
-        :accept="accept"
-        :disabled="uploading"
-        :before-upload="beforeUpload"
-        :http-request="handleCustomUpload"
-    >
+  <div
+      class="rich-editor"
+      :class="{ 'rich-editor--readonly': readOnly, 'rich-editor--upload-only': uploadOnly }"
+      :style="containerStyle"
+  >
+    <!-- 仅上传模式：不渲染富文本，整块区域点击即选文件（头像 / 任务附件等场景） -->
+    <div v-if="uploadOnly" class="rich-editor__upload" @click="triggerFileSelect">
       <slot>
         <button type="button" class="toolbar-btn toolbar-btn--primary" :disabled="uploading">
-          <Upload />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
           {{ uploading ? '上传中...' : uploadText }}
         </button>
       </slot>
-    </el-upload>
-  </div>
-
-  <div
-      v-else
-      class="rich-editor"
-      :class="{ 'rich-editor--readonly': readOnly }"
-      :style="containerStyle"
-  >
-    <div v-if="!readOnly" class="rich-editor__toolbar">
-      <el-upload
-          class="rich-editor__upload"
-          :show-file-list="false"
-          :multiple="multiple"
-          :accept="accept"
+    </div>
+    <div v-else-if="!readOnly" class="rich-editor__toolbar">
+      <button
+          type="button"
+          class="toolbar-btn toolbar-btn--primary"
           :disabled="uploading || !editorReady"
-          :before-upload="beforeUpload"
-          :http-request="handleCustomUpload"
+          @click="triggerFileSelect"
       >
-        <slot>
-          <button
-              type="button"
-              class="toolbar-btn toolbar-btn--primary"
-              :disabled="uploading || !editorReady"
-          >
-            <Upload />
-            {{ uploading ? '上传中...' : uploadText }}
-          </button>
-        </slot>
-      </el-upload>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        {{ uploading ? '上传中...' : '上传文件' }}
+      </button>
       <div class="toolbar-divider"></div>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleUndo">
-        <RefreshLeft />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+        </svg>
         撤销
       </button>
       <button type="button" class="toolbar-btn" :disabled="!editorReady" @click="handleRedo">
-        <RefreshRight />
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+        </svg>
         重做
       </button>
     </div>
@@ -66,18 +56,28 @@
         v-model="html"
         @onCreated="handleCreated"
     />
+    <input
+        ref="fileInputRef"
+        type="file"
+        class="rich-editor__file-input"
+        :accept="accept"
+        :multiple="multiple"
+        @change="onFilesSelected"
+    />
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /** 富文本编辑器（wangEditor），支持文件上传插入与只读模式；亦可 uploadOnly 仅作上传 */
+import '@wangeditor/editor/dist/css/style.css'
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Upload, RefreshLeft, RefreshRight } from '@element-plus/icons-vue'
+import type { IDomEditor } from '@wangeditor/editor'
+import { message } from '@/utils/message'
+import { uploadFileApi } from '@/apis/common/UploadFileApi'
+import { toErrorMessage } from '@/types/api'
 
-/** 仅完整编辑模式才加载；uploadOnly 时不解析未安装/未使用的 wangEditor */
+/** 仅完整编辑模式才加载；uploadOnly 时不解析未使用的 wangEditor */
 const WangEditor = defineAsyncComponent(async () => {
-  await import('@wangeditor/editor/dist/css/style.css')
   const mod = await import('@wangeditor/editor-for-vue')
   return mod.Editor
 })
@@ -85,68 +85,60 @@ const WangEditor = defineAsyncComponent(async () => {
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp']
 const VIDEO_EXT = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: '',
-  },
-  height: {
-    type: Number,
-    default: null,       // 固定高度时 body 区 = height - 工具栏
-  },
-  minHeight: {
-    type: Number,
-    default: 200,
-  },
-  readOnly: {
-    type: Boolean,
-    default: false,
-  },
-  fileSize: {
-    type: Number,
-    default: null,
-  },
-  placeholder: {
-    type: String,
-    default: '请输入内容',
-  },
-  /** 业务侧上传实现，必传（如任务附件 uploadTaskAttachmentApi） */
-  uploadHandler: {
-    type: Function,
-    required: true,
-  },
-  resolveUrl: {
-    type: Function,
-    default: null,
-  },
-  /** 仅上传按钮（不渲染富文本），供任务附件等复用 */
-  uploadOnly: {
-    type: Boolean,
-    default: false,
-  },
-  uploadText: {
-    type: String,
-    default: '上传文件',
-  },
-  accept: {
-    type: String,
-    default: '',
-  },
-  multiple: {
-    type: Boolean,
-    default: true,
-  },
-})
+/** 上传处理：返回可插入的文件地址 */
+type UploadHandler = (file: File) => Promise<{ url: string }>
+/** 地址解析：把存储路径转为可访问 URL */
+type ResolveUrl = (path: string) => string
 
-const emit = defineEmits(['update:modelValue'])
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    /** 固定高度时 body 区 = height - 工具栏 */
+    height?: number | null
+    minHeight?: number
+    readOnly?: boolean
+    /** 文件大小上限（MB） */
+    fileSize?: number | null
+    placeholder?: string
+    uploadHandler?: UploadHandler | null
+    resolveUrl?: ResolveUrl | null
+    /** 仅上传模式（不渲染富文本），供头像 / 任务附件等复用 */
+    uploadOnly?: boolean
+    /** 上传按钮文案 */
+    uploadText?: string
+    /** 文件类型限制（原生 accept，如 image/*） */
+    accept?: string
+    /** 是否可多选 */
+    multiple?: boolean
+  }>(),
+  {
+    modelValue: '',
+    height: null,
+    minHeight: 200,
+    readOnly: false,
+    fileSize: null,
+    placeholder: '请输入内容',
+    uploadHandler: null,
+    resolveUrl: null,
+    uploadOnly: false,
+    uploadText: '上传文件',
+    accept: '',
+    multiple: true,
+  },
+)
 
-const editorRef = shallowRef()   // wangEditor 实例，需 shallowRef 避免深度响应
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+}>()
+
+const editorRef = shallowRef<IDomEditor | null>(null)   // wangEditor 实例，需 shallowRef 避免深度响应
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const html = ref('')
 const uploading = ref(false)
 const editorReady = ref(false)
 
 const containerStyle = computed(() => {
-  const style = {}
+  const style: Record<string, string> = {}
   if (props.height) {
     style.height = `${props.height}px`
   }
@@ -154,7 +146,7 @@ const containerStyle = computed(() => {
 })
 
 const bodyStyle = computed(() => {
-  const style = {}
+  const style: Record<string, string> = {}
   if (props.minHeight) {
     style.minHeight = `${props.minHeight}px`
   }
@@ -164,33 +156,33 @@ const bodyStyle = computed(() => {
   return style
 })
 
-function defaultResolveUrl(path) {
+function defaultResolveUrl(path: string): string {
   if (!path) return ''
   if (/^https?:\/\//i.test(path) || /^data:/i.test(path)) return path
   const normalized = String(path).trim()
   return normalized.startsWith('/') ? normalized : `/${normalized}`
 }
 
-function resolveMediaUrl(path) {
+function resolveMediaUrl(path: string): string {
   return (props.resolveUrl || defaultResolveUrl)(path)
 }
 
-function getFileExt(name = '') {
+function getFileExt(name: string = ''): string {
   const index = name.lastIndexOf('.')
   return index >= 0 ? name.slice(index).toLowerCase() : ''
 }
 
-function isImageFile(file) {
+function isImageFile(file: File): boolean {
   if (file.type?.startsWith('image/')) return true
   return IMAGE_EXT.includes(getFileExt(file.name))
 }
 
-function isVideoFile(file) {
+function isVideoFile(file: File): boolean {
   if (file.type?.startsWith('video/')) return true
   return VIDEO_EXT.includes(getFileExt(file.name))
 }
 
-function escapeHtml(text) {
+function escapeHtml(text: string): string {
   return String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -198,28 +190,30 @@ function escapeHtml(text) {
       .replace(/"/g, '&quot;')
 }
 
-function validateFile(file) {
+function validateFile(file: File): boolean {
   if (props.accept?.includes('image/') && !isImageFile(file)) {
-    ElMessage.error('只能上传图片文件')
+    message.error('只能上传图片文件')
     return false
   }
   if (props.fileSize != null && props.fileSize > 0 && file.size / 1024 / 1024 > props.fileSize) {
-    ElMessage.error(`文件大小不能超过 ${props.fileSize} MB`)
+    message.error(`文件大小不能超过 ${props.fileSize} MB`)
     return false
   }
   return true
 }
 
-async function doUpload(file) {
-  const result = await props.uploadHandler(file)
-  if (result?.url) {
-    return { ...result, url: resolveMediaUrl(result.url) }
-  }
-  return result || { url: '' }
+async function doUpload(file: File): Promise<{ url: string }> {
+  const upload: UploadHandler = props.uploadHandler || (async (f: File) => {
+    const res = await uploadFileApi(f)
+    const url = res?.data
+    if (!url) throw new Error('上传成功但未返回文件地址')
+    return { url: resolveMediaUrl(url) }
+  })
+  return upload(file)
 }
 
 /** 按 MIME/扩展名插入 img、video 或下载链接 */
-function insertFileNode(editor, file, url) {
+function insertFileNode(editor: IDomEditor, file: File, url: string): void {
   editor.focus()
 
   if (isImageFile(file)) {
@@ -239,65 +233,65 @@ function insertFileNode(editor, file, url) {
   )
 }
 
-async function handleFileUpload(file) {
-  if (!validateFile(file)) return false
+async function handleFileUpload(file: File): Promise<void> {
+  if (!validateFile(file)) return
 
-  const result = await doUpload(file)
-  const url = result?.url || ''
-
-  if (!props.uploadOnly) {
-    const editor = editorRef.value
-    if (!editor) {
-      ElMessage.warning('编辑器尚未就绪，请稍后再试')
-      return false
+  if (props.uploadOnly) {
+    try {
+      await doUpload(file)
+    } catch (err) {
+      message.error(toErrorMessage(err) || '文件上传失败')
     }
-    if (url) insertFileNode(editor, file, url)
-  }
-  return true
-}
-
-/** el-upload：校验失败则拦截，避免进入 http-request */
-function beforeUpload(file) {
-  if (!props.uploadOnly && !editorReady.value) {
-    ElMessage.warning('编辑器尚未就绪，请稍后再试')
-    return false
-  }
-  return validateFile(file)
-}
-
-/** el-upload http-request */
-async function handleCustomUpload(opts) {
-  const file = opts?.file
-  if (!file) {
-    opts?.onError?.(new Error('未选择文件'))
     return
   }
 
-  uploading.value = true
+  const editor = editorRef.value
+  if (!editor) {
+    message.warning('编辑器尚未就绪，请稍后再试')
+    return
+  }
+
   try {
-    await handleFileUpload(file)
-    opts?.onSuccess?.({})
+    const { url } = await doUpload(file)
+    insertFileNode(editor, file, url)
   } catch (err) {
-    ElMessage.error(err.message || '文件上传失败')
-    opts?.onError?.(err)
-  } finally {
-    uploading.value = false
+    message.error(toErrorMessage(err) || '文件上传失败')
   }
 }
 
-function handleUndo() {
-  editorRef.value?.undo()
+function triggerFileSelect(): void {
+  fileInputRef.value?.click()
 }
 
-function handleRedo() {
-  editorRef.value?.redo()
+async function onFilesSelected(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  if (!files.length) return
+
+  uploading.value = true
+  try {
+    for (const file of files) {
+      await handleFileUpload(file)
+    }
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
+
+function handleUndo(): void {
+  editorRef.value?.undo?.()
+}
+
+function handleRedo(): void {
+  editorRef.value?.redo?.()
 }
 
 const editorConfig = {
   placeholder: props.placeholder,
   readOnly: props.readOnly,
   autoFocus: false,
-  onChange(editor) {
+  onChange(editor: IDomEditor) {
     emit('update:modelValue', editor.getHtml())
   },
 }
@@ -336,7 +330,7 @@ watch(
     },
 )
 
-function handleCreated(editor) {
+function handleCreated(editor: IDomEditor): void {
   editorRef.value = editor
   editorReady.value = true
   if (props.readOnly) {
@@ -346,13 +340,13 @@ function handleCreated(editor) {
 }
 
 /** 拦截 Word 粘贴的 file:// 本地图片，引导用户走上传 */
-async function handlePaste(event) {
-  const clipboardData = event.clipboardData
+async function handlePaste(event: Event): Promise<void> {
+  const clipboardData = (event as ClipboardEvent).clipboardData
   if (!clipboardData) return
 
   const items = clipboardData.items
   if (items) {
-    for (const item of items) {
+    for (const item of Array.from(items)) {
       if (!item.type.startsWith('image/')) continue
       event.preventDefault()
       const file = item.getAsFile()
@@ -360,8 +354,6 @@ async function handlePaste(event) {
         uploading.value = true
         try {
           await handleFileUpload(file)
-        } catch (err) {
-          ElMessage.error(err.message || '文件上传失败')
         } finally {
           uploading.value = false
         }
@@ -375,7 +367,7 @@ async function handlePaste(event) {
 
   if (/src=["']file:/i.test(pastedHtml)) {
     event.preventDefault()
-    ElMessage.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
+    message.warning('无法直接使用 Word 等文档中的本地图片，请点击「上传文件」按钮上传')
   }
 }
 
@@ -470,10 +462,7 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-.rich-editor__upload :deep(.el-upload) {
-  display: inline-block;
-}
-
+/* ── Upload-only mode ── */
 .rich-editor--upload-only {
   border: none;
   box-shadow: none;
@@ -490,6 +479,14 @@ onBeforeUnmount(() => {
 .rich-editor--upload-only:focus-within {
   border: none;
   box-shadow: none;
+}
+
+.rich-editor__upload {
+  cursor: pointer;
+}
+
+.rich-editor__file-input {
+  display: none;
 }
 
 .toolbar-btn {

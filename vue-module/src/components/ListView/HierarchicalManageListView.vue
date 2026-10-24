@@ -1,45 +1,87 @@
-<script setup>
+<script setup lang="ts" generic="T extends object">
 /** 树形层级管理列表：展开折叠、搜索过滤后扁平化渲染 */
 import { computed, ref, useSlots, watch, TransitionGroup } from 'vue'
-import {
-  Search,
-  Refresh,
-  Folder,
-  Document,
-  ArrowRight,
-} from '@element-plus/icons-vue'
 import ManageRowActions from './ManageRowActions.vue'
+import type { ColumnDef, RowAction, RowKeyConfig } from '@/types/components'
 
-const props = defineProps({
-  title: { type: String, default: '' },
-  desc: { type: String, default: '' },
-  loading: { type: Boolean, default: false },
-  data: { type: Array, default: () => [] },
-  columns: { type: Array, default: () => [] },
-  rowKey: { type: [String, Function], default: 'id' },
-  childrenKey: { type: String, default: 'children' },
-  searchQuery: { type: String, default: '' },
-  searchPlaceholder: { type: String, default: '搜索...' },
-  showSearch: { type: Boolean, default: true },
-  showRefresh: { type: Boolean, default: true },
-  showExpandAll: { type: Boolean, default: true },
-  defaultExpandAll: { type: Boolean, default: true },
-  showBackground: { type: Boolean, default: true },
-  showFooter: { type: Boolean, default: true },
-  emptyText: { type: String, default: '暂无数据' },
-  emptySearchText: { type: String, default: '未找到匹配结果' },
-  total: { type: Number, default: null },
-  rowActions: { type: Array, default: () => [] },
-  actionVariant: { type: String, default: 'icon' },
-  embedded: { type: Boolean, default: false },
-  treeColumnProp: { type: String, default: '' }
-})
+/** 树节点行数据：业务字段动态，取值时收窄 */
+type TreeNode = Record<string, unknown>
 
-const emit = defineEmits(['update:searchQuery', 'refresh', 'search', 'expand-change'])
+/** 扁平化后的渲染行 */
+interface VisibleRow<R> {
+  row: R
+  depth: number
+  key: string | number
+  hasChildren: boolean
+  expanded: boolean
+  visible: boolean
+}
+
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    desc?: string
+    loading?: boolean
+    /** 树形数据源，子节点数组由 childrenKey 指定 */
+    data?: T[]
+    columns?: ColumnDef[]
+    rowKey?: RowKeyConfig
+    /** 子节点数组字段名 */
+    childrenKey?: string
+    searchQuery?: string
+    searchPlaceholder?: string
+    showSearch?: boolean
+    showRefresh?: boolean
+    showExpandAll?: boolean
+    defaultExpandAll?: boolean
+    showBackground?: boolean
+    showFooter?: boolean
+    emptyText?: string
+    emptySearchText?: string
+    /** 显式总数；null 时统计全部节点数 */
+    total?: number | null
+    rowActions?: RowAction[]
+    actionVariant?: string
+    embedded?: boolean
+    /** 树形主列 prop；为空时取第一列 */
+    treeColumnProp?: string
+  }>(),
+  {
+    title: '',
+    desc: '',
+    loading: false,
+    data: () => [],
+    columns: () => [],
+    rowKey: 'id',
+    childrenKey: 'children',
+    searchQuery: '',
+    searchPlaceholder: '搜索...',
+    showSearch: true,
+    showRefresh: true,
+    showExpandAll: true,
+    defaultExpandAll: true,
+    showBackground: true,
+    showFooter: true,
+    emptyText: '暂无数据',
+    emptySearchText: '未找到匹配结果',
+    total: null,
+    rowActions: () => [],
+    actionVariant: 'icon',
+    embedded: false,
+    treeColumnProp: '',
+  },
+)
+
+const emit = defineEmits<{
+  (e: 'update:searchQuery', value: string): void
+  (e: 'refresh'): void
+  (e: 'search', value: string): void
+  (e: 'expand-change', payload: { key: string | number; expanded: boolean }): void
+}>()
 
 const slots = useSlots()
 // 当前展开的节点 key 集合（rowKey 解析后的值）
-const expandedKeys = ref(new Set())
+const expandedKeys = ref(new Set<string | number>())
 const allExpanded = ref(props.defaultExpandAll)
 
 /** 树形主列：默认第一列，或通过 treeColumnProp 指定 */
@@ -54,23 +96,19 @@ const flatColumns = computed(() => props.columns)
 
 const columnCount = computed(() => flatColumns.value.length)
 
-function resolveRowKey(row, index) {
-  if (typeof props.rowKey === 'function') return props.rowKey(row, index)
-  const key = row?.[props.rowKey]
-  return key != null ? key : index
+function resolveRowKey(row: T, index?: number): string | number {
+  if (typeof props.rowKey === 'function') return props.rowKey(row, index ?? 0)
+  const key = (row as TreeNode)?.[props.rowKey]
+  return key != null ? (key as string | number) : (index as string | number)
 }
 
-function getChildren(row) {
-  const children = row?.[props.childrenKey]
-  return Array.isArray(children) ? children : []
-}
-
-function hasChildren(row) {
-  return getChildren(row).length > 0
+function getChildren(row: T): T[] {
+  const children = (row as TreeNode)?.[props.childrenKey]
+  return Array.isArray(children) ? (children as T[]) : []
 }
 
 /** 递归收集所有节点 key（用于统计总数） */
-function collectAllKeys(nodes, keys = []) {
+function collectAllKeys(nodes: T[], keys: Array<string | number> = []): Array<string | number> {
   for (const node of nodes) {
     keys.push(resolveRowKey(node))
     const children = getChildren(node)
@@ -80,7 +118,7 @@ function collectAllKeys(nodes, keys = []) {
 }
 
 /** 仅有子节点的 key 才可展开/折叠 */
-function collectExpandableKeys(nodes, keys = []) {
+function collectExpandableKeys(nodes: T[], keys: Array<string | number> = []): Array<string | number> {
   for (const node of nodes) {
     const children = getChildren(node)
     if (children.length) {
@@ -110,11 +148,11 @@ function initExpandedKeys() {
 
 watch(() => props.data, initExpandedKeys, { immediate: true, deep: true })
 
-function isExpanded(row) {
+function isExpanded(row: T): boolean {
   return expandedKeys.value.has(resolveRowKey(row))
 }
 
-function toggleExpand(row) {
+function toggleExpand(row: T): void {
   const key = resolveRowKey(row)
   const next = new Set(expandedKeys.value)
   if (next.has(key)) next.delete(key)
@@ -124,7 +162,7 @@ function toggleExpand(row) {
   emit('expand-change', { key, expanded: next.has(key) })
 }
 
-function toggleExpandAll() {
+function toggleExpandAll(): void {
   if (allExpanded.value) {
     expandedKeys.value = new Set()
     allExpanded.value = false
@@ -134,23 +172,23 @@ function toggleExpandAll() {
   }
 }
 
-function rowMatchesQuery(row, query) {
+function rowMatchesQuery(row: T, query: string): boolean {
   // 任意列字段包含关键词即视为匹配
   const q = query.toLowerCase()
   return props.columns.some(col => {
-    const val = row?.[col.prop]
+    const val = (row as TreeNode)?.[col.prop ?? '']
     return val != null && String(val).toLowerCase().includes(q)
   })
 }
 
 // 保留匹配节点及其祖先/后代，搜索时自动展开子树
-function filterTree(nodes, query) {
+function filterTree(nodes: T[], query: string): T[] {
   if (!query.trim()) return nodes
-  const result = []
+  const result: T[] = []
   for (const node of nodes) {
     const children = filterTree(getChildren(node), query)
     if (rowMatchesQuery(node, query) || children.length) {
-      result.push({ ...node, [props.childrenKey]: children })
+      result.push({ ...node, [props.childrenKey]: children } as T)
     }
   }
   return result
@@ -163,15 +201,14 @@ const filteredData = computed(() => filterTree(props.data, props.searchQuery))
  * visibleRows：仅 parentExpanded 为 true 的行可见（模拟树展开）
  */
 const visibleRows = computed(() => {
-  const rows = []
+  const rows: VisibleRow<T>[] = []
   const query = props.searchQuery.trim()
 
-  function walk(nodes, depth, parentExpanded) {
+  function walk(nodes: T[], depth: number, parentExpanded: boolean): void {
     for (const node of nodes) {
       const key = resolveRowKey(node)
       const childList = getChildren(node)
       // 搜索模式下强制展开，便于展示所有匹配行
-      const expanded = query ? true : (parentExpanded && isExpanded(node))
       rows.push({
         row: node,
         depth,
@@ -181,7 +218,7 @@ const visibleRows = computed(() => {
         visible: parentExpanded
       })
       if (childList.length && (query || isExpanded(node))) {
-        walk(childList, depth + 1, parentExpanded && (query || isExpanded(node)))
+        walk(childList, depth + 1, Boolean(parentExpanded && (query || isExpanded(node))))
       }
     }
   }
@@ -200,29 +237,29 @@ const emptyMessage = computed(() => {
   return props.searchQuery.trim() ? props.emptySearchText : props.emptyText
 })
 
-function cellSlotName(column) {
+function cellSlotName(column: ColumnDef): string {
   if (column.type === 'actions') return 'actions'
   return `cell-${column.prop}`
 }
 
-function hasCellSlot(column) {
+function hasCellSlot(column: ColumnDef): boolean {
   return Boolean(slots[cellSlotName(column)])
 }
 
-function formatCell(row, column) {
-  const value = row?.[column.prop]
+function formatCell(row: T, column: ColumnDef): unknown {
+  const value = (row as TreeNode)?.[column.prop ?? '']
   if (value == null || value === '') return column.emptyText ?? '-'
   return value
 }
 
-function onSearchInput(event) {
-  const value = event.target.value
+function onSearchInput(event: Event): void {
+  const value = (event.target as HTMLInputElement).value
   emit('update:searchQuery', value)
   emit('search', value)
 }
 
 /** 判断该列是否为树形主列（显示展开箭头与缩进） */
-function isTreeCell(column) {
+function isTreeCell(column: ColumnDef): boolean {
   return column.prop === treeColumn.value?.prop
 }
 </script>
@@ -261,7 +298,11 @@ function isTreeCell(column) {
               {{ allExpanded ? '全部折叠' : '全部展开' }}
             </button>
             <div v-if="showSearch" class="management-list-view__search">
-              <Search class="management-list-view__search-icon" />
+              <svg class="management-list-view__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 :value="searchQuery"
                 type="text"
@@ -278,7 +319,12 @@ function isTreeCell(column) {
               :disabled="loading"
               @click="emit('refresh')"
             >
-              <Refresh :class="{ 'mlv-spin': loading }" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                   :class="{ 'mlv-spin': loading }">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
             </button>
             <slot name="toolbar-actions" />
           </div>
@@ -312,7 +358,10 @@ function isTreeCell(column) {
                 <td :colspan="columnCount" class="management-list-view__empty-cell">
                   <slot name="empty" :message="emptyMessage">
                     <div class="table-empty">
-                      <Folder style="font-size: 40px" />
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
                       <p>{{ emptyMessage }}</p>
                     </div>
                   </slot>
@@ -358,7 +407,9 @@ function isTreeCell(column) {
                       :title="item.expanded ? '折叠' : '展开'"
                       @click="toggleExpand(item.row)"
                     >
-                      <ArrowRight />
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </button>
                     <span v-else class="hierarchical-table__toggle-placeholder" />
 
@@ -366,8 +417,13 @@ function isTreeCell(column) {
                       class="hierarchical-table__node-icon"
                       :class="item.hasChildren ? 'hierarchical-table__node-icon--folder' : 'hierarchical-table__node-icon--leaf'"
                     >
-                      <Folder v-if="item.hasChildren" />
-                      <Document v-else />
+                      <svg v-if="item.hasChildren" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
                     </span>
 
                     <slot
